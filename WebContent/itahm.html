@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		
+		<script>
+if (location.hash) {
+	location.href = "itahm.html";
+}
+		</script>
+		
+		<link rel="stylesheet" href="itahm.css">
+		
+		<script src="js/JSONRequest.js"></script>
+		<script src="js/Canvas.js"></script>
+		
+		<script src="itahm.js"></script>
+		<script src="map.js"></script>
+		<script src="list.js"></script>
+		<script src="dialog.js"></script>
+		<script src="setting.js"></script>
+		
+	</head>
+
+	<body class="loading">
+
+<!---->
+		<div class="top">
+			<div id="logout">logout</div>
+			<div class="logo">ITAhM</div>
+		</div>
+<!---->
+
+<!---->		
+		<div class="side">
+			<ul>
+				<li><a href="#sect_map" id="open_map">map</a></li>
+				<li><a href="#sect_device" id="open_list">device</a></li>
+				<li><a href="#sect_line">line</a></li>
+				<li><a href="#sect_icon">icon</a></li>
+				<li><a href="#sect_setting" id="open_setting">setting</a></li>
+			</ul>
+		</div>
+<!---->
+
+<!---->
+		<div id="sect_map" class="body">
+			<div  id="map"></div>
+			<form id="map_nav" autocomplete="off">
+				<input type="button" name="info" value="info.">
+				<input type="button" name="link" value="link">
+			</form>
+			<button id="save_map"><img src="img/save.png"></button>
+		</div>
+<!---->
+
+<!---->
+		<div id="sect_device"  class="body">
+			<form id="form_device_list" class="control" autocomplete="off">
+				<input type="button" name="add" value="add">
+				<input type="button" name="remove" value="remove">
+			</form>
+			<table>
+				<caption>DEVICE LIST</caption>
+				<thead>
+					<tr>
+						<th>select</th>
+						<th>ip address</th>
+						<th>type</th>
+						<th>name</th>
+						<th>smp</th>
+						<th>community</th>
+					</tr>
+				</thead>
+				<tbody id="device_list"></tbody>
+			</table>
+		</div>
+<!---->
+
+<!---->
+		<div id="sect_line"  class="body">
+			<table class="full">
+				<caption>LINE LIST</caption>
+				<thead>
+					<tr>
+						<th>select</th>
+						<th>ip address</th>
+						<th>type</th>
+						<th>name</th>
+						<th>smp</th>
+						<th>community</th>
+					</tr>
+				</thead>
+				<tbody id="line_list"></tbody>
+			</table>
+		</div>
+<!---->
+
+<!---->
+		<div id="sect_icon"  class="body">
+			<h1>icon</h1>
+			<div id="icon">
+				<fieldset>
+					<legend>server</legend>
+					<img alt="server" title="server" src="img/server.png" id="icon_server">
+					<img alt="mainframe" title="mainframe" src="img/mainframe.png" id="icon_mainframe">
+					<img alt="database" title="database" src="img/database.png" id="icon_database">
+					<img alt="storage" title="storage" src="img/storage.png" id="icon_storage">
+					<img alt="web server" title="web server" src="img/www.png" id="icon_www">
+				</fieldset>
+				<fieldset>
+					<legend>network</legend>
+					<img alt="network" title="network" src="img/network.png" id="icon_network">
+					<img alt="workgroup switch" title="workgroup switch" src="img/workgroup.png" id="icon_workgroup">
+					<img alt="dummy hub" title="dummy hub" src="img/hub.png" id="icon_hub">
+					<img alt="layer4 switch" title="layer4 switch" src="img/l4switch.png" id="icon_l4switch">
+					<img alt="router" title="router" src="img/router.png" id="icon_router">
+					<img alt="firewall" title="firewall" src="img/firewall.png" id="icon_firewall">
+					<img alt="vpn gateway" title="vpn gateway" src="img/gateway.png">
+					<img alt="vpn concentrator" title="vpn concentrator" src="img/concentrator.png" id="icon_concentrator">
+					<img alt="wireless" title="wireless" src="img/wireless.png" id="icon_wireless">
+					<img alt="accesspoint" title="accesspoint" src="img/accesspoint.png" id="icon_accesspoint">
+				</fieldset>
+				<fieldset>
+					<legend>etc</legend>
+					<img alt="office" title="office" src="img/office.png" id="icon_office">
+					<img alt="cloud" title="cloud" src="img/cloud.png" id="icon_cloud">	
+					<img alt="unknown" title="unknown" src="img/unknown.png" id="icon_unknown">
+				</fieldset>
+			</div>
+		</div>
+<!---->
+
+<!---->
+		<div id="sect_setting" class="body">
+			<h1>SETTING</h1>
+			<section>
+				<h3>account <input id="add_account" type="button" value="+"></h3>
+				<ul id="account"></ul>
+			</section>
+			<section>
+				<h3>snmp profile <input id="add_profile" type="button" value="+"></h3>
+				<ul id="profile"></ul>
+			</section>
+		</div>
+<!---->
+
+<!---->
+		<div id="popup" class="popup">
+		
+			<form id="form_device" class="dialog" autocomplete="off">
+				<h2>Device</h2>
+				<table class="full">
+					<tbody>
+						<tr>
+							<td>name: </td>
+							<td>
+								<input type="text"  name="name" class="table text" placeholder="device name" required>
+							</td>
+						</tr>
+						<tr>
+							<td>type: </td>
+							<td>
+								<select name="type"  class="table text">
+										<option>unkown</option>
+									<optgroup label="network">
+										<option>router</option>
+										<option>dummy hub</option>
+										<option>L2 switch</option>
+										<option>L3 switch</option>
+										<option>L4 switch</option>
+									</optgroup>
+									<optgroup label="server">
+										<option>web server</option>
+										<option>was server</option>
+										<option>database</option>
+										<option>mainframe</option>
+										<option>storage</option>
+									</optgroup>
+									<optgroup label="security">
+										<option>firewall</option>
+										<option>web application firewall</option>
+										<option>vpn concentrator</option>
+										<option>vpn gateway</option>
+										<option>intrusion prevention system</option>
+										<option>intrusion detection system</option>
+									</optgroup>
+									<optgroup label="wireless">
+										<option>access point</option>
+										<option>sensor</option>
+										<option>wireless ips</option>
+									</optgroup>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<td>ip address: </td>
+							<td>
+								<input type="text" name="address" class="table text" placeholder="device ip address"
+									pattern="((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+									title="valid v4 ip address required">
+							</td>
+						</tr>
+						<tr>
+							<td><label><input name="snmp" type="checkbox">snmp</label>: </td>
+							<td>
+								<select name="profile" class="table text"></select>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</form>
+			
+			<form id="form_line" class="dialog" autocomplete="off">
+			<h2>Line</h2>
+				<table class="full">
+					<caption class="left">
+						<select name="index"></select> of <span id="link_count"></span>
+					</caption>
+					<tbody>
+						<tr>
+							<td>
+								<span>bandwidth : </span>
+								<select name="unit">
+									<option value="1000000000">Gbps
+									<option value="1000000" selected>Mbps
+									<option value="1000">Kbps
+									<option value="1">bps
+								</select>
+							</td>
+							<td>
+								<input type="text"  name="bandwidth" class="table text" placeholder="bandwidth" required>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				
+				<table class="full">
+					<caption class="left">interface</caption>
+					<tbody>
+						<tr>
+							<td>
+								<input type="text" name="from" class="disabled gray" disabled>
+							<td>
+								<input type="text" name="ifFrom" class="table text" placeholder="interface description">
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<input type="text" name="to" class="disabled gray" disabled>
+							<td>
+								<input type="text" name="ifTo" class="table text" placeholder="interface description">
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				
+				<p>
+					<label><input name = "remove" type="checkbox">remove this link</label>
+				</p>
+				
+			</form>
+			
+			<form id="form_account" class="dialog" autocomplete="off">
+				<h2>Account</h2>
+				<table class="full">
+					<tbody>
+						<tr>
+							<td>username</td>
+							<td>
+								<input type="text" name="username" class="table text" required>
+							</td>
+						</tr>
+						<tr>
+							<td>password</td>
+							<td>
+								<input type="password" name="password"
+									class="table text"
+									placeholder="new password"
+									pattern="[a-zA-Z0-9]{6,}"
+									required>
+							</td>
+						</tr>
+						<tr>
+							<td>confirm password</td>
+							<td>
+								<input type="password" name="confirm"
+									class="table text"
+									placeholder="confirm password"
+									pattern="[a-zA-Z0-9]{6,}"
+									required>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				
+				<p>
+					<label><input name = "remove" type="checkbox">remove this account</label>
+				</p>
+				
+			</form>
+			
+			<form id="form_snmp" class="dialog" autocomplete="off">
+				<h2>snmp profile</h2>
+				<table class="full">
+					<tbody>
+						<tr>
+							<td>profile name: </td>
+							<td>
+								<input type="text" name="name" class="table text" placeholder="snmp profile name" required>
+							</td>
+						</tr>
+						<tr>
+							<td>snmp version: </td>
+							<td>
+								<label><input type="radio" value="v1" name="version" disabled>v1</label>
+								<label><input type="radio" value="v2c" name="version" checked>v2c</label>
+								<label><input type="radio" value="v3" name="version" disabled>v3</label>
+							</td>
+						</tr>
+						<tr>
+							<td>community: </td>
+							<td>
+								<input type="text" name="community" class="table text" placeholder="snmp community string" required>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				
+				<p>
+					<label><input name = "remove" type="checkbox">remove this profile</label>
+				</p>
+			</form>
+		
+			<form id="form_login" class="login" autocomplete="off">
+				<input type="text" name="server" class="full" placeholder="server address" autofocus value="local.itahm.com:2014" required>
+				<input type="text" name="username" class="full" placeholder="username" value="root" required>
+				<input type="password" name="password" class="full" placeholder="password" value="root" required>
+				<input type="submit"  class="full" value="Login">
+				<p id="login_fail" class="white bold"></p>
+			</form>
+			
+			<div id="popup_button" class="right">
+				<input name="cancel" type="reset" value="cancel" class="dialog button">
+				<input name ="apply" type="submit" value="apply" class="dialog button">
+			</div>
+		</div>
+		
+<!---->
+
+<!---->
+		<div id="mask" class="show"></div>
+<!---->
+
+	</body>
+	
+</html>
