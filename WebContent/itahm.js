@@ -100,12 +100,6 @@ function ITAhM() {
 			}
 		});
 		
-		xhr.request({
-			line: {
-				get: null
-			}
-		});
-		
 		itahm.popup();
 		//sendRequest("device", null);
 	}
@@ -208,6 +202,12 @@ function ITAhM() {
 							map.set("device", device["get"]);
 						}
 					}
+					
+					xhr.request({
+						line: {
+							get: null
+						}
+					});
 					
 					break;
 				

@@ -181,7 +181,9 @@ function LineList() {
 		},
 		
 		get: function (from, to) {
-			return this.list[from][to];
+			var from = this.list[from];
+			
+			return from && from[to];
 		}
 	};
 	

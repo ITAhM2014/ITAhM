@@ -278,22 +278,20 @@ function SnmpDialog() {
 			this.dialog = form;
 		},
 		
-		set: function (fromName, toName, line) {
+		set: function (from, to, line) {
 			var link = line.link,
 				index = form.index,
 				option,
-				count = 0;
+				count = link.length;
 			
-			form.from.value = fromName;
-			form.to.value = toName;
+			form.from.value = from;
+			form.to.value = to;
 		
 			this.apply = edit.bind(this, line);
 			
 			index.length = 0;
 			
-			if (link) {
-				count = link.length;
-				
+			if (count > 0) {
 				for (var i=0; i<count; i++) {
 					option = document.createElement("option");
 					option.text = i +1;
@@ -354,7 +352,7 @@ function SnmpDialog() {
 				bandwidth: form.bandwidth.value * form.unit.value
 			};
 		
-		if (!link) {
+		if (link.length == 0) {
 			line.link = [tmp];
 			
 			itahm.request({
@@ -369,7 +367,7 @@ function SnmpDialog() {
 			var data = {};
 			
 			data[line.id] = line;
-			console.log(data);
+			
 			itahm.request({
 				line: {
 					set: data
@@ -410,18 +408,32 @@ function SnmpDialog() {
 	}
 	
 	function remove(line) {
-		var data = {};
+		var data = {},
+			link = line.link;
 		
-		data[line.id] = form.index.value;
+		link.splice(form.index.value, 1);
+		
+		if (link.length > 0) {
+			data[line.id] = line;
+			
+			itahm.request({
+				line: {
+					set: data
+				}
+			});
+		}
+		else {
+			data[line.id] = null;
+			
+			itahm.request({
+				line: {
+					remove: data
+				}
+			});
+		}
 		
 		itahm.request({
 			line: {
-				remove: data
-			}
-		});
-		
-		itahm.request({
-			"line": {
 				get: null
 			}
 		});
@@ -443,7 +455,7 @@ function SnmpDialog() {
 			form.addEventListener("submit", onApply.bind(this), false);
 			form.addEventListener("reset", onCancel.bind(this), false);
 			
-			form.remove.addEventListener("click", onRemove, false);
+			form.remove.addEventListener("click", onRemove.bind(this), false);
 			
 			this.dialog = form;
 		},
@@ -456,7 +468,7 @@ function SnmpDialog() {
 				
 				this.apply = edit.bind(this, account);
 				this.remove = remove.bind(this, account.username);
-						
+				
 				form.password.select();
 			}
 			else {
@@ -558,7 +570,7 @@ function SnmpDialog() {
 		});
 		
 		itahm.request({
-			"account": {
+			account: {
 				get: null
 			}
 		});

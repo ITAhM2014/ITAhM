@@ -684,7 +684,7 @@ function Icon() {
 		if (cp) {
 			cpX = cp.x;
 			cpY = cp.y;
-			console.log(x1, y1, cpX, cpY, x2, y2);
+
 			context.quadraticCurveTo(cpX, cpY, x2, y2);
 		}
 		else {
@@ -887,10 +887,12 @@ function Icon() {
 			index++;
 		}
 		
-		for (; index < length; index++, angle += Math.PI) {
+		for (var n; index < length; index++, angle += Math.PI) {
+			n = Math.floor(index /2 + 1)* 30;
+			
 			drawLine(context, pos1, pos2, link[index].from, link[index].to, {
-				x: cpX + Math.round(index /2)* 30 * Math.cos(angle),
-				y: cpY + Math.round(index /2)* 30 * Math.sin(angle),
+				x: cpX + n * Math.cos(angle),
+				y: cpY + n * Math.sin(angle),
 			});
 		}
 	};

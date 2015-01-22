@@ -114,13 +114,8 @@ function Map () {
 	
 	function Connector() {
 		var layer = Layer.create(),
-			dummy = {
-				x: 0,
-				y: 0
-			},
-			ready = false,
-			node = Node.create("line", {link: [{}]}, null, dummy);
-			
+			ready = false;
+		
 		map.add(layer);
 		
 		layer.context({
@@ -131,10 +126,17 @@ function Map () {
 		
 		layer.context().setLineDash([10, 10]);
 		
+		this.to = {
+			x: 0,
+			y: 0
+		};
+		
+		this.node = Node.create("line", {link: [{}]}, null, this.to);
+		
 		this.draw = function (x, y) {
 			if (ready) {
-				dummy.x = x;
-				dummy.y = y;
+				this.to.x = x;
+				this.to.y = y;
 				
 				layer.invalidate();
 			}
@@ -144,10 +146,12 @@ function Map () {
 			if (b === true) {
 				ready = true;
 				
-				layer.add(node);
+				layer.add(this.node);
 			}
 			else if (b === false) {
 				ready = false;
+				
+				this.node.to = this.to;
 				
 				layer.empty();
 			}
@@ -156,24 +160,39 @@ function Map () {
 			}
 		};
 		
-		this.from = function (device) {
-			if (device) {
-				node.from = device;
+		this.name = function (line) {
+			var from = this.node.from,
+				to = this.node.to;
+			
+			if (line.from == from.id) {
+				return {
+					from: from.name,
+					to: to.name
+				}
 			}
 			else {
-				return node.from;
+				return {
+					from: to.name,
+					to: from.name
+				}
 			}
 		};
 		
-		/*
-		 * device: device object (Node.device)
-		 */
-		this.get = function (device) {
-			return itahm.getLine(node.from.id, device.node.id);
-		};
+		this.set = function (node) {
+			return this.node.from = node;
+		}
 		
-		this.node = function () {
-			return node;
+		this.get = function (node) {
+			var from = this.node.from.id,
+				to = node.id;
+			
+			this.node.to = node;
+			
+			return itahm.getLine(from, to) || {
+				from: from,
+				to: to,
+				link: []
+			}
 		};
 	}
 	
@@ -200,10 +219,10 @@ function Map () {
 	function onSelect(device) {
 		if (connector.ready()) {
 			if (device) {
-				var from = connector.from(),
-					to = device.node;
+				var line = connector.get(device.node),
+					name = connector.name(line);
 				
-				itahm.popup("line", from.name, to.name, connector.get(device));
+				itahm.popup("line", name.from, name.to, line);
 				
 				map.select();
 			}
@@ -212,13 +231,9 @@ function Map () {
 		}
 		else {
 			if (device) {
-				var node = device.node;
-				
 				navigation.classList.add("show");
 				
-				connector.from(node);
-				
-				showDeviceForm = itahm.popup.bind(itahm, "device", node);
+				showDeviceForm = itahm.popup.bind(itahm, "device", connector.set(device.node));
 			}
 			else {
 				navigation.classList.remove("show");
