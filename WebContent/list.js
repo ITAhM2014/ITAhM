@@ -145,22 +145,28 @@ function LineList() {
 			
 			this.list = {};
 			
-			for (var name in list) {
-				line = list[name];
+			for (var id in list) {
+				line = list[id];
 				
 				tmp = this.list[line.from];
 				
-				if (tmp) {
-					tmp[line.to] = line.link;
-				}
-				else {
-					tmp = {};
-					tmp[line.to] = line.link;
-					
+				if (!tmp) {
+					tmp = {};	
 					this.list[line.from] = tmp;
 				}
 				
-				fragment.appendChild(add(line));
+				tmp[line.to] = line;
+				
+				tmp = this.list[line.to];
+				
+				if (!tmp) {
+					tmp = {};
+					this.list[line.to] = tmp;
+				}
+				
+				tmp[line.from] = line;
+				
+				//fragment.appendChild(add(line));
 			}
 			
 			table.appendChild(fragment);
@@ -175,9 +181,7 @@ function LineList() {
 		},
 		
 		get: function (from, to) {
-			var from = this.list[from],
-				to = this.list[to];
-			return from && from[to] || to && to[from];
+			return this.list[from][to];
 		}
 	};
 	

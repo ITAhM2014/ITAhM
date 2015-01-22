@@ -12,8 +12,7 @@ function Map () {
 		iconLibrary = undefined,
 		deviceLayer = undefined,
 		lineLayer = undefined,
-		tmpLayer = undefined,
-		link = new Link(),
+		connector = undefined,
 		showDeviceForm = new Function();
 	
 	Map.prototype = {
@@ -23,19 +22,19 @@ function Map () {
 			iconLibrary = new Icon("icon");
 			deviceLayer = Layer.create("draggable");
 			lineLayer = Layer.create();
-			tmpLayer = Layer.create();
+			connector = new Connector();
 			
-			map.add(deviceLayer);
 			map.add(lineLayer);
-			map.add(tmpLayer);
+			map.add(deviceLayer);
 			
-			tmpLayer.context({
-				lineWidth: 5,
-				strokeStyle: "#777",
-				lineCap: "round"
+			lineLayer.context({
+				strokeStyle: "#282",
+				lineWidth: 3,
+				font: "10pt arial, \"맑은 고딕\"",
+				textAlign: "center",
+				textBaseline: "middle",
+				fillStyle: "#999"
 			});
-			
-			tmpLayer.context().setLineDash([10, 10]);
 			
 			doc.getElementById("save_map").addEventListener("click", onSave, false);
 			navigation.info.addEventListener("click", onInfo, false);
@@ -44,7 +43,40 @@ function Map () {
 			map.on("mousemove", onMouseMove);
 		},
 		
-		reload: function (deviceList) {
+		set: function (name, list) {
+			switch (name) {
+			case "device":
+				var device;
+				
+				deviceLayer.empty();
+				
+				for (var id in list) {
+					device = list[id];
+					
+					deviceLayer.add(Node.create("device", device,  iconLibrary.get(device.type) || iconLibrary.get("unknown")));
+				}
+				
+				deviceLayer.invalidate();
+				
+				break;
+			case "line":
+				var line;
+				
+				lineLayer.empty();
+				
+				for (var id in list) {
+					line = list[id];
+					
+					lineLayer.add(Node.create("line", line, itahm.getDevice(line.from), itahm.getDevice(line.to)));
+				}
+				
+				lineLayer.invalidate();
+				
+				break;
+			}
+		},
+		
+		reloadDevice: function (deviceList) {
 			var device;
 			
 			navigation.classList.remove("show");
@@ -59,43 +91,90 @@ function Map () {
 			
 			map.invalidate();
 		},
+		
+		reloadLine: function (lineList) {
+			var line;
+			
+			navigation.classList.remove("show");
+			
+			map.empty();
+			
+			for (var id in lineList) {
+				line = lineList[id];
+				lineLayer.add(Node.create("line", line, itahm.getDevice(line.from), itahm.getDevice(line.to)));
+			}
+			
+			map.invalidate();
+		},
+		
+		invalidate: function () {
+			map.invalidate();
+		}
 	};
 	
-	function Link() {
-		var dummy = {
-			x: 0,
-			y: 0
-		},
-		line = Node.create("line", {link: [{}]}, null, Node.create("device", dummy));
-		
-		this.ready = false;
-		
-		this.move = function (x, y) {
-			dummy.x = x;
-			dummy.y = y;
-		}
-		
-		this.line = function (to) {
-			var from = line.from.node.id,
-				line = itahm.findLine(from, to);
+	function Connector() {
+		var layer = Layer.create(),
+			dummy = {
+				x: 0,
+				y: 0
+			},
+			ready = false,
+			node = Node.create("line", {link: [{}]}, null, dummy);
 			
-			return {
-				from: from.node.id,
-				to: to.node.id,
-				link: line && line.node.link
-			};
-		}
+		map.add(layer);
+		
+		layer.context({
+			lineWidth: 5,
+			strokeStyle: "#777",
+			lineCap: "round"
+		});
+		
+		layer.context().setLineDash([10, 10]);
+		
+		this.draw = function (x, y) {
+			if (ready) {
+				dummy.x = x;
+				dummy.y = y;
+				
+				layer.invalidate();
+			}
+		};
+		
+		this.ready = function (b) {
+			if (b === true) {
+				ready = true;
+				
+				layer.add(node);
+			}
+			else if (b === false) {
+				ready = false;
+				
+				layer.empty();
+			}
+			else {
+				return ready;
+			}
+		};
+		
+		this.from = function (device) {
+			if (device) {
+				node.from = device;
+			}
+			else {
+				return node.from;
+			}
+		};
+		
+		/*
+		 * device: device object (Node.device)
+		 */
+		this.get = function (device) {
+			return itahm.getLine(node.from.id, device.node.id);
+		};
 		
 		this.node = function () {
-			return line;
-		},
-		
-		this.set = function (device) {
-			line.from = device;
-		}
-		
-		//this.to = undefined;
-		//this.from = undefined;
+			return node;
+		};
 	}
 	
 	function onSave(e) {
@@ -119,26 +198,27 @@ function Map () {
 	}
 	
 	function onSelect(device) {
-		if (link.ready) {
+		if (connector.ready()) {
 			if (device) {
-				var node = device.node;
+				var from = connector.from(),
+					to = device.node;
 				
-				itahm.popup("line", line.from.node.name, node.name, link.line(device.node.id));
+				itahm.popup("line", from.name, to.name, connector.get(device));
 				
 				map.select();
 			}
 			
-			link.ready = false;
-			
-			tmpLayer.empty();
+			connector.ready(false);
 		}
 		else {
-			link.set(device);
-			
 			if (device) {
+				var node = device.node;
+				
 				navigation.classList.add("show");
 				
-				showDeviceForm = itahm.popup.bind(itahm, "device", device.node);
+				connector.from(node);
+				
+				showDeviceForm = itahm.popup.bind(itahm, "device", node);
 			}
 			else {
 				navigation.classList.remove("show");
@@ -147,9 +227,7 @@ function Map () {
 	}
 	
 	function onMouseMove(pos) {
-		link.move(pos.x, pos.y);
-		
-		tmpLayer.invalidate();
+		connector.draw(pos.x, pos.y);
 	}
 	
 	function onInfo() {
@@ -159,9 +237,7 @@ function Map () {
 	function onLink() {
 		navigation.classList.remove("show");
 		
-		link.ready = true;
-		
-		tmpLayer.add(link.node());
+		connector.ready(true);
 	}
 
 }) (window);

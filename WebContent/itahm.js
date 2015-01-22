@@ -46,8 +46,12 @@ function ITAhM() {
 			}
 		},
 		
-		findLine: function (from, to) {
-			lineList.get(from, to);
+		getLine: function (from, to) {
+			return lineList.get(from, to);
+		},
+		
+		getDevice: function (id) {
+			return deviceList.get(id);
 		}
 	}
 	
@@ -95,7 +99,13 @@ function ITAhM() {
 				get: null
 			}
 		});
-				
+		
+		xhr.request({
+			line: {
+				get: null
+			}
+		});
+		
 		itahm.popup();
 		//sendRequest("device", null);
 	}
@@ -195,7 +205,7 @@ function ITAhM() {
 						if (command == "get") {
 							deviceList.reload(device["get"]);
 							
-							map.reload(device["get"]);
+							map.set("device", device["get"]);
 						}
 					}
 					
@@ -206,9 +216,9 @@ function ITAhM() {
 					
 					for (var command in line) {
 						if (command == "get") {
-							//deviceList.reload(line["get"]);
+							lineList.reload(line["get"]);
 							
-							//map.reload(device["get"]);
+							map.set("line", line["get"]);
 						}
 					}
 					

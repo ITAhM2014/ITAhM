@@ -3,6 +3,7 @@
 
 body {
 	font-family: arial, "맑은 고딕";
+	background-color: #fff;
 }
 
 body.loading >* {
@@ -37,7 +38,7 @@ body.loading >#mask {
 #mask {
 	position: fixed; top: 0; right: 0; left: 0;
 	margin: 0; padding: 0;
-	background: #fff url("/itahm/img/waiting.gif") no-repeat center;
+	background: #fff url("img/waiting.gif") no-repeat center;
 	opacity: 0;
 	transition: opacity 1s;
 }
@@ -97,6 +98,7 @@ body.loading >#mask {
 	overflow: auto;
 	display: none;
 	padding: 20px;
+	background-color: rgba(255, 255, 255, .9);
 }
 
 .body:target {

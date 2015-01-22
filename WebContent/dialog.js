@@ -201,14 +201,14 @@ function SnmpDialog() {
 	}
 
 	function edit(device) {
-		var tmp = {};
+		var data = {};
 		
-		tmp[device.id] = device;
+		data[device.id] = device;
 		
 		if (update(device)) {
 			itahm.request({
 				"device": {
-					set: tmp
+					set: data
 				}
 			});
 			
@@ -273,8 +273,8 @@ function SnmpDialog() {
 			form.addEventListener("submit",onApply.bind(this), false);
 			form.addEventListener("reset",onCancel, false);
 
-			form.index.addEventListener("change", onSelect, false);
-			form.remove.addEventListener("click", onRemove, false);
+			form.index.addEventListener("change", onSelect.bind(this), false);
+			form.remove.addEventListener("click", onRemove.bind(this), false);
 			this.dialog = form;
 		},
 		
@@ -289,6 +289,8 @@ function SnmpDialog() {
 		
 			this.apply = edit.bind(this, line);
 			
+			index.length = 0;
+			
 			if (link) {
 				count = link.length;
 				
@@ -301,7 +303,6 @@ function SnmpDialog() {
 				}
 				
 				this.remove = remove.bind(this, line);
-				this.select = select.bind(this, line);
 			}
 			
 			linkCount.textContent = count;
@@ -313,6 +314,8 @@ function SnmpDialog() {
 			option.value = -1;
 			
 			index.add(option);
+			
+			select(link);
 		}
 	};
 	
@@ -348,7 +351,7 @@ function SnmpDialog() {
 			tmp = {
 				from: form.ifFrom.value,
 				to: form.ifTo.value,
-				bandwidth: form.bandwidth.value
+				bandwidth: form.bandwidth.value * form.unit.value
 			};
 		
 		if (!link) {
@@ -356,16 +359,20 @@ function SnmpDialog() {
 			
 			itahm.request({
 				line: {
-					create: line
+					create: [line]
 				}
 			});
 		}
 		else {
 			link[index < 0? link.length: index] = tmp;
 			
+			var data = {};
+			
+			data[line.id] = line;
+			console.log(data);
 			itahm.request({
 				line: {
-					set: line
+					set: data
 				}
 			});
 		}
@@ -377,18 +384,39 @@ function SnmpDialog() {
 		});
 	}
 	
-	function select(link) {
-		console.log(link[form.index.value]);
+	function select(linkArray) {
+		link = linkArray && linkArray[form.index.value];
+		
+		if (link) {
+			var bandwidth = link.bandwidth || 0,
+				unit = 1;
+			
+			while (bandwidth > 999) {
+				bandwidth /= 1000;
+				unit *= 1000;
+			}
+			
+			form.unit.value = unit;
+			form.bandwidth.value = bandwidth;
+			form.ifFrom.value = link.from;
+			form.ifTo.value = link.to;
+		}
+		else {
+			form.unit.value = 1000;
+			form.bandwidth.value = "";
+			form.ifFrom.value = "";
+			form.ifTo.value = "";
+		}
 	}
 	
 	function remove(line) {
-		var tmp = {};
+		var data = {};
 		
-		tmp[line.id] = form.index.value;
+		data[line.id] = form.index.value;
 		
 		itahm.request({
 			line: {
-				remove: tmp
+				remove: data
 			}
 		});
 		

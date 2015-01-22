@@ -670,7 +670,7 @@ function Icon() {
 		this.node = node;
 	}
 	
-	function drawLine(context, pos1, pos2, label1, label2, pos) {
+	function drawLine(context, pos1, pos2, label1, label2, cp) {
 		var x1 = pos1.x,
 			y1 = pos1.y,
 			x2 = pos2.x,
@@ -681,11 +681,11 @@ function Icon() {
 		
 		context.moveTo(x1, y1);
 		
-		if (pos) {
-			cpX = pos.x;
-			cpY = pos.y;
-			
-			context.quadraticCurveTo(x1, y1, x2, y2);
+		if (cp) {
+			cpX = cp.x;
+			cpY = cp.y;
+			console.log(x1, y1, cpX, cpY, x2, y2);
+			context.quadraticCurveTo(cpX, cpY, x2, y2);
 		}
 		else {
 			cpX = (x1 + x2) /2;
@@ -839,6 +839,7 @@ function Icon() {
 	
 	/* line
 	 * {
+	 *     id: #800001
 	 *     from: #000001,
 	 *     to: #000002,
 	 *     link: [
@@ -866,21 +867,20 @@ function Icon() {
 		var link = this.node.link,
 			from = this.from,
 			to = this.to,
-			pos1 = from.pos(),
-			pos2 = to.pos(),
+			pos1 = {
+				x: from.x,
+				y: from.y
+			},
+			pos2 = {
+				x: to.x,
+				y: to.y
+			},
 			cpX = (pos1.x + pos2.x) /2,
 			cpY = (pos1.y + pos2.y) /2,
 			index = 0,
 			length = link.length, 
 			angle = Math.atan2(pos2.y - pos1.y, pos2.x - pos1.x) + Math.PI/2;
-/*
-		context.strokeStyle = "#282";
-		context.lineWidth = "1";
-		context.font = "10pt arial, \"맑은 고딕\"";
-		context.textAlign= "center";
-		context.textBaseline = "middle";
-		context.fillStyle = "#999";
-	*/	
+
 		if (length %2 > 0) {
 			drawLine(context, pos1, pos2, link[0].from, link[0].to);
 			
@@ -889,8 +889,8 @@ function Icon() {
 		
 		for (; index < length; index++, angle += Math.PI) {
 			drawLine(context, pos1, pos2, link[index].from, link[index].to, {
-				x: cpX + index * 20 * Math.cos(angle),
-				Y: cpY + index * 20 * Math.sin(angle),
+				x: cpX + Math.round(index /2)* 30 * Math.cos(angle),
+				y: cpY + Math.round(index /2)* 30 * Math.sin(angle),
 			});
 		}
 	};
