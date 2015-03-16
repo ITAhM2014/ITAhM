@@ -400,10 +400,10 @@ function SnmpDialog() {
 			form.ifTo.value = link.to;
 		}
 		else {
-			form.unit.value = 1000;
-			form.bandwidth.value = "";
-			form.ifFrom.value = "";
-			form.ifTo.value = "";
+			//form.unit.value = 1000;
+			//form.bandwidth.value = "";
+			//form.ifFrom.value = "";
+			//form.ifTo.value = "";
 		}
 	}
 	

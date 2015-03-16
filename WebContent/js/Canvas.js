@@ -241,7 +241,10 @@ function Icon() {
 	}
 	
 	function mouseMove (x, y) {
-		fire(this.eventHandler["mousemove"], {x: x - Math.round(this.width /2), y: y - Math.round(this.height /2)});
+		fire(this.eventHandler["mousemove"], {
+			x: Math.round((x - this.width /2) / this.scale),
+			y: Math.round((y - this.height /2) / this.scale)
+		});
 	}
 	
 	function dragMove (cache, x, y, x2, y2) {

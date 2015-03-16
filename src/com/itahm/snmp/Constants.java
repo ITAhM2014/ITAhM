@@ -74,11 +74,13 @@ public class Constants {
 	public final static OID 							ifHCInUcastPkts =  new OID(ifXEntry).append(7); // 11
 	public final static OID 							ifHCInMulticastPkts =  new OID(ifXEntry).append(8); // 11
 	public final static OID 							ifHCInBroadcastPkts =  new OID(ifXEntry).append(9); // 11
-	public final static OID 							ifHCOutOctets =  new OID(ifXEntry).append(10); // 11
+	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31).ifMibObjects(1).ifXTable(1).ifXEntry(1).ifHCOutOctets(10)
+	public final static OID ifHCOutOctets =  new OID(new int [] {1,3,6,1,2,1,31,1,1,1,10});
 	public final static OID 							ifHCOutUcastPkts =  new OID(ifXEntry).append(11); // 11
 	public final static OID 							ifHCOutMulticastPkts =  new OID(ifXEntry).append(12); // 11
 	public final static OID 							ifHCOutBroadcastPkts =  new OID(ifXEntry).append(13); // 11
-	public final static OID 							ifAlias =  new OID(ifXEntry).append(18); // 11
+	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31).ifMibObjects(1).ifXTable(1).ifXEntry(1).ifAlias(18)
+	public final static OID ifAlias = new OID(new int [] {1,3,6,1,2,1,31,1,1,1,18});
 	/*
 	 * HOST-RESOURCES-MIB
 	 */

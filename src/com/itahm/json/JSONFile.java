@@ -2,6 +2,7 @@ package com.itahm.json;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -13,7 +14,7 @@ import org.json.JSONObject;
 
 public class JSONFile implements Closeable{
 	private JSONObject json;
-	private RandomAccessFile file;
+	private RandomAccessFile file = null;
 	private FileChannel channel;
 	private FileLock lock;
 	
@@ -22,6 +23,11 @@ public class JSONFile implements Closeable{
 	}
 	
 	public JSONFile load(File file) throws IOException{
+		if (this.file != null) {
+			close();
+			clear();
+		}
+		
 		this.file = new RandomAccessFile(file, "rws");
 		this.channel = this.file.getChannel();
 		
@@ -60,11 +66,23 @@ public class JSONFile implements Closeable{
 		return this.json;
 	}
 
+	public void clear() throws IOException {
+		this.json = new JSONObject();
+	}
+	
 	public void save() throws IOException {	
 		ByteBuffer buffer = ByteBuffer.wrap(this.json.toString().getBytes());
 		
 		this.file.setLength(0);
 		this.channel.write(buffer);
+	}
+	
+	public void saveAs(File file) throws IOException {
+		try (
+			FileOutputStream fos = new FileOutputStream(file, true);				
+		) {
+			fos.write(this.json.toString().getBytes());
+		}		
 	}
 	
 	@Override

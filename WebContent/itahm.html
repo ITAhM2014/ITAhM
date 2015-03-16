@@ -51,11 +51,18 @@ if (location.hash) {
 <!---->
 		<div id="sect_map" class="body">
 			<div  id="map"></div>
-			<form id="map_nav" autocomplete="off">
-				<input type="button" name="info" value="info.">
-				<input type="button" name="link" value="link">
+			<form id="form_map_nav" autocomplete="off">
+				<div class="sidenav">
+					<input type="button" name="info" value="info." class="navbtn">
+					<input type="button" name="link" value="link" class="navbtn">
+				</div>
+				
+				<div class="topnav">
+					<button name="zoomout"><img src="img/zoom_out.png"></button>
+					<button name="zoomin"><img src="img/zoom_in.png"></button>
+					<button name="save"><img src="img/save.png"></button>
+				</div>
 			</form>
-			<button id="save_map"><img src="img/save.png"></button>
 		</div>
 <!---->
 
@@ -79,6 +86,7 @@ if (location.hash) {
 				</thead>
 				<tbody id="device_list"></tbody>
 			</table>
+			<!--a class="button1" href="#sect_map">X</a-->
 		</div>
 <!---->
 
@@ -234,7 +242,7 @@ if (location.hash) {
 								</select>
 							</td>
 							<td>
-								<input type="text"  name="bandwidth" class="table text" placeholder="bandwidth" required>
+								<input type="text"  name="bandwidth" class="table text" placeholder="bandwidth" value="100" required>
 							</td>
 						</tr>
 					</tbody>

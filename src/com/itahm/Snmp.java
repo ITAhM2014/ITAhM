@@ -13,51 +13,51 @@ import org.json.JSONObject;
 import org.snmp4j.smi.OID;
 
 import com.itahm.json.JSONFile;
+import com.itahm.json.RollingFile;
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.Manager;
 import com.itahm.snmp.Node;
 import com.itahm.snmp.Worker;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class Snmp.
+ */
 public class Snmp implements Worker, Runnable, Closeable {
 
-	/**
-	 * SNMP manager responsible for sending and receiving snmp protocol
-	 */
+	/** SNMP manager responsible for sending and receiving snmp protocol. */
 	private final Manager manager;
 	
-	/**
-	 * The file that has snmp information of the device list
-	 */
+	/** The file that has snmp information of the device list. */
 	private final JSONFile file;
 	
-	/**
-	 * JSON Object of the file above
-	 */
+	/** JSON Object of the file above. */
 	private final JSONObject json;
 	
-	/**
-	 * The thread of this Snmp class
-	 */
+	/** The thread of this Snmp class. */
 	private final Thread thread;
 	
-	/**
-	 * stop flag means this thread should not work any more
-	 */
+	/** stop flag means this thread should not work any more. */
 	private boolean stop;
 	
-	/**
-	 * The mapping key as IP address with rolling file
-	 */
-	private final Map<String, JSONFile> map;
+	/** The mapping key as IP address with rolling file. */
+	private final Map<String, RollingFile> map;
 	
+	/** The path. */
 	private final File path;
 	
+	/**
+	 * Instantiates a new snmp.
+	 *
+	 * @param root the root
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	public Snmp(String root) throws IOException {
 		manager = new Manager();
 		file = new JSONFile();
 		stop = false;
 		thread = new Thread(this);
-		map = new HashMap<String, JSONFile>();
+		map = new HashMap<String, RollingFile>();
 		path = (root != null && root.length() > 0)? new File(root, "snmp"): new File("snmp");
 		
 		manager.setWorker(this);
@@ -85,6 +85,12 @@ public class Snmp implements Worker, Runnable, Closeable {
 		thread.start();
 	}
 	
+	/**
+	 * Test.
+	 *
+	 * @param oid the oid
+	 * @return true, if successful
+	 */
 	private boolean test(OID oid) {
 		return Constants.interfaces.leftMostCompare(Constants.interfaces.size(), oid) == 0 && (
 			Constants.ifInOctets.leftMostCompare(Constants.ifInOctets.size(), oid) == 0 ||
@@ -93,7 +99,14 @@ public class Snmp implements Worker, Runnable, Closeable {
 			Constants.ifHCOutOctets.leftMostCompare(Constants.ifHCOutOctets.size(), oid) == 0);
 	}
 	
-	private void roll(JSONFile file, String key, Object value) {	
+	/**
+	 * Roll.
+	 *
+	 * @param file the file
+	 * @param key the key
+	 * @param value the value
+	 */
+	private void roll(RollingFile file, String key, Object value) {	
 		JSONObject jo = file.getJSONObject();
 		
 		if (jo.has(key)) {
@@ -106,6 +119,13 @@ public class Snmp implements Worker, Runnable, Closeable {
 		jo.put(Long.toString(Calendar.getInstance().getTimeInMillis()), value);
 	}
 	
+	/**
+	 * Update.
+	 *
+	 * @param address the address
+	 * @param key the key
+	 * @param value the value
+	 */
 	private void update(String address, String key, Object value) {
 		try {
 			JSONObject jo = this.json.getJSONObject(address);
@@ -124,6 +144,9 @@ public class Snmp implements Worker, Runnable, Closeable {
 		}
 	}
 	
+	/**
+	 * Stop.
+	 */
 	public synchronized void stop() {
 		if (!this.stop) {
 			this.stop = true;
@@ -136,16 +159,19 @@ public class Snmp implements Worker, Runnable, Closeable {
 		}
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.itahm.snmp.Worker#work(com.itahm.snmp.Node, boolean, java.lang.String)
+	 */
 	@Override
 	public void work(Node node, boolean success, String msg) throws IOException {
 		if (success) {
 			Iterator<OID> it = node.iterator();
 			String address = node.address();
-			JSONFile jf = this.map.get(address);
+			RollingFile jf = this.map.get(address);
 			OID oid;
 			
 			if (jf == null) {
-				jf = new JSONFile().load(new File(this.path, address));
+				jf = new RollingFile(this.path, address);
 				
 				this.map.put(address, jf);
 			}
@@ -162,12 +188,16 @@ public class Snmp implements Worker, Runnable, Closeable {
 			}
 			
 			jf.save();
+			jf.roll();
 		}
 		else {
 			// see msg for detail
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see java.lang.Runnable#run()
+	 */
 	@Override
 	public void run() {
 		String [] array;
@@ -194,8 +224,8 @@ public class Snmp implements Worker, Runnable, Closeable {
 			}
 			
 			try {
-				//Thread.sleep(60*1000);
-				Thread.sleep(10*1000);
+				Thread.sleep(60*1000);
+				//Thread.sleep(10*1000);
 			}
 			catch (InterruptedException e) {
 				break;
@@ -204,6 +234,9 @@ public class Snmp implements Worker, Runnable, Closeable {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see java.io.Closeable#close()
+	 */
 	@Override
 	public void close() throws IOException {
 		stop();
@@ -212,6 +245,12 @@ public class Snmp implements Worker, Runnable, Closeable {
 		this.manager.close();
 	}
 
+	/**
+	 * The main method.
+	 *
+	 * @param args the arguments
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	public static void main(String [] args) throws IOException {
 		Snmp snmp = new Snmp(null);
 		

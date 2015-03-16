@@ -13,11 +13,12 @@ function Map () {
 		deviceLayer = undefined,
 		lineLayer = undefined,
 		connector = undefined,
-		showDeviceForm = new Function();
+		showDeviceForm = new Function(),
+		zoom = 1;
 	
 	Map.prototype = {
 		init: function () {
-			navigation = doc.getElementById("map_nav");
+			navigation = doc.getElementById("form_map_nav");
 			map = new Canvas("map");
 			iconLibrary = new Icon("icon");
 			deviceLayer = Layer.create("draggable");
@@ -36,7 +37,12 @@ function Map () {
 				fillStyle: "#999"
 			});
 			
-			doc.getElementById("save_map").addEventListener("click", onSave, false);
+			navigation.addEventListener("submit", function (e) {
+				e.preventDefault();
+			}, false);
+			navigation.save.addEventListener("click", onSave, false);
+			navigation.elements.zoomin.addEventListener("click", onZoomIn, false);
+			navigation.elements.zoomout.addEventListener("click", onZoomOut, false);
 			navigation.info.addEventListener("click", onInfo, false);
 			navigation.link.addEventListener("click", onLink, false);
 			map.on("select", onSelect);
@@ -230,17 +236,25 @@ function Map () {
 			connector.ready(false);
 		}
 		else {
+			navigation.classList.remove("show");
+			
 			if (device) {
-				navigation.classList.add("show");
+				setTimeout(function () {navigation.classList.add("show")}, 100);
+				//navigation.classList.add("show");
 				
 				showDeviceForm = itahm.popup.bind(itahm, "device", connector.set(device.node));
-			}
-			else {
-				navigation.classList.remove("show");
 			}
 		}
 	}
 	
+	function onZoomIn(e) {
+		map.zoom(zoom *= 1.2);
+	}
+	
+	function onZoomOut(e) {
+		map.zoom(zoom /= 1.2);
+	}
+
 	function onMouseMove(pos) {
 		connector.draw(pos.x, pos.y);
 	}

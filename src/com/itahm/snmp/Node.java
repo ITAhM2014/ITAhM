@@ -30,7 +30,7 @@ public class Node extends CommunityTarget {
 		
 		setVersion(SnmpConstants.version2c);
 		setRetries(0);
-		setTimeout(1000);
+		setTimeout(3000);
 	}
 
 	public static Node create(JSONObject node) {

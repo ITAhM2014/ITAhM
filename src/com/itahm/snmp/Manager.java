@@ -2,6 +2,8 @@ package com.itahm.snmp;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.Iterator;
 import java.util.Vector;
 
 import org.snmp4j.PDU;
@@ -12,6 +14,7 @@ import org.snmp4j.smi.Counter32;
 import org.snmp4j.smi.Counter64;
 import org.snmp4j.smi.Gauge32;
 import org.snmp4j.smi.Integer32;
+import org.snmp4j.smi.Null;
 import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.Variable;
@@ -59,7 +62,7 @@ public class Manager implements Closeable, ResponseListener  {
 		this.snmp.send(pdu, node, node, this);
 	}
 	
-	private final void parse (Node node, OID oid, Variable variable) {		
+	private final void parse (Node node, OID oid, Variable variable) {
 		if (oid.leftMostCompare(5, Constants.mgmt) == 0) {
 			if (oid.leftMostCompare(6, Constants.mib_2) == 0) {
 				if (oid.leftMostCompare(7, Constants.system) == 0) {
@@ -147,22 +150,22 @@ public class Manager implements Closeable, ResponseListener  {
 								if (oid.leftMostCompare(11, Constants.ifName) == 0) {
 									OctetString value = (OctetString)variable;
 									
-									node.set(Constants.ifName, new String(value.getValue()));
+									node.set(oid, new String(value.getValue()));
 								}
 								else if (oid.leftMostCompare(11, Constants.ifHCInOctets) == 0) {
 									Counter64 value = (Counter64)variable;
 									
-									node.set(Constants.ifHCInOctets, value.getValue());
+									node.set(oid, value.getValue());
 								}
 								else if (oid.leftMostCompare(11, Constants.ifHCOutOctets) == 0) {
 									Counter64 value = (Counter64)variable;
 									
-									node.set(Constants.ifHCOutOctets, value.getValue());
+									node.set(oid, value.getValue());
 								}
 								else if (oid.leftMostCompare(11, Constants.ifAlias) == 0) {
 									OctetString value = (OctetString)variable;
 									
-									node.set(Constants.ifAlias, new String(value.getValue()));
+									node.set(oid, new String(value.getValue()));
 								}
 							}
 				}
@@ -175,29 +178,31 @@ public class Manager implements Closeable, ResponseListener  {
 	
 	private final PDU getNext(Node node, PDU request, PDU response) {
 		Vector<? extends VariableBinding> requestVBs = request.getVariableBindings();
-		Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
-		Vector<VariableBinding> vbs = new Vector<VariableBinding>();
+		Vector<? extends VariableBinding> vbs = response.getVariableBindings();
+		Vector<VariableBinding> nextVBs = new Vector<VariableBinding>();
 		VariableBinding requestVB, responseVB;
-		OID requestOID, responseOID;
-		int requestSize, responseSize;
+		OID requestOID, oid;
+		Variable variable;
+		int requestSize, size;
 		
-		for (int i=0, length = responseVBs.size(); i<length; i++) {
+		for (int i=0, length = vbs.size(); i<length; i++) {
 			requestVB = (VariableBinding)requestVBs.get(i);
-			responseVB = (VariableBinding)responseVBs.get(i);
-			
-			parse(node, responseVB.getOid(), responseVB.getVariable());
+			responseVB = (VariableBinding)vbs.get(i);
 			
 			requestOID = requestVB.getOid();
-			responseOID = responseVB.getOid();
+			oid = responseVB.getOid();
+			variable = responseVB.getVariable();
 			requestSize = requestOID.size();
-			responseSize = responseOID.size();
+			size = oid.size();
 			
-			if (responseOID.leftMostCompare(requestSize == responseSize? requestSize -1: requestSize, requestOID) == 0) {
-				vbs.add(responseVB);
+			if (!variable.equals(Null.endOfMibView) && oid.leftMostCompare(requestSize == size? requestSize -1: requestSize, requestOID) == 0) {
+				parse(node, oid, variable);
+				
+				nextVBs.add(responseVB);
 			}
 		}
 		
-		return vbs.size() > 0? new PDU(PDU.GETNEXT, vbs): null;
+		return nextVBs.size() > 0? new PDU(PDU.GETNEXT, nextVBs): null;
 	}
 	
 	private final void onResponse(Node node, PDU request, PDU response) throws IOException {
@@ -239,26 +244,33 @@ public class Manager implements Closeable, ResponseListener  {
 		this.snmp.close();
 	}
 	
-	public static void main(String [] args) {
+	public static void main(String [] args) throws UnknownHostException, IOException {
 		try (
 			Manager manager = new Manager();
 		) {
 			manager.setWorker(new Worker() {
 				public void work(Node node, boolean success, String msg) {
-					
+					if (success) {
+						Iterator<OID> it = node.iterator();
+						OID oid;
+						while(it.hasNext()) {
+							oid = it.next();
+							
+							System.out.println(oid.toDottedString() + " : "+ node.get(oid));
+						}
+					}
+					else {
+						System.out.println("request fail");
+						if (msg != null) {
+							System.out.println(msg);
+						}
+					}
 				}
 			});
-			Node node = new Node("127.0.0.1", 161, "public");
 			
-			manager.request(node);
+			manager.request(new Node("192.168.0.20", 161, "itahm2014"));
 			
-			Thread.sleep(5000);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.in.read();
 		}
 	}
 	

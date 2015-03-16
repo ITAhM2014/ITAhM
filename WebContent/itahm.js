@@ -234,8 +234,10 @@ function ITAhM() {
 				}
 			}
 		}
-			
-		mask.classList.remove("show");
+		
+		setTimeout(function () {
+			mask.classList.remove("show");
+		}, 500);
 	}
 	
 	window.addEventListener("load", onLoad, false);
