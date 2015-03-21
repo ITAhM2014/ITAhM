@@ -10,17 +10,17 @@ public class Session implements Runnable{
 	private final static long TIMEOUT = 1000*30;
 	
 	private static final Map<String, Session> sessions = new ConcurrentHashMap<String, Session>();
-	private final String id = UUID.randomUUID().toString();
-	
+	private final String id;
 	private final Thread thread;
 	private boolean update = false;
 	
 	public Session() {
-		sessions.put(this.id, this);
+		id = UUID.randomUUID().toString();
+		thread = new Thread(this);
 		
-		this.thread = new Thread(this);
+		sessions.put(id, this);
 		
-		this.thread.start();
+		thread.start();
 	}
 
 	/*
@@ -42,11 +42,13 @@ public class Session implements Runnable{
 			return null;
 		}
 		
-		return sessions.get(sessID);
+		Session sess = sessions.get(sessID);
+		
+		return sess;
 	}
 	
-	public static void close(Session sess) {
-		sessions.remove(sess.getID());
+	public static void close(Session session) {
+		sessions.remove(session.getID());
 	}
 	
 	@Override

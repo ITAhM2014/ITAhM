@@ -5,8 +5,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Base64;
-import java.util.Map;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -16,26 +14,80 @@ import com.itahm.Server;
 import com.itahm.database.Database;
 
 public class Response {
-	private final Database database = Server.getDatabase();
+	private static final Database database = Server.getDatabase();
 	
-	public Response(SocketChannel channel) throws IOException {
-		ArrayList<String> resHeader = new ArrayList<String>();
-		resHeader.add("HTTP/1.1 400 Bad Request");
-		resHeader.add("Connection: Close");
+	public static void ok(SocketChannel channel, Message request) throws IOException {
+		String requestLine = request.get();
+		Message response = new Message("HTTP/1.1 200 OK")
+				.set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				.set("Access-Control-Allow-Origin", "http://local.itahm.com")
+				.set("Access-Control-Allow-Credentials", "true");
 		
-		write(channel, resHeader, new byte[0]);
+		String [] token = requestLine.split(" ");
+		
+		if (token[0].equals("OPTIONS")) {
+			response.send(channel);
+		}
+		else {
+			String cookie = request.cookie();
+			String user = request.user();
+			Session session = null;
+			int level = 0;
+			
+			if (cookie != null) {
+				session = Session.find(cookie);
+			}
+			
+			if (session != null) {
+				level = 2;
+			}
+			else if (user != null){
+				Object data = database.get("account", user);
+				if (data != null) {
+					try {
+						if (((JSONObject)data).getString("password").equals(request.password())) {
+							session = new Session();
+							
+							level = 1;
+						}
+					}
+					catch(JSONException jsone) {
+								
+					}
+				}
+			}
+			
+			
+			switch (level) {
+			case 1:
+				response.set("Set-Cookie", "SESSID="+ session.getID() +"; HttpOnly");
+				
+			case 2:
+				JSONObject json = new JSONObject(new String(request.body()));
+				
+				processRequest(json, session);
+				response.send(channel, new JSONObject(new String(request.body())).toString());
+				
+				break;
+				
+			default:
+				new Message("HTTP/1.1 401 Unauthorized").set("Connection", "Close").send(channel);
+			}
+		}
 	}
-	
+	/*
 	public Response(SocketChannel channel, Parser parser) throws IOException {
 		ArrayList<String> resHeader = new ArrayList<String>();
 		JSONObject body = parser.body();
-		Map<String, String> header = parser.header();
-		String sessID = parseCookie(header);
-		String auth = parseAuth(header);
+		Message message = parser.message();
+		String sessID = message.cookie();
+		String user = message.user();
 		Session session = Session.find(sessID);
 		int level = 0;
 		
-		if (header.get("method").equals("OPTIONS")) {
+		String [] token = message.get().split(" ");
+		
+		if (token[0].equals("OPTIONS")) {
 			resHeader.add("HTTP/1.1 200 OK");
 			resHeader.add("Access-Control-Allow-Headers: Authorization, Content-Type");
 		}
@@ -43,10 +95,20 @@ public class Response {
 			if (sessID != null && session != null) {
 				level = 2;
 			}
-			else if (auth != null && verify(auth)) {
-				session = new Session();
-				
-				level = 1;
+			else if (user != null) { 
+				Object data = database.get("account", user);
+				if (data != null) {
+					try {
+						if (((JSONObject)data).getString("password").equals(message.password())) {
+							session = new Session();
+							
+							level = 1;
+						}
+					}
+					catch(JSONException jsone) {
+								
+					}
+				}
 			}
 			
 			switch (level) {
@@ -73,7 +135,7 @@ public class Response {
 		write(channel, resHeader, body == null? new byte[0]: body.toString().getBytes("UTF-8"));
 	}
 	
-	public void write(SocketChannel channel, ArrayList<String> resHeader, byte [] body) throws IOException {
+	private static void write(SocketChannel channel, ArrayList<String> resHeader, byte [] body) throws IOException {
 		String header = "";
 		int length;
 		
@@ -101,74 +163,8 @@ public class Response {
 	private static final void write(SocketChannel channel, String message) throws IOException {
 		write(channel, message.getBytes("US-ASCII"));
 	}
-	
-	private String parseCookie(Map<String, String> header) {
-		String value = header.get("cookie");
-		String session = null;
-		
-		if (value != null) {
-			String [] cookie = value.split("; ");
-			
-			for(int i=0, _i=cookie.length; i<_i; i++) {
-				session = parseCookie(cookie[i]);
-				
-				if (session != null) {
-					break;
-				}
-			}
-		}
-		
-		return session;
-	}
-	
-	private String parseCookie(String cookie) {
-		String [] token = cookie.split("=");
-		
-		if (token.length == 2 && Header.SESS_ID.equals(token[0])) {
-			return token[1];
-		}
-		
-		return null;
-	}
-	
-	private String parseAuth(Map<String, String> header) {
-		String value = header.get("authorization");
-		
-		if (value != null) {
-			String [] token = value.split("Basic ");
-			
-			if (token.length == 2) {
-				try {
-					return new String(Base64.getDecoder().decode(token[1]));
-				} catch (Exception e) {
-					return null;
-				}
-			}
-		}
-		
-		return null;
-	}
-	
-	private boolean verify(String auth) {
-		String [] token = auth.split(":");
-		
-		if (token.length == 2) {
-			Object data = this.database.get("account", token[0]);
-			
-			if (data != null) {
-				try {
-					return ((JSONObject)data).getString("password").equals(token[1]);
-				}
-				catch(JSONException jsone) {
-					
-				}
-			}
-		}
-		
-		return false;
-	}
-	
-	private final void processRequest(JSONObject request, Session session) {
+	*/
+	private static void processRequest(JSONObject request, Session session) {
 		@SuppressWarnings("unchecked")
 		Iterator<String> iterator = request.keys();
 		String command;
@@ -195,7 +191,7 @@ public class Response {
 		}
 	}
 	
-	private final void processEach(String tableName, JSONObject query) {
+	private static void processEach(String tableName, JSONObject query) {
 		@SuppressWarnings("unchecked")
 		Iterator<String> iterator = query.keys();
 		String command;
@@ -223,8 +219,8 @@ public class Response {
 	}
 	
 	// get all data from table
-	private final void processEach(JSONObject query, String tableName, String command) {
-		JSONObject data = this.database.get(tableName);
+	private static void processEach(JSONObject query, String tableName, String command) {
+		JSONObject data = database.get(tableName);
 		
 		if (tableName.equals("account")) {
 			data = new JSONObject(data.toString());
@@ -244,15 +240,15 @@ public class Response {
 	}
 
 	// create data without key
-	private final void processEach(String tableName, String command, JSONArray data) {
+	private static void processEach(String tableName, String command, JSONArray data) {
 		int length = data.length();
 		
 		while (length-- > 0) {
-			this.database.add(tableName, null, data.getJSONObject(length));
+			database.add(tableName, null, data.getJSONObject(length));
 		}
 	}
 	
-	private final void processEach(String tableName, String command, JSONObject data) {
+	private static void processEach(String tableName, String command, JSONObject data) {
 		@SuppressWarnings("unchecked")
 		Iterator<String> iterator = data.keys();
 		String key;
@@ -261,23 +257,23 @@ public class Response {
 			key = iterator.next();
 			
 			if (command.equals("get")) {
-				data.put(key, this.database.get(tableName, key));
+				data.put(key, database.get(tableName, key));
 			}
 			else if (command.equals("add")){
-				data.put(key, this.database.add(tableName, key, data.getJSONObject(key)));
+				data.put(key, database.add(tableName, key, data.getJSONObject(key)));
 			}
 			else if (command.equals("set")){
 				if (tableName.equals("config")) {
-					processEach(this.database.get("config"), data);
+					processEach(database.get("config"), data);
 					
 					data.put(key, true);
 				}
 				else {
-					data.put(key, this.database.set(tableName, key, data.getJSONObject(key)));
+					data.put(key, database.set(tableName, key, data.getJSONObject(key)));
 				}
 			}
 			else if (command.equals("remove")){
-				data.put(key, this.database.remove(tableName, key));
+				data.put(key, database.remove(tableName, key));
 			}
 			else {
 				data.put(key, JSONObject.NULL);
@@ -285,7 +281,7 @@ public class Response {
 		}
 	}
 
-	private final void processEach (JSONObject config, JSONObject data) {
+	private static void processEach (JSONObject config, JSONObject data) {
 		@SuppressWarnings("unchecked")
 		Iterator<String> iterator = data.keys();
 		String key;
@@ -293,7 +289,7 @@ public class Response {
 		while(iterator.hasNext()) {
 			key = iterator.next();
 			
-			this.database.set("config", key, data.getString(key));
+			database.set("config", key, data.getString(key));
 		}
 	}
 }

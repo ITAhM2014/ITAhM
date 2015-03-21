@@ -16,55 +16,74 @@ import java.util.Iterator;
 import java.util.Set;
 
 import com.itahm.database.Database;
-import com.itahm.http.ParseException;
+import com.itahm.http.HttpException;
+import com.itahm.http.Message;
 import com.itahm.http.Parser;
 import com.itahm.http.Response;
 import com.itahm.http.TCPTimer;
-import com.itahm.snmp.Manager;
-import com.itahm.snmp.Worker;
+//import com.itahm.snmp.Manager;
+//import com.itahm.snmp.Worker;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class Server.
+ */
 public class Server implements Runnable, Closeable  {
+	
+	/** The Constant LOG_CONN. */
 	private final static String LOG_CONN = "tcp session %s start";
+	
+	/** The Constant LOG_CLOSE. */
 	private final static String LOG_CLOSE = "tcp session %s end";
+	
+	/** The Constant LOG_ERR_SERVER. */
 	private final static String LOG_ERR_SERVER = "socket server exception : %s";
+	
+	/** The Constant LOG_ERR_CLIENT. */
 	private final static String LOG_ERR_CLIENT = "socket client [%s] exception : %s";
 	
+	/** The Constant BUFF_SIZE. */
 	final static int BUFF_SIZE = 2048;
 	
+	/** The logger. */
 	private static Logger logger;
+	
+	/** The database. */
 	private static Database database;
-	private final Manager snmpManager;
-	private final Worker snmpWorker;
+	//private final Manager snmpManager;
+	//private final Worker snmpWorker;
+	/** The listener. */
 	private ServerSocket listener;
+	
+	/** The channel. */
 	private final ServerSocketChannel channel = ServerSocketChannel.open();
+	
+	/** The selector. */
 	private final Selector selector = Selector.open();
+	
+	/** The tcp timer. */
 	private final TCPTimer tcpTimer;
 	
+	/** The shutdown. */
 	private boolean shutdown = false;
+	
+	/** The buffer. */
 	private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFF_SIZE);
 	
-	public static void main (String [] args) {
-		String root = "";
-		
-		if (args.length > 0) {
-			root = args[0];
-		}
-		
-		try {
-			new Server(2014, root);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
-	
+	/**
+	 * Instantiates a new server.
+	 *
+	 * @param udpPort the udp port
+	 * @param root the root
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	public Server(int udpPort, String root) throws IOException {
 		logger = new Logger(root);
 		database = new Database(root);
-		snmpManager = new Manager();
-		snmpWorker = new Snmp(root);
+//		snmpManager = new Manager();
+//		snmpWorker = new Snmp(root);
 		
-		snmpManager.setWorker(snmpWorker);
+	//	snmpManager.setWorker(snmpWorker);
 		
 		this.tcpTimer = new TCPTimer(this.selector);
 		
@@ -73,6 +92,12 @@ public class Server implements Runnable, Closeable  {
 		new Thread(this).start();
 	}
 	
+	/**
+	 * Bind.
+	 *
+	 * @param udpPort the udp port
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private void bind(int udpPort) throws IOException {
 		this.listener = this.channel.socket();
 		
@@ -87,18 +112,39 @@ public class Server implements Runnable, Closeable  {
 	 * PUBLIC 
 	 */
 	
+	/**
+	 * Gets the logger.
+	 *
+	 * @return the logger
+	 */
 	public static Logger getLogger() {
 		return logger;
 	}
 	
+	/**
+	 * Gets the database.
+	 *
+	 * @return the database
+	 */
 	public static Database getDatabase() {
 		return database;
 	}
 	
+	/**
+	 * Database.
+	 *
+	 * @return the database
+	 */
 	public static Database database() {
 		return database;
 	}
 	
+	/**
+	 * Gets the address.
+	 *
+	 * @param channel the channel
+	 * @return the address
+	 */
 	public static final String getAddress(SocketChannel channel) {
 		try {
 			InetSocketAddress sockAddr = (InetSocketAddress)channel.getRemoteAddress();
@@ -110,6 +156,12 @@ public class Server implements Runnable, Closeable  {
 		}
 	}
 
+	/**
+	 * Reset.
+	 *
+	 * @param channel the channel
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	public static final void reset(SocketChannel channel ) throws IOException {
 		Socket socket = channel.socket();
 		
@@ -117,10 +169,18 @@ public class Server implements Runnable, Closeable  {
 		socket.close();
 	}
 	
+	/**
+	 * Tcp session count.
+	 *
+	 * @return the int
+	 */
 	public int tcpSessionCount() {
 		return this.tcpTimer.size();
 	}
 	
+	/* (non-Javadoc)
+	 * @see java.lang.Runnable#run()
+	 */
 	@Override
 	public void run() {
 		try {
@@ -150,6 +210,9 @@ public class Server implements Runnable, Closeable  {
 		}
 	}
 	
+	/* (non-Javadoc)
+	 * @see java.io.Closeable#close()
+	 */
 	@Override
 	public synchronized void close() {
 		shutdown = true;
@@ -172,6 +235,11 @@ public class Server implements Runnable, Closeable  {
 	 * PRIVATE
 	 */
 	
+	/**
+	 * Listen.
+	 *
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private void listen() throws IOException{
 		Set<SelectionKey> selectedKeys = null;
 		Iterator<SelectionKey> iterator = null;
@@ -201,6 +269,11 @@ public class Server implements Runnable, Closeable  {
 		}
 	}
 	
+	/**
+	 * On connect.
+	 *
+	 * @param channel the channel
+	 */
 	private void onConnect(SocketChannel channel) {
 		try {
 			channel.configureBlocking(false);
@@ -214,6 +287,12 @@ public class Server implements Runnable, Closeable  {
 		}
 	}
 	
+	/**
+	 * On read.
+	 *
+	 * @param channel the channel
+	 * @param parser the parser
+	 */
 	private void onRead(SocketChannel channel, Parser 	parser) {
 		this.tcpTimer.update(channel, System.currentTimeMillis());
 		
@@ -230,14 +309,17 @@ public class Server implements Runnable, Closeable  {
 				
 				try {
 					
-					if (parser.parse(this.buffer)) {
-						new Response(channel, parser);
+					if (parser.update(this.buffer)) {System.out.println(9);
+						Response.ok(channel, parser.message());
+						
+						parser.clear();
+						//new Response(channel, parser);
 					}
 					// else continue
 				}
-				catch (ParseException pe) {pe.printStackTrace();
+				catch (HttpException pe) {
 					//new Response().write(channel);
-					new Response(channel);
+					new Message("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
 				}
 				
 				this.buffer.clear();
@@ -248,6 +330,11 @@ public class Server implements Runnable, Closeable  {
 		}
 	}
 
+	/**
+	 * On close.
+	 *
+	 * @param channel the channel
+	 */
 	public void onClose(SocketChannel channel) {
 		logger.log(String.format(LOG_CLOSE, getAddress(channel)));
 		
@@ -260,10 +347,21 @@ public class Server implements Runnable, Closeable  {
 		}
 	}
 	
+	/**
+	 * On error.
+	 *
+	 * @param e the e
+	 */
 	private void onError(Exception e) {
 		logger.log(String.format(LOG_ERR_SERVER, e));
 	}
 
+	/**
+	 * On error.
+	 *
+	 * @param channel the channel
+	 * @param e the e
+	 */
 	private void onError(SocketChannel channel, Exception e) {
 		logger.log(String.format(LOG_ERR_CLIENT, getAddress(channel), e));
 		
@@ -277,4 +375,25 @@ public class Server implements Runnable, Closeable  {
 		this.tcpTimer.remove(channel);
 	}
 
+	/**
+	 * The main method.
+	 *
+	 * @param args the arguments
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	public static void main (String [] args) throws IOException {
+		String root = "";
+		Server server;
+		
+		if (args.length > 0) {
+			root = args[0];
+		}
+		
+		server = new Server(2014, root);
+		
+		System.in.read();
+		
+		server.close();
+	}
+	
 }

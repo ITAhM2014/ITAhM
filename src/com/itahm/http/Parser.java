@@ -6,35 +6,70 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class Parser.
+ */
 public class Parser {
 	
-	private final HashMap<String, String> header = new HashMap<String, String>();
-	 
-	private byte [] buffer = null;
-	private int length = -1;
-	private final ByteArrayOutputStream body = new ByteArrayOutputStream();
-	
+	/**
+	 * The Enum Status.
+	 */
 	private static enum Status {
+		
+		/** The init. */
 		init,
+		
+		/** The header. */
 		header,
+		
+		/** The body. */
 		body,
+		
+		/** The closed. */
 		closed
 	}
 	
-	private Status status = Status.init;
-	private final CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
+	/** The message. */
+	private final Message message;
 	
-	/*
-	 * PUBLIC
+	/** The buffer. */
+	private byte [] buffer;
+	
+	/** The content length. */
+	private int contentLength = -1;
+	
+	/** The body. */
+	private final ByteArrayOutputStream body;
+	
+	/** The status. */
+	private Status status;
+	
+	/** The decoder. */
+	private final CharsetDecoder decoder;
+	
+	/**
+	 * Instantiates a new parser.
 	 */
+	public Parser() {
+		message = new Message();
+		body = new ByteArrayOutputStream();
+		status = Status.init;
+		decoder = Charset.forName("UTF-8").newDecoder();
+	}
 	
-	public boolean parse(ByteBuffer src) throws IOException {
+	/**
+	 * Update.
+	 *
+	 * @param src the src
+	 * @return true, if successful
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	public boolean update(ByteBuffer src) throws IOException {
 		try {
 			switch(this.status) {
 			case init:
@@ -50,17 +85,27 @@ public class Parser {
 				return false;
 			}
 		}
-		catch (ParseException pe) {
+		catch (HttpException pe) {
 			this.status = Status.closed;
 			
 			throw pe;
 		}
 	}
 	
-	public Map<String, String> header() {
-		return this.header;
+	/**
+	 * Message.
+	 *
+	 * @return the message
+	 */
+	public Message message() {
+		return this.message;
 	}
 	
+	/**
+	 * Body.
+	 *
+	 * @return the JSON object
+	 *
 	public JSONObject body() {
 		byte [] body = this.body.toByteArray();
 		
@@ -70,42 +115,57 @@ public class Parser {
 			return null;
 		}
 	}
+	*/
 	
+	/**
+	 * client가 socket이 닫히지 않은 상태로 재요청 하게되면 parser도 재활용됨.
+	 */
 	public void clear() {
 		this.body.reset();
-		this.header.clear();
+		this.message.clear();
 	}
-	/*
-	 * PRIVATE
-	 */
 	
-	//private JSONObject read(ByteBuffer src) throws IOException {
+	/**
+	 * Parses the request.
+	 *
+	 * @param src the src
+	 * @return true, if successful
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private boolean parseRequest(ByteBuffer src) throws IOException {
 		String line = readLine(src);
 		
 		if (line == null) {
 			// line을 얻지 못함. Listener의 다음 call을 기대함
-			
+			// 사실 발생하면 안되는...
 			return false;
 		}
 		
 		if (line.length() == 0) {
+			//규약에 의해 request-line 이전의 빈 라인은 무시한다.
 			return parseRequest(src);
 		}
 		
 		// request-line 파싱
 		String [] token = line.split(" ");
-		if (token.length != 3 || !(token[0].equals("POST") || token[0].equals("OPTIONS")) || !token[2].equals("HTTP/1.1")) {System.out.println("00000");
-			throw new ParseException("invalid request line");
+		if (token.length != 3 || !(token[0].equals("POST") || token[0].equals("OPTIONS")) || !token[2].equals("HTTP/1.1")) {
+			throw new HttpException("invalid request line");
 		}
 		
-		this.header.put("method", token[0]);
+		this.message.set(line);
 		
 		this.status = Status.header;
 		
 		return parseHeader(src);
 	}
 	
+	/**
+	 * Parses the header.
+	 *
+	 * @param src the src
+	 * @return true, if successful
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private boolean parseHeader(ByteBuffer src) throws IOException {
 		String line = readLine(src);
 		
@@ -120,25 +180,25 @@ public class Parser {
 			int index = line.indexOf(":");
 			
 			if (index == -1) {
-				throw new ParseException("invalid header field");
+				throw new HttpException("invalid header field");
 			}
 			
-			this.header.put(line.substring(0, index).toLowerCase(), line.substring(index + 1).trim());
+			this.message.set(line.substring(0, index).toLowerCase(), line.substring(index + 1).trim());
 			
 			return parseHeader(src);
 		}
 		
 		// header 파싱 완료
-		String value = this.header.get("content-length");
+		String value = this.message.get("content-length");
 		
-		this.length = 0;
+		this.contentLength = 0;
 		
 		if (value != null) {
 			try {
-				this.length = Integer.parseInt(value);
+				this.contentLength = Integer.parseInt(value);
 			}
 			catch(NumberFormatException nfe) {
-				
+				throw new HttpException(String.format("invalid content-length %s", value));
 			}
 		}
 		
@@ -149,28 +209,43 @@ public class Parser {
 		return parseBody(src);
 	}
 	
+	/**
+	 * Parses the body.
+	 *
+	 * @param src the src
+	 * @return true, if successful
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private boolean parseBody(ByteBuffer src) throws IOException {
-		byte [] octets = new byte[src.limit()];
+		byte [] bytes = new byte[src.limit()];
 		
-		src.get(octets);
-		this.body.write(octets);
+		src.get(bytes);
+		this.body.write(bytes);
 		
 		int length = this.body.size();
 		
-		if (length < this.length) {
+		if (length < this.contentLength) {
 			return false;
 		}
 		
-		if (length > this.length) {
-			throw new ParseException(String.format("out of content length %d/%d", length, this.length));
+		if (length > this.contentLength) {
+			throw new HttpException(String.format("out of content length %d/%d", length, this.contentLength));
 		}
 		
 		// body 조합 완료
+		this.message.set(this.body.toByteArray());
 		this.status = Status.init;
 		
 		return true;
 	}
 	
+	/**
+	 * Read line.
+	 *
+	 * @param src the src
+	 * @return the string
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private String readLine(ByteBuffer src) throws IOException {
 		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 		
@@ -186,7 +261,7 @@ public class Parser {
 			b = src.get();
 			buffer.write(b);
 			
-			if (b == Header.LF) {
+			if (b == Message.LF) {
 				String line = readLine(buffer.toByteArray());
 				if (line != null) {
 					return line;
@@ -199,10 +274,17 @@ public class Parser {
 		return null;
 	}
 	
+	/**
+	 * Read line.
+	 *
+	 * @param src the src
+	 * @return the string
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
 	private String readLine(byte [] src) throws IOException {
 		int length = src.length;
 		
-		if (length > 1 && src[length - 2] == Header.CR) {
+		if (length > 1 && src[length - 2] == Message.CR) {
 			return new String(src, 0, length -2);
 		}
 		

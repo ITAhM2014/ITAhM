@@ -35,7 +35,7 @@ public class JSONFile implements Closeable{
 			this.lock = this.channel.tryLock();
 			
 			if (this.lock == null) {
-				throw new IOException();
+				throw new IOException("lock fail file is "+ file.getName());
 			}
 			
 			long size = this.channel.size();
