@@ -21,13 +21,13 @@ public class Listener implements Runnable, Closeable {
 	private final Thread thread;
 	private boolean shutdown;
 	private final ByteBuffer buffer;
-	private final Handler server;
+	private final EventListener server;
 	
-	public Listener(Handler server) throws IOException {
+	public Listener(EventListener server) throws IOException {
 		this(server , 80);
 	}
 
-	public Listener(Handler handler, int tcp) throws IOException {
+	public Listener(EventListener handler, int tcp) throws IOException {
 		channel = ServerSocketChannel.open();
 		listener = channel.socket();
 		selector = Selector.open();
@@ -74,6 +74,35 @@ public class Listener implements Runnable, Closeable {
 		this.server.onConnect(channel);
 	}
 	
+	private void preProcessRequest(SocketChannel channel, Message request) throws IOException{
+		Message response = new Message()
+			.set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			.set("Access-Control-Allow-Origin", "http://local.itahm.com")
+			.set("Access-Control-Allow-Credentials", "true");
+		
+		if (request != null) {
+			String method = request.method();
+			
+			if (!"HTTP/1.1".equals(request.version())) {
+				response.set("HTTP/1.1 505 HTTP Version Not Supported").send(channel);
+			}
+			else {
+				if ("OPTIONS".equals(method)) {
+					response.set("HTTP/1.1 200 OK").set("Allow", "OPTIONS, POST").send(channel);
+				}
+				else if ("POST".equals(method)) {
+					this.server.onRequest(channel, request, response);
+				}
+				else {
+					response.set("HTTP/1.1 405 Method Not Allowed").set("Allow", "OPTIONS, POST").send(channel);
+				}
+			}
+		}
+		else {
+			response.set("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
+		}
+	}
+	
 	private void onRead(SocketChannel channel, Parser 	parser) throws IOException {
 		this.buffer.clear();
 		
@@ -85,14 +114,14 @@ public class Listener implements Runnable, Closeable {
 			
 			try {
 				if (parser.update(this.buffer)) {
-					this.server.onRequest(channel, parser.message());
+					preProcessRequest(channel, parser.message());
 					
 					parser.clear();
 				}
 				// else continue
 			}
-			catch (HttpException pe) {
-				this.server.onRequest(channel, null);
+			catch (HttpException pe) {pe.printStackTrace();
+				preProcessRequest(channel, null);
 			}
 			
 			this.buffer.clear();
@@ -137,7 +166,7 @@ public class Listener implements Runnable, Closeable {
 	}
 
 	public static void main(String[] args) throws IOException {
-		try (Listener listener = new Listener(new Handler() {
+		try (Listener listener = new Listener(new EventListener() {
 
 			@Override
 			public void onConnect(SocketChannel channel) {
@@ -160,16 +189,12 @@ public class Listener implements Runnable, Closeable {
 			}
 
 			@Override
-			public void onRequest(SocketChannel channel, Message message) {
+			public void onRequest(SocketChannel channel, Message request, Message response) {
 				try {
 					System.out.println("request >> "+ channel.getRemoteAddress());
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				
-				if (message == null) {
-					System.out.println("bad request");
 				}
 			}
 

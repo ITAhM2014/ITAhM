@@ -3,12 +3,6 @@ package com.itahm.http;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -49,9 +43,6 @@ public class Parser {
 	/** The status. */
 	private Status status;
 	
-	/** The decoder. */
-	private final CharsetDecoder decoder;
-	
 	/**
 	 * Instantiates a new parser.
 	 */
@@ -59,7 +50,6 @@ public class Parser {
 		message = new Message();
 		body = new ByteArrayOutputStream();
 		status = Status.init;
-		decoder = Charset.forName("UTF-8").newDecoder();
 	}
 	
 	/**
@@ -148,11 +138,14 @@ public class Parser {
 		
 		// request-line 파싱
 		String [] token = line.split(" ");
-		if (token.length != 3 || !(token[0].equals("POST") || token[0].equals("OPTIONS")) || !token[2].equals("HTTP/1.1")) {
+		if (token.length != 3) {
 			throw new HttpException("invalid request line");
 		}
 		
-		this.message.set(line);
+		this.message.method(token[0]);
+		this.message.version(token[2]);
+		
+		//this.message.set(line);
 		
 		this.status = Status.header;
 		

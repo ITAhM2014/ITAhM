@@ -11,8 +11,6 @@ import java.util.Map;
 
 public final class Message {
 
-	public final static String SESS_ID = "SESSID";
-	public final static String COOKIE = "Set-Cookie: "+ SESS_ID +"=%s; HttpOnly\r\n";
 	public final static String CRLF = "\r\n";
 	public final static byte CR = (byte)'\r';
 	public final static byte LF = (byte)'\n';
@@ -21,6 +19,9 @@ public final class Message {
 	private final Map<String, String> header;
 	private String startLine;
 	private byte [] body;
+	private String method;
+	private String version;
+	private String cookie;
 	private String user;
 	private String password;
 	
@@ -54,6 +55,19 @@ public final class Message {
 				}
 			}
 		}
+		else if ("cookie".equals(fieldName)) {
+			String [] cookies = fieldValue.split("; ");
+			String [] token;
+			
+			for(int i=0, length=cookies.length; i<length; i++) {
+				token = cookies[i].split("=");
+				
+				if (token.length == 2 && "SESSION".equals(token[0])) {
+					this.cookie= token[1];
+				}
+			}
+			
+		}
 		else {
 			this.header.put(fieldName, fieldValue);
 		}
@@ -67,6 +81,30 @@ public final class Message {
 		this.body = new byte[length];
 		
 		System.arraycopy(body, 0, this.body, 0, length);
+	}
+	
+	public void method(String method) {
+		this.method = method;
+	}
+	
+	public String method() {
+		return this.method;
+	}
+	
+	public void version(String version) {
+		this.version = version;
+	}
+	
+	public String version() {
+		return this.version;
+	}
+
+	public void cookie(String cookie) {
+		set("Set-Cookie", "SESSION="+ cookie +"; HttpOnly");
+	}
+	
+	public String cookie() {
+		return this.cookie;
 	}
 	
 	public String user() {
@@ -145,33 +183,14 @@ public final class Message {
 		return this.body;
 	}
 	
-	public String cookie() {
-		String cookie = this.header.get("cookie");
-		
-		if (cookie == null) {
-			return null;
-		}
-		
-		String [] cookies = cookie.split("; ");
-		String [] token;
-		
-		for(int i=0, length=cookies.length; i<length; i++) {
-			token = cookies[i].split("=");
-			
-			if (token.length == 2 && SESS_ID.equals(token[0])) {
-				return token[1];
-			}
-		}
-		
-		return null;
-	}
-	
 	public void clear() {
-		header.clear();
-		startLine = null;
-		body = new byte[0];
-		user = null;
-		password = null;
+		this.header.clear();
+		this.startLine = null;
+		this.body = new byte[0];
+		this.method = null;
+		this.user = null;
+		this.password = null;
+		this.cookie = null;
 	}
 	
 }
