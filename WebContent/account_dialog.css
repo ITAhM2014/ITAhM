@@ -1,0 +1,7 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+form {
+	border: 1px solid #ddd;
+}
+

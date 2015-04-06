@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="snmp.css">
+		
+		<script src="js/JSONRequest.js"></script>
+	</head>
+
+	<body>
+		<div class="background">
+			<div class="dialog">
+				<form id="form" autocomplete="off">
+					<h2>snmp profile</h2>
+					<table class="full">
+						<tbody>
+							<tr>
+								<td>profile name: </td>
+								<td>
+									<input type="text" name="name" class="table text" placeholder="snmp profile name" required autofocus>
+								</td>
+							</tr>
+							<tr>
+								<td>snmp version: </td>
+								<td>
+									<label><input type="radio" value="v1" name="version" disabled>v1</label>
+									<label><input type="radio" value="v2c" name="version" checked>v2c</label>
+									<label><input type="radio" value="v3" name="version" disabled>v3</label>
+								</td>
+							</tr>
+							<tr>
+								<td>community: </td>
+								<td>
+									<input type="text" name="community" class="table text" placeholder="snmp community string" required>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					<input type="reset" value="cancel">
+					<input type="submit" value="apply">
+				</form>
+			</div>
+		</div>
+		
+		<script src="snmp.js"></script>
+		
+	</body>
+	
+</html>

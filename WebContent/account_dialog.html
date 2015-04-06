@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="account_dialog.css">
+		
+		<script src="js/JSONRequest.js"></script>
+	</head>
+
+	<body>
+		<div class="background">
+			<div class="dialog">
+				<form id="form" class="dialog" autocomplete="off">
+					<h2>Account</h2>
+					<table class="full">
+						<tbody>
+							<tr>
+								<td>username</td>
+								<td>
+									<input type="text" name="username" class="table text" required>
+								</td>
+							</tr>
+							<tr>
+								<td>password</td>
+								<td>
+									<input type="password" name="password"
+										class="table text"
+										placeholder="new password"
+										pattern="[a-zA-Z0-9]{6,}"
+										required>
+								</td>
+							</tr>
+							<tr>
+								<td>confirm password</td>
+								<td>
+									<input type="password" name="confirm"
+										class="table text"
+										placeholder="confirm password"
+										pattern="[a-zA-Z0-9]{6,}"
+										required>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					
+					<input type="reset" value="cancel">
+					<input type="submit" value="apply">
+					
+				</form>
+			</div>
+		</div>
+			
+		<script src="account_dialog.js"></script>
+		
+	</body>
+	
+</html>

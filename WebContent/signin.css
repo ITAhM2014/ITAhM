@@ -1,0 +1,28 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+input, span {
+	font-size: 11pt;
+}
+
+form {
+	width: 400px;
+	margin: 100px auto;
+	padding: 10px;
+	position: relative;
+	border: 1px solid #ddd;
+}
+
+label {
+	display: block;
+}
+
+span{
+	display: inline-block;
+	line-height: 3em;
+	width: 30%;
+}
+
+input {
+	padding: .5em;
+}

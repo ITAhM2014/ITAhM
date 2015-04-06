@@ -1,0 +1,18 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+div.background {
+	position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+	background-color: rgba(255,255,255,.5);
+}
+
+div.dialog {
+	width: 400px;
+	margin: 100px auto;
+	padding: 10px;
+	box-shadow: -.2em -.2em .2em .2em 5px #fff;
+}
+
+form {
+	border: 1px solid #ddd;
+}

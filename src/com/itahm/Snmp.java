@@ -252,7 +252,7 @@ public class Snmp implements Worker, Runnable, Closeable {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public static void main(String [] args) throws IOException {
-		Snmp snmp = new Snmp(null);
+		Snmp snmp = new Snmp("c:\\Project\\test\\itahm");
 		
 		System.in.read();
 		

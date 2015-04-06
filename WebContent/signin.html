@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="signin.css">
+		
+		<script src="js/JSONRequest.js"></script>
+	</head>
+
+	<body>
+		<form id="form" autocomplete="off">
+			<label>
+				<span>server</span>
+				<input type="text" name="server" class="full" placeholder="server address[:tcp port]" value="local.itahm.com:2014" required>
+			</label>
+			<label>
+				<span>username</span>
+				<input type="text" name="username" placeholder="root" value="root" required autofocus>
+			</label>
+			<label>
+				<span>password</span>
+				<input type="password" name="password" placeholder="root" value="root" required>
+			</label>
+			<input type="submit" value="SignIn">
+		</form>
+		
+		<script src="signin.js"></script>
+		
+	</body>
+	
+</html>

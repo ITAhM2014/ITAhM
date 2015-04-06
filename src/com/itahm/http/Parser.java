@@ -29,7 +29,7 @@ public class Parser {
 	}
 	
 	/** The message. */
-	private final Message message;
+	private Message message;
 	
 	/** The buffer. */
 	private byte [] buffer;
@@ -112,7 +112,7 @@ public class Parser {
 	 */
 	public void clear() {
 		this.body.reset();
-		this.message.clear();
+		this.message = new Message();
 	}
 	
 	/**

@@ -2,12 +2,14 @@ package com.itahm.json;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 
 import org.json.JSONObject;
@@ -35,7 +37,7 @@ public class JSONFile implements Closeable{
 			this.lock = this.channel.tryLock();
 			
 			if (this.lock == null) {
-				throw new IOException("lock fail file is "+ file.getName());
+				throw new IOException("Can not lock file "+ file.getName());
 			}
 			
 			long size = this.channel.size();

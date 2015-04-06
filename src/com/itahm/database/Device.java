@@ -1,21 +1,20 @@
 package com.itahm.database;
 
-import java.io.IOException;
-
+import org.json.JSONException;
 import org.json.JSONObject;
 
-public class Device extends File {
+public class Device extends Database implements Function {
 
-	
-	public Device(String path) throws IOException {
-		super(path + java.io.File.separator + "device");
+	public Device() {
 	}
 
-	public boolean add(String key, JSONObject device) {
-		String id = String.format("#%06x", Database.index(true));
-		
-		device.put("id", id);
-		
-		return super.add(id, device);
+	@Override
+	public void execute(JSONObject request) {
+		try {
+			execute(request, device);
+		}
+		catch (JSONException jsone) {
+			
+		}
 	}	
 }

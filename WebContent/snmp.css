@@ -1,0 +1,12 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+.dialog {
+	width: 400px;
+	padding: 10px;
+	margin: 100px auto;
+}
+
+form {
+	border: 1px solid #ddd;
+}

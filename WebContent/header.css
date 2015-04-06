@@ -1,0 +1,22 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+nav {
+	height: 50px;
+}
+
+ul {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	float: left;
+}
+
+li {
+	padding: .5em;
+}
+
+form {
+	float: right;
+}

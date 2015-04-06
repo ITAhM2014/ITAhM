@@ -4,36 +4,29 @@ import java.io.IOException;
 
 import org.json.JSONObject;
 
-public class Account extends File {
+public class Account extends Database implements Function {
 
-	public Account(String path) throws IOException {
-		super(path + File.separator + "account");
+	public Account() {
 		
-		if (count() == 0) {
-			add();
-		}
 	}
 
-	private void add() {
-		add("root", new JSONObject().put("username", "root").put("password", "root"));
-	}
-	
-	public boolean add(String username, JSONObject account) {
-		if (!account.has("password")) {
-			return false;
+	@Override
+	public void execute(JSONObject request) {
+		execute(request, account);
+		
+		JSONObject jo = account.getJSONObject();
+		if (jo.length() == 0) {
+			jo.put("root", new JSONObject().put("username", "root").put("password", "root"));
+			
+			try {
+				account.save();
+			}
+			catch (IOException ioe) {
+				// fatal error
+				
+				ioe.printStackTrace();
+			}
 		}
-		
-		return super.add(username, account);
-	}
-	
-	public boolean remove(String username) {
-		boolean result = super.remove(username);
-		
-		if (count() == 0) {
-			add();
-		}
-		
-		return result;
 	}
 	
 }

@@ -1,0 +1,30 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+form {
+	border: 1px solid #ddd;
+	border-radius: 10px;
+	padding: 10px;
+	position: relative;
+	margin: 1em;
+}
+
+#control {
+	position: absolute; top: 10px; right: 10px;
+	display: none;
+}
+
+form:hover:not(:first-child) #control {
+	display: block;
+}
+
+form:first-child {
+	border-style: dashed;
+	text-align: center;
+}
+
+form:first-child input[type=submit] {
+	font-size: 16pt;
+	font-weight: bold;
+	margin: 30px;
+}

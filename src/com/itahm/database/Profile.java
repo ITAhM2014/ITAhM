@@ -4,28 +4,29 @@ import java.io.IOException;
 
 import org.json.JSONObject;
 
-public class Profile extends File {
+public class Profile extends Database implements Function {
 
-	public Profile(String path) throws IOException {
-		super(path + File.separator + "profile");
-		
-		if (count() == 0) {
-			add();
-		}
+	public Profile() throws IOException {
 	}
 
-	private void add() {
-		add("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
-	}
-	
-	public boolean remove(String name) {
-		boolean result = super.remove(name);
+	@Override
+	public void execute(JSONObject request) {
+		execute(request, profile);
 		
-		if (count() == 0) {
-			add();
+		JSONObject jo = profile.getJSONObject();
+		
+		if (jo.length() == 0) {
+			jo.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
+			
+			try {
+				profile.save();
+			}
+			catch (IOException ioe) {
+				// fatal error
+				
+				ioe.printStackTrace();
+			}
 		}
-		
-		return result;
 	}
 	
 }

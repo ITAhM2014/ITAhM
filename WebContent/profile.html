@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="profile.css">
+		
+		<script src="js/JSONRequest.js"></script>
+	</head>
+
+	<body>
+		<iframe src="header.html" class="header"></iframe>
+		<div class="content">
+			<div class="body">
+				<div id="list">
+					<form id="form">
+						<input type="submit" value="add new profile">
+						<div id="control">
+							<input type="submit" value="edit">
+							<input type="reset" value="remove">
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<iframe class="dialog" id="dialog" src="snmp.html"></iframe>
+		<script src="profile.js"></script>
+		
+	</body>
+	
+</html>

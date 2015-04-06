@@ -84,22 +84,22 @@ public class Listener implements Runnable, Closeable {
 			String method = request.method();
 			
 			if (!"HTTP/1.1".equals(request.version())) {
-				response.set("HTTP/1.1 505 HTTP Version Not Supported").send(channel);
+				response.status("HTTP/1.1 505 HTTP Version Not Supported").send(channel);
 			}
 			else {
 				if ("OPTIONS".equals(method)) {
-					response.set("HTTP/1.1 200 OK").set("Allow", "OPTIONS, POST").send(channel);
+					response.status("HTTP/1.1 200 OK").set("Allow", "OPTIONS, POST").send(channel);
 				}
 				else if ("POST".equals(method)) {
 					this.server.onRequest(channel, request, response);
 				}
 				else {
-					response.set("HTTP/1.1 405 Method Not Allowed").set("Allow", "OPTIONS, POST").send(channel);
+					response.status("HTTP/1.1 405 Method Not Allowed").set("Allow", "OPTIONS, POST").send(channel);
 				}
 			}
 		}
 		else {
-			response.set("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
+			response.status("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
 		}
 	}
 	
@@ -114,6 +114,7 @@ public class Listener implements Runnable, Closeable {
 			
 			try {
 				if (parser.update(this.buffer)) {
+					
 					preProcessRequest(channel, parser.message());
 					
 					parser.clear();

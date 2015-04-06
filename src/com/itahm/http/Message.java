@@ -1,6 +1,8 @@
 package com.itahm.http;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -8,6 +10,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import com.itahm.ITAhMException;
 
 public final class Message {
 
@@ -33,10 +37,10 @@ public final class Message {
 	public Message(String startLine) {
 		this();
 		
-		set(startLine);
+		status(startLine);
 	}
 	
-	public Message set(String startLine) {
+	public Message status(String startLine) {
 		this.startLine = startLine;
 		
 		return this;
@@ -143,10 +147,6 @@ public final class Message {
 		return message.toByteArray();		
 	}
 	
-	public String get() {
-		return this.startLine;
-	}
-	
 	public String get(String name) {
 		return this.header.get(name);
 	}
@@ -156,16 +156,38 @@ public final class Message {
 	}
 	
 	public void send(SocketChannel channel, String body) throws IOException {
+		send(channel, body.getBytes("UTF-8"));
+	}
+	
+	public void send(SocketChannel channel, File body) throws IOException {
+		try (
+			FileInputStream fis = new FileInputStream(body);
+		) {
+			long size = body.length();
+			
+			if (size != (int)size) {
+				throw new ITAhMException("Can not read more than 2^31 -1 bytes");
+			}
+			else if (size > 0) {
+				byte [] buffer = new byte [(int)size];
+				
+				fis.read(buffer);
+				
+				send(channel, buffer);
+			}
+		}
+	}
+	
+	public void send(SocketChannel channel, byte [] body) throws IOException {
 		if (this.startLine == null || this.startLine.length() == 0) {
 			throw new HttpException("invalid start-line");
 		}
 		
 		Iterator<String> it;
 		String header = startLine +CRLF;
-		byte [] bytes = body.getBytes("UTF-8");
 		String key;
 		
-		this.header.put("Content-Length", Integer.toString(bytes.length));
+		this.header.put("Content-Length", Integer.toString(body.length));
 		
 		it = this.header.keySet().iterator();
 		
@@ -175,22 +197,22 @@ public final class Message {
 			header += String.format(FIELD, key, this.header.get(key));
 		}
 		
-		channel.write(ByteBuffer.wrap((header +CRLF).getBytes("US-ASCII")));
-		channel.write(ByteBuffer.wrap(bytes));
+		send(channel, ByteBuffer.wrap((header +CRLF).getBytes("US-ASCII")));
+		send(channel, ByteBuffer.wrap(body));
+	}
+	
+	private int send(SocketChannel channel, ByteBuffer buffer) throws IOException {
+		int bytes = 0;
+		
+		while (buffer.remaining() > 0) {
+			bytes += channel.write(buffer);
+		}
+		
+		return bytes;
 	}
 	
 	public byte [] body() {
 		return this.body;
-	}
-	
-	public void clear() {
-		this.header.clear();
-		this.startLine = null;
-		this.body = new byte[0];
-		this.method = null;
-		this.user = null;
-		this.password = null;
-		this.cookie = null;
 	}
 	
 }
