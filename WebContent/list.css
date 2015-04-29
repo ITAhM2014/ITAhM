@@ -1,0 +1,34 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+table {
+	border-collapse: collapse;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+tr {
+	border: 1px solid #ddd;
+}
+
+td {
+	padding: .5em;
+}
+
+col:nth-child(1) {
+	width: 2em;
+}
+	
+col:nth-child(3) {
+	width: 10em;
+}
+
+td:nth-child(2) {
+	font-weight: bold;
+	cursor: pointer;
+}
+	
+td:nth-child(2):hover {
+	color: #90f;
+	text-decoration: underline;
+}

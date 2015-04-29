@@ -24,13 +24,14 @@
 		var request = {
 			database: "profile",
 			command: "put",
-			key: this.name.value,
-			value: {
+			data: {}
+		};
+		
+		request.data[this.name.value] = {
 				name: this.name.value,
 				version: this.version.value,
 				community: this.community.value
-			}
-		};
+			};
 		
 		xhr.request(request);
 	}

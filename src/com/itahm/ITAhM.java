@@ -10,7 +10,6 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.database.Function;
 import com.itahm.database.SignIn;
 import com.itahm.http.EventListener;
 import com.itahm.http.Message;
@@ -24,31 +23,36 @@ public class ITAhM implements EventListener, Closeable {
 	{
 		commandMap.put("account", "com.itahm.database.Account");
 		commandMap.put("device", "com.itahm.database.Device");
+		commandMap.put("line", "com.itahm.database.Line");
 		commandMap.put("traffic", "com.itahm.database.Traffic");
 		commandMap.put("profile", "com.itahm.database.Profile");
-		
 	}
 	
 	private final Listener listener;
 	
 	public ITAhM(int udpPort, String path) throws IOException {
 		
-		listener = new Listener(this, udpPort);
-		
 		File root = new File(path, "itahm");
 		root.mkdir();
 		
 		Database.init(root);
+			
+		listener = new Listener(this, udpPort);
 	}
 
 	private boolean signin(String username, String password) {
 		JSONObject jo = new JSONObject();
+		JSONObject data = new JSONObject();
 		
-		jo.put("username", username).put("password", password);
+		jo.put("database", "account")
+			.put("command", "get")
+			.put("data", data
+				.put(username, new JSONObject()
+					.put("password", password)));
 		
-		new SignIn().execute(jo);
+		new SignIn(jo);
 		
-		return jo.getBoolean("result");
+		return !data.isNull(username);
 	}
 	
 	private void processRequest(JSONObject json, Session session) {
@@ -73,7 +77,7 @@ public class ITAhM implements EventListener, Closeable {
 		
 		if (className != null) {
 			try {
-				((Function)Class.forName(className).newInstance()).execute(jo);
+				((Database)Class.forName(className).newInstance()).execute(jo);
 			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -161,7 +165,7 @@ public class ITAhM implements EventListener, Closeable {
 		
 		try {
 			try {
-				JSONObject jo = new JSONObject(new String(request.body()));
+				JSONObject jo = request.body();
 				
 				processRequest(jo, session);
 				
@@ -207,6 +211,8 @@ public class ITAhM implements EventListener, Closeable {
 			System.out.println("service end");
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (ITAhMException itahme) {
+			itahme.printStackTrace();
 		}
 	}
 	

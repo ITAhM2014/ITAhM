@@ -1,272 +1,309 @@
 ;"use strict";
 
-function Map () {
-	this.init();
-}
-
 (function (window, undefined) {
+	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
+		form = document.getElementById("form"),
+		dialog = document.getElementById("dialog"),
+		iconMap = {},
+		deviceList = {},
+		lineList = {},
+		lineIndex = {},
+		scale = 1,
+		linkWrapper = link.bind(this),
+		canvas,
+		deviceLayer,
+		lineLayer,
+		selected;
 	
-	var doc = document,
-		map = undefined,
-		navigation = undefined,
-		iconLibrary = undefined,
-		deviceLayer = undefined,
-		lineLayer = undefined,
-		connector = undefined,
-		showDeviceForm = new Function(),
-		zoom = 1;
+	form.addEventListener("submit", onSubmit, false);
+	form.elements["save"].addEventListener("click", onSave, false);
+	form.elements["zoomin"].addEventListener("click", function (e) {
+		canvas.zoom(scale *=1.2);
+	}, false);
+	form.elements["zoomout"].addEventListener("click", function (e) {
+		canvas.zoom(scale /=1.2);
+	}, false);
+	form.elements["link"].addEventListener("click", onLink, false);
+	window.addEventListener("load", onLoad, false);
+	window.addEventListener("message", onMessage, false);
 	
-	Map.prototype = {
-		init: function () {
-			navigation = doc.getElementById("form_map_nav");
-			map = new Canvas("map");
-			iconLibrary = new Icon("icon");
-			deviceLayer = Layer.create("draggable");
-			lineLayer = Layer.create();
-			connector = new Connector();
-			
-			map.add(lineLayer);
-			map.add(deviceLayer);
-			
-			lineLayer.context({
-				strokeStyle: "#282",
-				lineWidth: 3,
-				font: "10pt arial, \"맑은 고딕\"",
-				textAlign: "center",
-				textBaseline: "middle",
-				fillStyle: "#999"
-			});
-			
-			navigation.addEventListener("submit", function (e) {
-				e.preventDefault();
-			}, false);
-			navigation.save.addEventListener("click", onSave, false);
-			navigation.elements.zoomin.addEventListener("click", onZoomIn, false);
-			navigation.elements.zoomout.addEventListener("click", onZoomOut, false);
-			navigation.info.addEventListener("click", onInfo, false);
-			navigation.link.addEventListener("click", onLink, false);
-			map.on("select", onSelect);
-			map.on("mousemove", onMouseMove);
-		},
-		
-		set: function (name, list) {
-			switch (name) {
-			case "device":
-				var device;
-				
-				deviceLayer.empty();
-				
-				for (var id in list) {
-					device = list[id];
-					
-					deviceLayer.add(Node.create("device", device,  iconLibrary.get(device.type) || iconLibrary.get("unknown")));
-				}
-				
-				deviceLayer.invalidate();
-				
-				break;
-			case "line":
-				var line;
-				
-				lineLayer.empty();
-				
-				for (var id in list) {
-					line = list[id];
-					
-					lineLayer.add(Node.create("line", line, itahm.getDevice(line.from), itahm.getDevice(line.to)));
-				}
-				
-				lineLayer.invalidate();
-				
-				break;
-			}
-		},
-		
-		reloadDevice: function (deviceList) {
-			var device;
-			
-			navigation.classList.remove("show");
-			
-			map.empty();
-			
-			for (var key in deviceList) {
-				device = deviceList[key];
-				
-				deviceLayer.add(Node.create("device", device,  iconLibrary.get(device.type) || iconLibrary.get("unknown")));
-			}
-			
-			map.invalidate();
-		},
-		
-		reloadLine: function (lineList) {
-			var line;
-			
-			navigation.classList.remove("show");
-			
-			map.empty();
-			
-			for (var id in lineList) {
-				line = lineList[id];
-				lineLayer.add(Node.create("line", line, itahm.getDevice(line.from), itahm.getDevice(line.to)));
-			}
-			
-			map.invalidate();
-		},
-		
-		invalidate: function () {
-			map.invalidate();
-		}
-	};
-	
-	function Connector() {
-		var layer = Layer.create(),
-			ready = false;
-		
-		map.add(layer);
-		
-		layer.context({
-			lineWidth: 5,
-			strokeStyle: "#777",
-			lineCap: "round"
+	function onLoad(e) {
+		xhr.request({
+			command: "echo"
 		});
 		
-		layer.context().setLineDash([10, 10]);
+		/*
+		lineLayer.context({
+			strokeStyle: "#282",
+			lineWidth: 3,
+			font: "10pt arial, \"맑은 고딕\"",
+			textAlign: "center",
+			textBaseline: "middle",
+			fillStyle: "#999"
+		});
+		*/
 		
-		this.to = {
-			x: 0,
-			y: 0
-		};
+		//canvas.on("mousemove", onMouseMove);
+	}
+	
+	function load(map) {
+		iconMap = map;
+		canvas = new Canvas("map");
 		
-		this.node = Node.create("line", {link: [{}]}, null, this.to);
+		canvas.on("select", onSelect);
 		
-		this.draw = function (x, y) {
-			if (ready) {
-				this.to.x = x;
-				this.to.y = y;
-				
-				layer.invalidate();
-			}
-		};
+		lineLayer = canvas.layer(drawLine);
+		deviceLayer = canvas.layer(drawDevice);
 		
-		this.ready = function (b) {
-			if (b === true) {
-				ready = true;
-				
-				layer.add(this.node);
-			}
-			else if (b === false) {
-				ready = false;
-				
-				this.node.to = this.to;
-				
-				layer.empty();
-			}
-			else {
-				return ready;
-			}
-		};
+		deviceLayer.context({
+			font: "bold 15px arial, \"맑은 고딕\"",
+			textBaseline:  "bottom",
+		});
+	
+		xhr.request({
+			database: "device",
+			command: "get",
+			data: null
+		});
 		
-		this.name = function (line) {
-			var from = this.node.from,
-				to = this.node.to;
-			
-			if (line.from == from.id) {
-				return {
-					from: from.name,
-					to: to.name
-				}
-			}
-			else {
-				return {
-					from: to.name,
-					to: from.name
-				}
-			}
-		};
-		
-		this.set = function (node) {
-			return this.node.from = node;
-		}
-		
-		this.get = function (node) {
-			var from = this.node.from.id,
-				to = node.id;
-			
-			this.node.to = node;
-			
-			return itahm.getLine(from, to) || {
-				from: from,
-				to: to,
-				link: []
-			}
-		};
+		xhr.request({
+			database: "line",
+			command: "get",
+			data: null
+		});
+	}
+	
+	function onSubmit(e) {
+		e.preventDefault();
 	}
 	
 	function onSave(e) {
-		var data = {},
-			device;
+		var request = {
+				database: "device",
+				command: "put",
+				data: deviceList
+			};
 		
-		/*deviceLayer.zIndex.map(function (deviceObject) {
-			device = deviceObject.node;
-			data[device.id] = device;
-		});*/
-		deviceLayer.each(function (deviceObject) {
-			device = deviceObject.node;
-			data[device.id] = device;
-		});
-		
-		itahm.request({
-			device: {
-				set: data
-			}
-		});
+		xhr.request(request);
 	}
 	
-	function onSelect(device) {
-		if (connector.ready()) {
-			if (device) {
-				var line = connector.get(device.node),
-					name = connector.name(line);
-				
-				itahm.popup("line", name.from, name.to, line);
-				
-				map.select();
-			}
-			
-			connector.ready(false);
+	function onSelect(node) {
+		var result;
+		
+		if (tryLink(node)) {
+			result = false;
 		}
 		else {
-			navigation.classList.remove("show");
+			selected = node;
+		}
+		
+		tryLink = function () {return false};
+		
+		return result;
+	}
+	
+	function onLink(e) {
+		tryLink = link.bind(this, selected);
+	}
+	
+	function tryLink() {
+		return false;
+	}
+	
+	function link(from, to) {
+		if (from == to || !from || !to) {
+			return false;
+		}
+		
+		(showLineDialog = _showLineDialog.bind(this, from, to))();
+		
+		return true;
+	}
+	
+	function showLineDialog() {
+	}
+
+	function _showLineDialog(from, to) {
+		var line = getLine(from, to);
+		
+		dialog.contentWindow.postMessage({
+			message: "line",
+			deviceFrom: from,
+			deviceTo: to,
+			line: line
+		}, "*");
+		
+		dialog.classList.add("show");
+	}
+	
+	function closeLineDialog() {
+		dialog.classList.remove("show");
+	}
+	
+	function getLine(from, to) {
+		var index = lineIndex[from.id];
+		
+		if (index) {
+			var id = index[to.id];
 			
-			if (device) {
-				setTimeout(function () {navigation.classList.add("show")}, 100);
-				//navigation.classList.add("show");
-				
-				showDeviceForm = itahm.popup.bind(itahm, "device", connector.set(device.node));
+			if (id) {
+				return lineList[id];
 			}
 		}
 	}
 	
-	function onZoomIn(e) {
-		map.zoom(zoom *= 1.2);
-	}
-	
-	function onZoomOut(e) {
-		map.zoom(zoom /= 1.2);
-	}
-
-	function onMouseMove(pos) {
-		connector.draw(pos.x, pos.y);
-	}
-	
-	function onInfo() {
-		showDeviceForm();
-	}
-	
-	function onLink() {
-		navigation.classList.remove("show");
+	function loadDevice() {
+		var device;
 		
-		connector.ready(true);
+		for (var id in deviceList) {
+			device = deviceList[id];
+			
+			deviceLayer.add(device);
+		}
+		
+		deviceLayer.invalidate();
 	}
-
+	
+	function loadLine() {
+		var line;
+		
+		for (var id in lineList) {
+			line = lineList[id];
+			
+			lineLayer.add(line);
+			
+			if (!lineIndex[line.from]) {
+				lineIndex[line.from] = {};
+			}
+			lineIndex[line.from][line.to] = id;
+			
+			if (!lineIndex[line.to]) {
+				lineIndex[line.to] = {};
+			}
+			lineIndex[line.to][line.from] = id;
+		}
+		
+		lineLayer.invalidate();
+	}
+	
+	function reLoadLine() {
+		xhr.request({
+			database: "line",
+			command: "get",
+			data: null
+		});
+	}
+	
+	/*draw = {
+	 *     node: device
+	 *     context: canvas context
+	 *     shadow: shadow context
+	 *     color: shadow color
+	 */
+	
+	function drawDevice(draw) {
+		var device = draw.node,
+			icon = iconMap[device.type],
+			width = icon.width,
+			height = icon.height,
+			x = device.x - Math.round(width/2),
+			y = device.y - Math.round(height/2),
+			context = draw.context,
+			radius = Math.round(Math.max(width, height) *.5 *1.5),
+			shadow;
+		
+		if (device == selected) {
+			context.save();
+			context.globalAlpha = .2;
+			context.beginPath();
+			context.arc(device.x, device.y, Math.max(width, height), 0, Math.PI *2);
+			context.fill();
+			context.restore();
+		}
+		
+		context.drawImage(icon, x, y, width, height);
+		context.fillText(device.name, x, y)
+		
+		if (shadow = draw.shadow) {
+			shadow.fillStyle = draw.color;
+			shadow.fillRect(x, y, width, height);
+		}
+	}
+	
+	function drawLine(draw) {
+		var context = draw.context,
+			line = draw.node,
+			from = deviceList[line.from],
+			to = deviceList[line.to];
+		
+		context.beginPath();
+		context.moveTo(from.x, from.y);
+		context.lineTo(to.x, to.y);
+		context.stroke();
+	}
+	
+	function onMessage(e) {
+		var data = e.data;
+		
+		if (!data) {
+			return;
+		}
+		
+		switch(data.message) {
+		case "reLoadLine":
+			reLoadLine();
+			
+			break;
+		case "showLineDialog":
+			showLineDialog();
+			
+			break;
+		case "closeLineDialog":
+			closeLineDialog();
+			
+			break;
+		}
+	}
+	
+	function onResponse(response) {
+		if ("error" in response) {
+			var status = response.error.status;
+			
+			if (status == 401) {
+				location.href = "signin.html";
+			}
+		}
+		else if ("json" in response) {
+			var json = response.json;
+			
+			switch (json.command) {
+			case "get":
+				if (json.database == "device") {
+					deviceList = json.data;
+					
+					loadDevice();
+				}
+				else if (json.database == "line") {
+					lineList = json.data;
+					
+					loadLine();
+				}
+				
+				break;
+		
+			case "put":
+				location.reload();
+				
+				break;
+				
+			case "echo":
+				new IconLoader(load);
+				
+				break;
+			}
+		}
+		else {
+			throw "fatal error";
+		}
+	}
 }) (window);

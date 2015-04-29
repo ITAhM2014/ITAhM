@@ -2,17 +2,18 @@ package com.itahm.json;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.itahm.ITAhMException;
 
 public class JSONFile implements Closeable{
 	private JSONObject json;
@@ -24,7 +25,7 @@ public class JSONFile implements Closeable{
 		json = new JSONObject();
 	}
 	
-	public JSONFile load(File file) throws IOException{
+	public JSONFile load(File file) throws IOException, ITAhMException {
 		if (this.file != null) {
 			close();
 			clear();
@@ -49,8 +50,12 @@ public class JSONFile implements Closeable{
 				
 				this.channel.read(buffer);
 				buffer.flip();
-				
-				this.json = new JSONObject(Charset.defaultCharset().decode(buffer).toString());
+				try {
+					this.json = new JSONObject(Charset.defaultCharset().decode(buffer).toString());
+				}
+				catch (JSONException jsone) {
+					throw new ITAhMException("invalid json file. "+ file.getName(), jsone);
+				}
 			}
 			else {
 				save();
@@ -89,9 +94,17 @@ public class JSONFile implements Closeable{
 	
 	@Override
 	public void close() throws IOException {
-		this.lock.release();
-		this.channel.close();
-		this.file.close();
+		if (this.lock != null) {
+			this.lock.release();
+		}
+		
+		if (this.channel != null) {
+			this.channel.close();
+		}
+		
+		if (this.file != null) {
+			this.file.close();
+		}
 	}
 	
 }

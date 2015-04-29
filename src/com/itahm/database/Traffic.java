@@ -8,9 +8,12 @@ import org.json.JSONObject;
 
 import com.itahm.json.JSONFile;
 
-public class Traffic extends Database implements Function {
+public class Traffic extends Database {
 
-	public Traffic() {
+	public Traffic(JSONObject jo) {
+		super(profile);
+		
+		execute(jo);
 	}
 	
 	@Override
@@ -50,5 +53,17 @@ public class Traffic extends Database implements Function {
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
+	}
+
+	@Override
+	protected JSONObject each(String command, String key, JSONObject value) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	protected boolean complete() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

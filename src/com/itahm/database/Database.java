@@ -2,17 +2,19 @@ package com.itahm.database;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.itahm.ITAhMException;
 import com.itahm.json.JSONFile;
 
 // TODO: Auto-generated Javadoc
 /**
  * The Class Database.
  */
-public class Database {
-
+abstract public class Database {
 	protected static File root;
 	
 	/** The Constant account. */
@@ -21,13 +23,26 @@ public class Database {
 	/** The Constant device. */
 	protected final static JSONFile device = new JSONFile();
 	
+	/** The Constant line. */
+	protected final static JSONFile line = new JSONFile();
+	
 	/** The Constant profile. */
 	protected final static JSONFile profile = new JSONFile();
+	
+	protected final static JSONFile index = new JSONFile();
+	
+	//protected final static JSONFile icon = new JSONFile();
+	
+	protected final JSONFile file;
+	protected final JSONObject database;
 	
 	/**
 	 * Instantiates a new database.
 	 */
-	protected Database() {
+	
+	protected Database(JSONFile jf) {
+		file = jf;
+		database = file.getJSONObject();
 	}
 	
 	/**
@@ -41,23 +56,75 @@ public class Database {
 		
 		JSONObject jo;
 		
-		account.load(new File(path, "account"));
-		
-		jo = account.getJSONObject();
-		if (jo.length() == 0) {
-			jo.put("root", new JSONObject().put("username", "root").put("password", "root"));
-			account.save();
+		try {
+			account.load(new File(path, "account"));
+			
+			jo = account.getJSONObject();
+			if (jo.length() == 0) {
+				jo.put("root", new JSONObject().put("username", "root").put("password", "root"));
+				account.save();
+			}
+			
+			index.load(new File(path, "index"));
+			jo = index.getJSONObject();
+			if (!jo.has("index")) {
+				jo.put("index", 1);
+			}
+			
+			profile.load(new File(path, "profile"));
+			
+			jo = profile.getJSONObject();
+			if (jo.length() == 0) {
+				jo.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
+				profile.save();
+			}
+			
+			device.load(new File(path, "device"));
+			line.load(new File(path, "line"));
+			//icon.load(new File(path, "icon"));
+		}
+		catch (ITAhMException itahme) {
+			account.close();
+			device.close();
+			index.close();
+			profile.close();
+			
+			itahme.printStackTrace();
+			
+			throw itahme;
+		}
+	}
+	
+	protected String newID() throws IOException {
+		int numID;
+		synchronized(index) {
+			JSONObject jo = index.getJSONObject();
+			
+			numID = jo.getInt("index");
+			jo.put("index", numID +1);
+			
+			index.save();
 		}
 		
-		device.load(new File(path, "device"));
-		
-		profile.load(new File(path, "profile"));
-		
-		jo = profile.getJSONObject();
-		if (jo.length() == 0) {
-			jo.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
-			profile.save();
+		return Integer.toString(numID);
+	}
+	
+	protected JSONObject execute(String command, String key, JSONObject value) {
+		if ("get".equals(command)) {
+			if (this.database.has(key)) {
+				return this.database.getJSONObject(key);
+			}
 		}
+		else if ("put".equals(command)) {
+			database.put(key, value);
+			
+			return value;
+		}
+		else if ("delete".equals(command)) {
+			return (JSONObject)database.remove(key);
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -65,47 +132,46 @@ public class Database {
 	 *
 	 * @param request the request
 	 * @param file the file
+	 * @throws JSONException 
 	 * @throws IOException Signals that an I/O exception has occurred (file.save()).
 	 */
-	protected void execute(JSONObject request, JSONFile file) {
-		JSONObject database = file.getJSONObject();
-		
-		request.put("result", false);
-		
+	
+	public void execute(JSONObject request) {
 		String command = request.getString("command");
 		
-		if ("get".equals(command)) {
-			if (request.has("key")) {
-				// get selected data
-				
-				request.put("result", database.getJSONObject(request.getString("key")));
-			}
-			else {
-				// get entire data
-				
-				request.put("result", database);
+		if (request.isNull("data")) {
+			if ("get".equals(command)) {
+				request.put("data", this.database);
 			}
 		}
 		else {
-			if ("put".equals(command)) {
-				database.put(request.getString("key"), request.getJSONObject("value"));
+			JSONObject data = request.getJSONObject("data");
+			
+			@SuppressWarnings("rawtypes")
+			Iterator it = data.keys();
+			String key;
+			JSONObject value;
+			
+			while (it.hasNext()) {
+				key = (String)it.next();
+				value = each(command, key, data.isNull(key)? null: data.getJSONObject(key));
 				
-				request.put("result", true);
-			}
-			else if ("delete".equals(command)) {
-				if (database.remove(request.getString("key")) != null) {
-					request.put("result", true);
-				}
+				data.put(key, value == null? JSONObject.NULL: value);
 			}
 			
-			try {
-				file.save();
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-				
-				// fatal error
+			if ("put".equals(command) || "delete".equals(command) || complete()) {
+				try {
+					this.file.save();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+					
+					// fatal error
+				}
 			}
-
 		}
 	}
+	
+	abstract protected JSONObject each(String command, String key, JSONObject value);
+	abstract protected boolean complete();
+	
 }

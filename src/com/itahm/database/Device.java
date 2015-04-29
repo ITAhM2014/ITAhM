@@ -1,20 +1,38 @@
 package com.itahm.database;
 
-import org.json.JSONException;
+import java.io.IOException;
+
 import org.json.JSONObject;
 
-public class Device extends Database implements Function {
-
+public class Device extends Database {
+	
 	public Device() {
+		super(device);
 	}
-
+	
 	@Override
-	public void execute(JSONObject request) {
+	public JSONObject each(String command, String key, JSONObject value) {
 		try {
-			execute(request, device);
+			if ("put".equals(command) && Integer.parseInt(key) < 0) {
+				key = newID();
+				value.put("id", key);
+			}
+		
+			return execute(command, key, value);
 		}
-		catch (JSONException jsone) {
+		catch(NumberFormatException nfe) {
 			
+		} catch (IOException e) {
+			e.printStackTrace();
+			
+			// fatal error
 		}
+		
+		return null;
+	}
+	
+	@Override
+	public boolean complete() {
+		return false;
 	}	
 }

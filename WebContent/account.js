@@ -18,7 +18,8 @@
 	function onLoad(e) {
 		xhr.request( {
 			database: "account",
-			command: "get"
+			command: "get",
+			data: null
 		});
 	}
 	
@@ -43,8 +44,10 @@
 		var request = {
 				database: "account",
 				command: "delete",
-				key: json.username
+				data: {}
 		};
+		
+		request.data[json.username] = null;
 		
 		xhr.request(request);
 	}
@@ -91,7 +94,7 @@
 			
 			switch (json.command) {
 			case "get":
-				init (json.result);
+				init (json.data);
 				
 				break;
 			case "delete":

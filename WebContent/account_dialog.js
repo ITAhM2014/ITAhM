@@ -24,15 +24,18 @@
 			confirm = this.confirm.value;
 		
 		if (password == confirm) {
-			xhr.request ({
+			var request = {
 				database: "account",
 				command: "put",
-				key: username,
-				value: {
-					username: username,
-					password: password
-				}
-			});
+				data: {}
+			};
+			
+			request.data[username] = {
+				username: username,
+				password: password
+			};
+			
+			xhr.request(request);
 		}
 		else {
 			alert("Password does not match the confirm password");

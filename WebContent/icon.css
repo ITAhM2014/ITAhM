@@ -1,0 +1,36 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+li {
+	display: inline-block;
+	border: 1px solid #ddd;
+	margin: 10px;
+	width: 120px;
+	line-height: 120px;
+	text-align: center;
+	position: relative;
+	cursor: pointer;
+}
+
+li:hover {
+	outline: 3px solid orange;
+}
+
+img {
+	vertical-align: middle;
+	max-width: 100px;
+	max-height: 100px;
+}
+
+li span {
+	position: absolute; top: -30px; left:5px;
+	white-space: nowrap;
+	font-weight: bold;
+	color: #555;
+}
+
+fieldset {
+	border-radius: 10px;
+	border: 1px solid #ddd;
+	margin: 10px;
+}

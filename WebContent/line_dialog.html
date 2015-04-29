@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="line_dialog.css">
+		
+		<script src="js/JSONRequest.js"></script>
+	</head>
+
+	<body>
+		<div class="background">
+			<div class="dialog">
+				<form id="form" autocomplete="off">
+					<h2>line</h2>
+					
+					<div class="flex">
+						<select name="index"><option>new</select>
+						<span> of </span>
+						<input type="text" name="num_link" readonly>
+					</div>
+						
+					<table>
+						<colgroup>
+							<col width="40%">
+						</colgroup>
+
+						<tbody>
+							<tr>
+								<td>bandwidth</td>
+								<td class="flex">
+									<input type="text"  name="bandwidth" placeholder="bandwidth" value="100" required>
+									<select name="unit">
+										<option value="1000000000">Gbps
+										<option value="1000000" selected>Mbps
+										<option value="1000">Kbps
+										<option value="1">bps
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<input type="text" name="from" class="ellipsis" readonly>
+								<td>
+									<input type="text" name="ifdesc_from" class="table text" placeholder="interface description">
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<input type="text" name="to" class="ellipsis" readonly >
+								<td>
+									<input type="text" name="ifdesc_to" class="table text" placeholder="interface description">
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					
+					<label><input type="checkbox" name="remove">remove</label>
+					<input type="reset" value="cancel">
+					<input type="submit" value="apply">
+					<input name="id">
+				</form>
+			</div>
+		</div>
+			
+		<script src="line_dialog.js"></script>
+		
+	</body>
+	
+</html>

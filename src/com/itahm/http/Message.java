@@ -6,10 +6,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.json.JSONObject;
 
 import com.itahm.ITAhMException;
 
@@ -211,8 +214,13 @@ public final class Message {
 		return bytes;
 	}
 	
+	/*
 	public byte [] body() {
 		return this.body;
 	}
+	*/
 	
+	public JSONObject body() {
+		return new JSONObject(new String(this.body, Charset.forName("UTF-8")));
+	}
 }

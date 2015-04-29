@@ -4,29 +4,26 @@ import java.io.IOException;
 
 import org.json.JSONObject;
 
-public class Profile extends Database implements Function {
+public class Profile extends Database {
 
 	public Profile() throws IOException {
+		super(profile);
+	}
+	
+	@Override
+	protected JSONObject each(String command, String key, JSONObject value) {
+		return execute(command, key, value);
 	}
 
 	@Override
-	public void execute(JSONObject request) {
-		execute(request, profile);
-		
-		JSONObject jo = profile.getJSONObject();
-		
-		if (jo.length() == 0) {
-			jo.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
+	protected boolean complete() {
+		if (this.database.length() == 0) {
+			this.database.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
 			
-			try {
-				profile.save();
-			}
-			catch (IOException ioe) {
-				// fatal error
-				
-				ioe.printStackTrace();
-			}
+			return true;
 		}
+		
+		return false;
 	}
 	
 }

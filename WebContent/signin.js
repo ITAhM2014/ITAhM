@@ -21,7 +21,7 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				alert("invalid USERNAME or PASSWORD");;
 			}
 			
 			console.log(status);

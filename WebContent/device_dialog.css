@@ -1,0 +1,17 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+form {
+	border: 1px solid #ddd;
+	padding: 10px;
+}
+
+table {
+	width: 100%;
+	background-color: #fa0;
+}
+
+input[type=text], select {
+	width: 100%;
+	box-sizing: border-box;
+}

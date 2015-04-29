@@ -4,18 +4,35 @@ import java.io.IOException;
 
 import org.json.JSONObject;
 
-public class Line extends File {
-
+public class Line extends Database {
 	
-	public Line(String path) throws IOException {
-		super(path + java.io.File.separator + "line");
+	public Line() {
+		super(line);
 	}
 
-	public boolean add(String key, JSONObject line) {
-		String id = String.format("#%06x", Database.index(false) | 0x800000);
+	@Override
+	public JSONObject each(String command, String key, JSONObject value) {
+		try {
+			if ("put".equals(command) && Integer.parseInt(key) < 0) {
+				key = newID();
+				value.put("id", key);
+			}
 		
-		line.put("id", id);
+			return execute(command, key, value);
+		}
+		catch(NumberFormatException nfe) {
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+			
+			// fatal error
+		}
 		
-		return super.add(id, line);
+		return null;
+	}
+	
+	@Override
+	public boolean complete() {
+		return false;
 	}	
 }

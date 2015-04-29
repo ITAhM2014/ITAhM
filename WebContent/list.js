@@ -1,190 +1,143 @@
 ;"use strict";
 
-function DeviceList() {
-	this.init();
-}
-
-function LineList() {
-	this.init();
-}
-
 (function (window, undefined) {
-	var doc = document,
-		form = undefined,
-		table = undefined,
-		fragment = doc.createDocumentFragment();
+	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
+		list = document.getElementById("list"),
+		form = document.getElementById("form"),
+		dialog = document.getElementById("dialog"),
+		removeWrapper = {};
 	
-	DeviceList.prototype = {
+	form.addEventListener("submit", onAdd, false);
+	form.addEventListener("reset", onRemove, false);
+	window.addEventListener("load", onLoad, false);
+	window.addEventListener("message", onMessage, false);
+	
+	function onAdd(e) {
+		e.preventDefault();
 		
-		init: function () {
-			this.list = {};
-			
-			table = doc.getElementById("device_list");
-			form = doc.getElementById("form_device_list");
-			
-			form.add.addEventListener("click", onAdd.bind(this), false);
-			form.remove.addEventListener("click", this.remove.bind(this), false);
-		},
+		dialog.contentWindow.postMessage(null, "*");
 		
-		reload: function (list) {
-			var row,
-				index = 0;
-			
-			this.list = list;
-			
-			while (row = table.firstChild) {
-				table.removeChild(row);
-			}
-			
-			for (var id in list) {
-				fragment.appendChild(add(list[id]));
-			}
-			
-			table.appendChild(fragment);
-		},
+		dialog.classList.add("show");
+	}
+	
+	function onRemove(e) {
+		var array = [],
+			length = 0;
 		
-		add: function (device) {
-			table.appendChild(add(device));
-		},
-		
-		remove: function () {
-			var checkbox = table.querySelectorAll("input[type=checkbox]:checked"),
-				index = checkbox.length,
-				device = {};
-			
-			while (index-- > 0) {
-				device[checkbox[index].dataset["id"]] = null;
-			}
-			
-			itahm.send({
-				device: {
-					remove: device
-				}
-			});
-			
-			itahm.send({
-				device: {
-					get: null
-				}
-			});
-		},
-		
-		get: function (id) {
-			return this.list[id];
+		for (var id in removeWrapper) {
+			array[length++] = removeWrapper[id];
 		}
 		
-	};
-
-	function add(device) {
-		var row = document.createElement("tr"),
-			checkbox = document.createElement("input"),
-			cells,
-			length = 6;
+		if (confirm("remove "+ length +" device(s)?")) {
+			while (length-- > 0) {
+				array[length]();
+			}
+		}
+	}
+	
+	function onLoad(e) {
+		xhr.request( {
+			database: "device",
+			command: "get",
+			data: null
+		});
+	}
+	
+	function onMessage(e) {
+		switch (e.data) {
+		case "close":
+			dialog.classList.remove("show");
+			
+			break;
+		}
+	}
+	
+	function onEdit(json, e) {
+		//e.preventDefault();
 		
-		while (length-- > 0) {
-			row.insertCell(-1);
+		dialog.contentWindow.postMessage(json, "*");
+		
+		dialog.classList.add("show");
+	}
+	
+	function onSelect(json, e) {
+		if (this.checked) {
+			removeWrapper[json.id] = remove.bind(window, json.id);
+		}
+		else {
+			delete removeWrapper[json.id];
+		}
+		
+	}
+	
+	function remove(id) {
+		var request = {
+			database: "device",
+			command: "delete",
+			data: {}
+		};
+		
+		request.data[id] = null;
+		
+		xhr.request(request);
+	}
+	
+	function createDevice(json) {
+		var row = list.insertRow(),
+			checkbox = document.createElement("input"),
+			cols = 5;
+		
+		while (cols-- > 0) {
+			row.insertCell();
 		}
 		
 		checkbox.type = "checkbox";
-		checkbox.dataset["id"] = device.id;
 		
-		cells = row.cells;
+		row.cells[0].appendChild(checkbox);
+		row.cells[1].textContent = json.name;
+		row.cells[2].textContent = json.type;
+		row.cells[3].textContent = json.address;
+		row.cells[4].textContent = json.profile;
 		
-		cells[0].appendChild(checkbox);
-		cells[1].textContent = device.address;
-		cells[2].textContent = device.type;
-		cells[3].textContent = device.name;
-		cells[4].textContent =  device.snmp;
-		cells[5].textContent =  device.profile;
-		
-		row.addEventListener("click", onSelect.bind(this, device), false);
+		checkbox.addEventListener("click", onSelect.bind(checkbox, json), false);
+		row.cells[1].addEventListener("click", onEdit.bind(row, json), false);
 		
 		return row;
 	}
 	
-	function onAdd(e) {
-		itahm.popup("device");
+	function init(json) {
+		for (var id in json) {
+			list.appendChild(createDevice(json[id]));
+		}
 	}
 	
-	function onSelect(device, e) {
-		if (e.target.nodeName == "INPUT") {
-			return;
+	function onResponse(response) {
+		if ("error" in response) {
+			var status = response.error.status;
+			
+			if (status == 401) {
+				location.href = "signin.html";
+			}
+			
+			console.log(status);
 		}
-
-		itahm.popup("device", device);
+		else if ("json" in response) {
+			var json = response.json;
+			
+			switch (json.command) {
+			case "get":
+				init (json.data);
+				
+				break;
+			case "delete":
+				window.location.reload();
+			}
+			
+			console.log(json);
+		}
+		else {
+			console.log("fatal error");
+		}
 	}
-	
-}) (window);
-
-(function (window, undefined) {
-	var doc = document,
-		form = undefined,
-		table = undefined,
-		fragment = doc.createDocumentFragment();
-	
-	LineList.prototype = {
-		
-		init: function () {
-			this.list = {};
-			
-			table = doc.getElementById("line_list");
-			form = doc.getElementById("form_line_list");
-			
-			//form.add.addEventListener("click", onAdd.bind(this), false);
-			//form.remove.addEventListener("click", this.remove.bind(this), false);
-		},
-		
-		reload: function (list) {
-			var row,
-				line,
-				tmp;
-			
-			while (row = table.firstChild) {
-				table.removeChild(row);
-			}
-			
-			this.list = {};
-			
-			for (var id in list) {
-				line = list[id];
-				
-				tmp = this.list[line.from];
-				
-				if (!tmp) {
-					tmp = {};	
-					this.list[line.from] = tmp;
-				}
-				
-				tmp[line.to] = line;
-				
-				tmp = this.list[line.to];
-				
-				if (!tmp) {
-					tmp = {};
-					this.list[line.to] = tmp;
-				}
-				
-				tmp[line.from] = line;
-				
-				//fragment.appendChild(add(line));
-			}
-			
-			table.appendChild(fragment);
-		},
-		
-		add: function (device) {
-			
-		},
-		
-		remove: function () {
-			
-		},
-		
-		get: function (from, to) {
-			var from = this.list[from];
-			
-			return from && from[to];
-		}
-	};
 	
 }) (window);

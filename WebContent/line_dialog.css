@@ -1,0 +1,39 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+form {
+	border: 1px solid #ddd;
+	padding: 10px;
+}
+
+table {
+	width: 100%;
+}
+
+input[type=text], select {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+input[name=id1] {
+	display: none;
+}
+
+label {
+	display: block;
+}
+
+.flex {
+	display: flex;
+}
+
+.flex >*{
+	flex: 1;
+	align-self: flex-end;
+}
+
+.ellipsis {
+	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+}

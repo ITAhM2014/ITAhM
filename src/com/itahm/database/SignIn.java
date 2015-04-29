@@ -1,27 +1,31 @@
 package com.itahm.database;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-public class SignIn extends Database implements Function {
+public class SignIn extends Database {
 
-	public SignIn() {
+	public SignIn(JSONObject jo) {
+		super(account);
 		
+		execute(jo);
 	}
-
+	
 	@Override
-	public void execute(JSONObject jo) {
-		JSONObject database = account.getJSONObject();
-		
-		jo.put("result", false);
-		
-		try {
-			String username = jo.getString("username");
+	protected JSONObject each(String command, String key, JSONObject value) {
+		if ("get".equals(command)) {
+			JSONObject account = execute(command, key, value);
 			
-			jo.put("result", database.getJSONObject(username).getString("password").equals(jo.getString("password")));
+			if (account != null &&value.getString("password").equals(account.getString("password"))) {
+				return account;
+			}
 		}
-		catch (JSONException jsone) {
-		}
+
+		return null;
+	}
+	
+	@Override
+	protected boolean complete() {
+		return false;
 	}
 
 }

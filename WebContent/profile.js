@@ -18,7 +18,8 @@
 	function onLoad(e) {
 		xhr.request( {
 			database: "profile",
-			command: "get"
+			command: "get",
+			data: null
 		});
 	}
 	
@@ -47,8 +48,10 @@
 		var request = {
 				database: "profile",
 				command: "delete",
-				key: json.name
-		};
+				data: {}
+			};
+		
+		request.data[json.name] = null;
 		
 		xhr.request(request);
 	}
@@ -98,12 +101,12 @@
 			
 			console.log(status);
 		}
-		else if ("json" in response) {console.log(response);
+		else if ("json" in response) {
 			var json = response.json;
 			
 			switch (json.command) {
 			case "get":
-				init (json.result);
+				init (json.data);
 				
 				break;
 			case "delete":
