@@ -60,6 +60,13 @@
 			textBaseline:  "bottom",
 		});
 	
+		lineLayer.context({
+			font: "normal 13px arial, \"맑은 고딕\"",
+			//textBaseline:  "bottom",
+			fillStyle: "#777",
+			strokeStyle: "#777"
+		});
+		
 		xhr.request({
 			database: "device",
 			command: "get",
@@ -124,14 +131,22 @@
 	}
 
 	function _showLineDialog(from, to) {
-		var line = getLine(from, to);
+		var line = getLine(from, to),
+			msg = {
+				message: "line",
+				line: line
+			};
 		
-		dialog.contentWindow.postMessage({
-			message: "line",
-			deviceFrom: from,
-			deviceTo: to,
-			line: line
-		}, "*");
+		if (line.from != from.id) {
+			msg["deviceFrom"] = to;
+			msg["deviceTo"] = from;
+		}
+		else {
+			msg["deviceFrom"] = from;
+			msg["deviceTo"] = to;
+		}
+		
+		dialog.contentWindow.postMessage(msg, "*");
 		
 		dialog.classList.add("show");
 	}
@@ -233,13 +248,44 @@
 	function drawLine(draw) {
 		var context = draw.context,
 			line = draw.node,
+			link = line.link,
 			from = deviceList[line.from],
-			to = deviceList[line.to];
+			to = deviceList[line.to],
+			x1 = from.x,
+			y1 = from.y,
+			x2 = to.x,
+			y2 = to.y,
+			x = (x1 + x2) /2,
+			y = (y1 + y2) /2,
+			index = 0,
+			length = link.length,
+			angle = Math.atan2(y2 - y1, x2 - x1) + Math.PI *.5,
+			cpX, cpY;
+
+		if (length %2 > 0) {
+			context.beginPath();
+			context.moveTo(x1, y1);
+			context.lineTo(x2, y2);
+			context.stroke();
+			
+			context.fillText(link[index].from, (x2 + x1 *3) /4, (y2 + y1 *3) /4);
+			context.fillText(link[index].to, (x2 *3 + x1) /4, (y2 *3 + y1) /4);
+			
+			index++;
+		}
 		
-		context.beginPath();
-		context.moveTo(from.x, from.y);
-		context.lineTo(to.x, to.y);
-		context.stroke();
+		for (var half = 1; index < length; index++, half += .5, angle += Math.PI) {
+			cpX = x + (Math.floor(half)) * 40 * Math.cos(angle);
+			cpY = y + (Math.floor(half)) * 40 * Math.sin(angle);
+			
+			context.beginPath();
+			context.moveTo(x1, y1);
+			context.quadraticCurveTo(cpX, cpY, x2, y2);
+			context.stroke();
+			
+			context.fillText(link[index].from, (cpX + x1) /2, (cpY + y1) /2);
+			context.fillText(link[index].to, (x2 + cpX) /2, (y2 + cpY) /2);
+		}
 	}
 	
 	function onMessage(e) {

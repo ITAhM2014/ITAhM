@@ -158,7 +158,6 @@
 			message: "reLoadLine",
 		}, "*");
 		
-		console.log("reset");
 		setLink();
 	}
 	

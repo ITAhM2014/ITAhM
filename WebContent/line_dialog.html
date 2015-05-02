@@ -31,6 +31,12 @@
 
 						<tbody>
 							<tr>
+								<td>name</td>
+								<td>
+									<input type="text"  name="name" placeholder="name of link">
+								</td>
+							</tr>
+							<tr>
 								<td>bandwidth</td>
 								<td class="flex">
 									<input type="text"  name="bandwidth" placeholder="bandwidth" value="100" required>
@@ -44,14 +50,14 @@
 							</tr>
 							<tr>
 								<td>
-									<input type="text" name="from" class="ellipsis" readonly>
+									<input type="text" name="from" class="ellipsis" tabindex="-1" readonly>
 								<td>
 									<input type="text" name="ifdesc_from" class="table text" placeholder="interface description">
 								</td>
 							</tr>
 							<tr>
 								<td>
-									<input type="text" name="to" class="ellipsis" readonly >
+									<input type="text" name="to" class="ellipsis" tabindex="-1" readonly >
 								<td>
 									<input type="text" name="ifdesc_to" class="table text" placeholder="interface description">
 								</td>

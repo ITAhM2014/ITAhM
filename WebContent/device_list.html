@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="device_list.css">
+		
+		<script src="js/JSONRequest.js"></script>
+	</head>
+
+	<body>
+		
+		<iframe src="header.html" class="header"></iframe>
+		<div class="content">
+			<div class="menu">
+				<form id="form" class="control" autocomplete="off">
+					<input type="submit" name="add" value="add">
+					<input type="reset" name="remove" value="remove">
+				</form>
+			</div>
+			<table class="list">
+				<colgroup span="5">
+					<col>
+					<col>
+					<col span="3">
+				<tbody id="list"></tbody>
+			</table>
+		</div>
+		
+		<iframe class="dialog" id="dialog" src="device_dialog.html"></iframe>
+			
+		<script src="device_list.js"></script>
+		
+	</body>
+	
+</html>

@@ -5,7 +5,8 @@
 		list = document.getElementById("list"),
 		form = document.getElementById("form"),
 		dialog = document.getElementById("dialog"),
-		removeWrapper = {};
+		removeWrapper = {},
+		unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
 	
 	form.addEventListener("submit", onAdd, false);
 	form.addEventListener("reset", onRemove, false);
@@ -37,16 +38,30 @@
 	
 	function onLoad(e) {
 		xhr.request( {
-			database: "device",
+			database: "line",
 			command: "get",
 			data: null
 		});
 	}
 	
 	function onMessage(e) {
-		switch (e.data) {
-		case "close":
-			dialog.classList.remove("show");
+		var data = e.data;
+		
+		if (!data) {
+			return;
+		}
+		
+		switch(data.message) {
+		case "reLoadLine":
+			reLoadLine();
+			
+			break;
+		case "showLineDialog":
+			showLineDialog();
+			
+			break;
+		case "closeLineDialog":
+			closeLineDialog();
 			
 			break;
 		}
@@ -58,6 +73,10 @@
 		dialog.contentWindow.postMessage(json, "*");
 		
 		dialog.classList.add("show");
+	}
+	
+	function closeLineDialog() {
+		dialog.classList.remove("show");
 	}
 	
 	function onSelect(json, e) {
@@ -82,32 +101,41 @@
 		xhr.request(request);
 	}
 	
-	function createDevice(json) {
-		var row = list.insertRow(),
+	function createLink(line, index) {
+		var link = line.link[index],
+			row = list.insertRow(),
 			checkbox = document.createElement("input"),
-			cols = 5;
+			cols = 5,
+			bandwidth = link.bandwidth;
 		
 		while (cols-- > 0) {
 			row.insertCell();
 		}
 		
+		for (var index=0; bandwidth > 999; index++) {
+			bandwidth /= 1000;
+		}
+		
 		checkbox.type = "checkbox";
 		
 		row.cells[0].appendChild(checkbox);
-		row.cells[1].textContent = json.name;
-		row.cells[2].textContent = json.type;
-		row.cells[3].textContent = json.address;
-		row.cells[4].textContent = json.profile;
+		row.cells[1].textContent = link.name || "";
+		row.cells[2].textContent = bandwidth + unit[index];
 		
-		checkbox.addEventListener("click", onSelect.bind(checkbox, json), false);
-		row.cells[1].addEventListener("click", onEdit.bind(row, json), false);
-		
-		return row;
+		checkbox.addEventListener("click", onSelect.bind(checkbox, line, index), false);
+		row.cells[1].addEventListener("click", onEdit.bind(row, line, index), false);
 	}
 	
 	function init(json) {
+		var line, link, index;
+		
 		for (var id in json) {
-			list.appendChild(createDevice(json[id]));
+			line = json[id];
+			link = line.link;
+			
+			for (index=0; index<link.length; index++) {
+				createLink(line, index);
+			}
 		}
 	}
 	
@@ -131,9 +159,9 @@
 				break;
 			case "delete":
 				window.location.reload();
+				
+				break;
 			}
-			
-			console.log(json);
 		}
 		else {
 			console.log("fatal error");

@@ -8,10 +8,6 @@ function Layer(draw) {
 	this.init(draw);
 }
 
-function Node(node) {
-	this.init(node);
-}
-
 function numToRGBString(n) {
 	return "#"+ (1 << 24 | n).toString(16).substring(1);
 }
@@ -32,52 +28,6 @@ function getPos(canvas, e) {
 		y: e.clientY - rect.top
 	};
 }
-
-function clear(canvas) {
-	var context = canvas.getContext("2d"),
-		width = canvas.width,
-		height = canvas.height;
-
-	context.save();
-	
-	context.setTransform(1, 0, 0, 1, 0, 0);
-	context.clearRect(0, 0, width, height);
-	
-	context.restore();
-}
-
-/*
-function select(layer, node, toggle) {
-	if (toggle && layer.find(node)) {
-		layer.remove(node);
-	}
-	else {
-		layer.add(node);
-	}
-	
-	layer.invalidate();
-}
-*/
-
-function batch(array, context, func) {
-	var length = array.length;
-	
-	for (var index = 0; index < length; index++) {
-		array[index][func](context);
-	}
-}
-
-function move(node, x, y) {
-	if (node.x && node.y) {
-		node.x += x;
-		node.y += y;
-	}
-}
-/*
-function Icon() {
-	this.init(arguments);
-}
-*/
 
 /**************************************************************************************************
  * Canvas
@@ -257,6 +207,26 @@ function Icon() {
 		this.canvas.insertBefore(this.fragment, this.mask.canvas);
 	}
 	
+	function move(node, x, y) {
+		if (node.x && node.y) {
+			node.x += x;
+			node.y += y;
+		}
+	}
+	
+	function clear(canvas) {
+		var context = canvas.getContext("2d"),
+			width = canvas.width,
+			height = canvas.height;
+
+		context.save();
+		
+		context.setTransform(1, 0, 0, 1, 0, 0);
+		context.clearRect(0, 0, width, height);
+		
+		context.restore();
+	}
+	
 	Canvas.prototype = {
 		init: function (id) {
 			this.canvas = document.getElementById(id);
@@ -393,6 +363,8 @@ function Icon() {
 			eventHandler[type].push(handler);
 		}
 	};
+	
+	Canvas.clear = clear;
 	
 })(window);
 
@@ -545,8 +517,8 @@ function Icon() {
 			draw["context"] = this.canvas.getContext("2d");
 			draw["shadow"] = this.shadow.getContext("2d");
 			
-			clear(this.canvas);
-			clear(this.shadow);
+			Canvas.clear(this.canvas);
+			Canvas.clear(this.shadow);
 			
 			for (var i=0, _i=this.zIndex.length; i<_i; i++) {
 				
