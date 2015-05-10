@@ -25,7 +25,7 @@ public class RollingFile extends JSONFile {
 		File path = new File(this.path, fileName.format(c.getTime()));
 		path.mkdirs();
 		
-		load(new File(path, Integer.toString(this.last = c.get(Calendar.HOUR_OF_DAY))));
+		load(new File(path, String.format("%02d", this.last = c.get(Calendar.HOUR_OF_DAY))));
 	}
 	
 	public void roll() throws IOException {

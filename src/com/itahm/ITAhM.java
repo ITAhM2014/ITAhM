@@ -16,6 +16,7 @@ import com.itahm.http.Message;
 import com.itahm.http.Listener;
 import com.itahm.database.Database;
 import com.itahm.session.Session;
+import com.itahm.snmp.Manager;
 
 public class ITAhM implements EventListener, Closeable {
 
@@ -26,6 +27,7 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("line", "com.itahm.database.Line");
 		commandMap.put("traffic", "com.itahm.database.Traffic");
 		commandMap.put("profile", "com.itahm.database.Profile");
+		commandMap.put("address", "com.itahm.database.Address");
 	}
 	
 	private final Listener listener;
@@ -35,7 +37,7 @@ public class ITAhM implements EventListener, Closeable {
 		File root = new File(path, "itahm");
 		root.mkdir();
 		
-		Database.init(root);
+		Database.init(root, new Manager(root));
 			
 		listener = new Listener(this, udpPort);
 	}

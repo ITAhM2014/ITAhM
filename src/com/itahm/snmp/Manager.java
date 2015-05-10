@@ -1,39 +1,45 @@
 package com.itahm.snmp;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
-import java.net.UnknownHostException;
-import java.util.Iterator;
-import java.util.Vector;
+//import java.util.Vector;
 
+
+
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
 import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.event.ResponseListener;
-import org.snmp4j.smi.Counter32;
-import org.snmp4j.smi.Counter64;
-import org.snmp4j.smi.Gauge32;
-import org.snmp4j.smi.Integer32;
-import org.snmp4j.smi.Null;
-import org.snmp4j.smi.OID;
-import org.snmp4j.smi.OctetString;
-import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-public class Manager implements Closeable, ResponseListener  {
+import com.itahm.json.JSONFile;
+
+public class Manager extends TimerTask implements ResponseListener, Closeable  {
 
 	private final Snmp snmp;
-	private Worker worker;
+	private final Timer timer;
+	private final File root;
+	private final JSONFile snmpFile = new JSONFile();
+	private final JSONFile addrFile = new JSONFile();
 	
+	private final HashSet<Node> nodeList = new HashSet<Node>();
 	private final static PDU pdu = new PDU();
-	static {
+	{
 		pdu.setType(PDU.GETNEXT);
-		// iso.org.dod.internet.mgmt.mib_2.system
 		pdu.add(new VariableBinding(Constants.sysDescr));
 		pdu.add(new VariableBinding(Constants.sysObjectID));
 		pdu.add(new VariableBinding(Constants.sysName));
-		//pdu.add(new VariableBinding(Constants.ifIndex));
+		pdu.add(new VariableBinding(Constants.sysServices));
 		pdu.add(new VariableBinding(Constants.ifDescr));
 		pdu.add(new VariableBinding(Constants.ifType));
 		pdu.add(new VariableBinding(Constants.ifSpeed));
@@ -46,170 +52,91 @@ public class Manager implements Closeable, ResponseListener  {
 		pdu.add(new VariableBinding(Constants.ifHCInOctets));
 		pdu.add(new VariableBinding(Constants.ifHCOutOctets));
 		pdu.add(new VariableBinding(Constants.ifAlias));
+		pdu.add(new VariableBinding(Constants.ipNetToMediaType));
+		pdu.add(new VariableBinding(Constants.ipNetToMediaPhysAddress));
 	}
+	
+	//public static long DELAY = 60 * 1000; // 1 min.
+	public static long DELAY = 3 * 1000; // test
 	
 	public Manager() throws IOException {
+		this(new File(""));
+	}
+	
+	public Manager(File path) throws IOException {
 		snmp = new Snmp(new DefaultUdpTransportMapping());
+		timer = new Timer(true);
+		root = new File(path, "snmp");
+		
+		root.mkdir();
+		
+		snmpFile.load(new File(root, "snmp"));
+		addrFile.load(new File(root, "address"));
 		
 		snmp.listen();
-	}
-
-	public void setWorker(Worker worker) {
-		this.worker = worker;
+		
+		JSONObject jo = snmpFile.getJSONObject();
+		
+		if (jo.length() > 0) {
+			String [] names = JSONObject.getNames(jo);
+			
+			for (int i=0, _i=names.length; i<_i; i++) {
+				Node.create(root, jo.getJSONObject(names[i]));
+			}
+		}
+		else {
+			add("127.0.0.1", 161, "public");
+		}
+		
+		timer.scheduleAtFixedRate(this, 3000, DELAY);
 	}
 	
-	public void request(Node node) throws IOException {
-		this.snmp.send(pdu, node, node, this);
-	}
-	
-	private final void parse (Node node, OID oid, Variable variable) {
-		if (oid.leftMostCompare(5, Constants.mgmt) == 0) {
-			if (oid.leftMostCompare(6, Constants.mib_2) == 0) {
-				if (oid.leftMostCompare(7, Constants.system) == 0) {
-					if (oid.leftMostCompare(8, Constants.sysDescr) == 0) {
-						OctetString value = (OctetString)variable;
-					
-						node.set(oid, new String(value.getValue()));
+	public Node add (String ip, int udp, String community) {
+		JSONObject snmpTable = snmpFile.getJSONObject();
+		JSONObject jo = new JSONObject()
+			.put("ip", ip)
+			.put("udp", udp)
+			.put("community", community)
+			.put("ifEntry", new JSONObject());
+		
+		try {
+			snmpTable.put(ip, jo);
+			
+			Node node = Node.create(this.root, jo);
+			if (node != null) {
+				synchronized(this.nodeList) {
+					if (this.nodeList.add(node)) {
+						return node;
 					}
-					else if (oid.leftMostCompare(8, Constants.sysObjectID) == 0) {
-						OID value = (OID)variable;
-						
-						node.set(oid, value.toDottedString());
-					}
-					else if (oid.leftMostCompare(8, Constants.sysName) == 0) {
-						OctetString value = (OctetString)variable;
-						
-						node.set(oid, new String(value.getValue()));
-					}
-				}
-				else if (oid.leftMostCompare(7, Constants.interfaces) == 0) {
-					if (oid.leftMostCompare(9, Constants.ifEntry) == 0) {
-						if (oid.leftMostCompare(10, Constants.ifIndex) == 0) {
-							Integer32 value = (Integer32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-						else if (oid.leftMostCompare(10, Constants.ifDescr) == 0) {
-							OctetString value = (OctetString)variable;
-							
-							node.set(oid, new String(value.getValue()));
-						}
-						else if (oid.leftMostCompare(10, Constants.ifType) == 0) {
-							Integer32 value = (Integer32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-						else if (oid.leftMostCompare(10, Constants.ifSpeed) == 0) {
-							Gauge32 value = (Gauge32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-						else if (oid.leftMostCompare(10, Constants.ifPhysAddress) == 0) {
-							OctetString value = (OctetString)variable;
-							
-							node.set(oid, new String(value.getValue()));
-						}
-						else if (oid.leftMostCompare(10, Constants.ifAdminStatus) == 0) {
-							Integer32 value = (Integer32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-						else if (oid.leftMostCompare(10, Constants.ifOperStatus) == 0) {
-							Integer32 value = (Integer32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-						else if (oid.leftMostCompare(10, Constants.ifInOctets) == 0) {
-							Counter32 value = (Counter32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-						else if (oid.leftMostCompare(10, Constants.ifOutOctets) == 0) {
-							Counter32 value = (Counter32)variable;
-							
-							node.set(oid, value.getValue());
-						}
-					}
-				}
-				else if (oid.leftMostCompare(7, Constants.at) == 0) {
-					if (oid.leftMostCompare(8, Constants.atTable) == 0) {
-						if (oid.leftMostCompare(9, Constants.atEntry) == 0) {
-							if (oid.leftMostCompare(10, Constants.atPhysAddress) == 0) {
-								
-							}
-							else if (oid.leftMostCompare(10, Constants.atNetAddress) == 0) {
-								
-							}
-						}
-					}
-				}
-				else if (oid.leftMostCompare(7, Constants.ifMib) == 0) {
-					//if (oid.leftMostCompare(8, Constants.ifMibObjects) == 0) 
-						//if (oid.leftMostCompare(9, Constants.ifXTable) == 0) 
-							if (oid.leftMostCompare(10, Constants.ifXEntry) == 0) {
-								if (oid.leftMostCompare(11, Constants.ifName) == 0) {
-									OctetString value = (OctetString)variable;
-									
-									node.set(oid, new String(value.getValue()));
-								}
-								else if (oid.leftMostCompare(11, Constants.ifHCInOctets) == 0) {
-									Counter64 value = (Counter64)variable;
-									
-									node.set(oid, value.getValue());
-								}
-								else if (oid.leftMostCompare(11, Constants.ifHCOutOctets) == 0) {
-									Counter64 value = (Counter64)variable;
-									
-									node.set(oid, value.getValue());
-								}
-								else if (oid.leftMostCompare(11, Constants.ifAlias) == 0) {
-									OctetString value = (OctetString)variable;
-									
-									node.set(oid, new String(value.getValue()));
-								}
-							}
-				}
-				else {
-					//
 				}
 			}
 		}
-	}
-	
-	private final PDU getNext(Node node, PDU request, PDU response) {
-		Vector<? extends VariableBinding> requestVBs = request.getVariableBindings();
-		Vector<? extends VariableBinding> vbs = response.getVariableBindings();
-		Vector<VariableBinding> nextVBs = new Vector<VariableBinding>();
-		VariableBinding requestVB, responseVB;
-		OID requestOID, oid;
-		Variable variable;
-		int requestSize, size;
-		
-		for (int i=0, length = vbs.size(); i<length; i++) {
-			requestVB = (VariableBinding)requestVBs.get(i);
-			responseVB = (VariableBinding)vbs.get(i);
-			
-			requestOID = requestVB.getOid();
-			oid = responseVB.getOid();
-			variable = responseVB.getVariable();
-			requestSize = requestOID.size();
-			size = oid.size();
-			
-			if (!variable.equals(Null.endOfMibView) && oid.leftMostCompare(requestSize == size? requestSize -1: requestSize, requestOID) == 0) {
-				parse(node, oid, variable);
-				
-				nextVBs.add(responseVB);
-			}
+		catch (JSONException | IOException e) {
+			e.printStackTrace();
 		}
 		
-		return nextVBs.size() > 0? new PDU(PDU.GETNEXT, nextVBs): null;
+		return null;
 	}
 	
-	private final void onResponse(Node node, PDU request, PDU response) throws IOException {
+	@Override
+	public void close() throws IOException {
+		this.timer.cancel();
+		
+		snmp.close();
+	}
+	
+	@Override
+	public void onResponse(ResponseEvent event) {
+		PDU request = event.getRequest();
+		PDU response = event.getResponse();
+		Node node = ((Node)event.getUserObject());
+		
+		((Snmp)event.getSource()).cancel(request, this);
+		
 		if (response == null) {			
-			if (this.worker != null) {
-				this.worker.work(node, false, "response timed out");
-			}
+			// TODO response timed out
+			
+			System.out.println("node "+ event.getPeerAddress() +" request timed out");
 			
 			return;
 		}
@@ -218,74 +145,140 @@ public class Manager implements Closeable, ResponseListener  {
 		
 		if (status == PDU.noError) {
 			try {
+				PDU nextRequest = node.parse(request, response);
 				
-				PDU next = getNext(node, request, response);
-				if (next == null) {
-					if (this.worker != null) {
-						this.worker.work(node, true, null);
+				if (nextRequest == null) {
+					JSONObject addrTable = this.addrFile.getJSONObject();
+					Map<String, String> addrMap = node.getAddrTable();
+					String mac;
+					JSONObject data;
+					long now = Calendar.getInstance().getTimeInMillis();
+					
+					synchronized(addrMap) {
+						for (String ip : addrMap.keySet()) {
+							mac = addrMap.get(ip);
+							
+							if (mac == null) {
+								// dynamic arp table ip를 수집했으나 아직 mac이 확인되지 않은 상태 
+								
+								continue;
+							}
+							
+							if (addrTable.has(ip)) {
+								data = addrTable.getJSONObject(ip);
+															
+								if (data.getString("mac").equals(mac)) {
+									data.put("last", now);
+									
+									continue;
+								}
+							}
+							else {
+								addrTable.put(ip, data = new JSONObject());
+							}
+							
+							data.put("from", now)
+								.put("last", now)
+								.put("mac", mac);
+						}
 					}
+					
 				}
 				else {
-					this.snmp.send(next, node, node, this);
+					snmp.send(nextRequest, node, node, this);
 				}
-			} catch (Exception e) {
+			} catch (IOException e) {
+				// TODO fatal error
 				e.printStackTrace();
+			} catch (JSONException jsone) {
+				jsone.printStackTrace();
 			}
 		}
 		else {
-			if (this.worker != null) {
-				this.worker.work(node, false, String.format("error index[%d] status : %s", response.getErrorIndex(), response.getErrorStatusText()));
+			// TODO String.format("error index[%d] status : %s", response.getErrorIndex(), response.getErrorStatusText())
+		}
+	}
+	
+	public JSONFile getAddrFile() {
+		return this.addrFile;
+	}
+	
+	public void test() {
+		JSONObject addrMap = this.addrFile.getJSONObject();
+		
+		if (addrMap.length() == 0) {
+			return;
+		}
+		
+		String [] keys = JSONObject.getNames(addrMap);
+		JSONObject data;
+		String ip;
+		String mac;
+		byte [] tmp;
+		
+		
+		System.out.println("print address table");
+		for (int i=0, _i=keys.length; i<_i; i++) {
+			try {
+				ip = keys[i];
+				data = addrMap.getJSONObject(ip);
+				mac = data.getString("mac");
+				
+				tmp = ip.getBytes();
+				System.out.print(String.format("%d.%d.%d.%d >> ", tmp[0] & 0xff, tmp[1] & 0xff, tmp[2] & 0xff, tmp[3] & 0xff));
+				tmp = mac.getBytes();
+				System.out.println(String.format("%02x-%02x-%02x-%02x-%02x-%02x", tmp[0] & 0xff, tmp[1] & 0xff, tmp[2] & 0xff, tmp[3] & 0xff, tmp[4] & 0xff, tmp[5] & 0xff));
+			}
+			catch(JSONException jsone) {
+				jsone.printStackTrace();
+			}
+		}
+		
+		//System.out.println("count of node is "+ this.nodeList.size());
+	}
+	
+	public void run() {
+		synchronized(this.nodeList) {
+			try {
+				for (Node node : this.nodeList) {
+					this.snmp.send(pdu, node, node, this);
+				}
+			} catch (IOException e) {
+				// TODO fatal error
+				
+				e.printStackTrace();
 			}
 		}
 	}
 	
-	@Override
-	public void close() throws IOException {
-		this.snmp.close();
-	}
-	
-	public static void main(String [] args) throws UnknownHostException, IOException {
-		try (
-			Manager manager = new Manager();
-		) {
-			manager.setWorker(new Worker() {
-				public void work(Node node, boolean success, String msg) {
-					if (success) {
-						Iterator<OID> it = node.iterator();
-						OID oid;
-						while(it.hasNext()) {
-							oid = it.next();
-							
-							System.out.println(oid.toDottedString() + " : "+ node.get(oid));
-						}
-					}
-					else {
-						System.out.println("request fail");
-						if (msg != null) {
-							System.out.println(msg);
-						}
-					}
-				}
-			});
-			
-			manager.request(new Node("192.168.0.20", 161, "itahm2014"));
-			
-			System.in.read();
-		}
-	}
-	
-	@Override
-	public void onResponse(ResponseEvent event) {
-		PDU request = event.getRequest();
-		
-		((Snmp)event.getSource()).cancel(request, this);
-		
+	public static void main(String [] args) {
+		Manager manager;
 		try {
-			onResponse((Node)event.getUserObject(), request, event.getResponse());
+			manager = new Manager();
+			
+			//Node node =
+			//manager.add("127.0.0.1", 161, "public");
+			
+			boolean more = true;
+			while (more) {
+				switch(System.in.read()) { 
+				case 'd':
+					manager.test();
+					break;
+				case -1:
+					more = false;
+					
+					break;
+				default:
+						
+				}
+			}
+			
+			manager.close();	
 		} catch (IOException e) {
-			// TODO fatal error
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}	
 	}
 	
 }

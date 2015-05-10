@@ -9,6 +9,7 @@ import org.json.JSONObject;
 
 import com.itahm.ITAhMException;
 import com.itahm.json.JSONFile;
+import com.itahm.snmp.Manager;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -35,6 +36,7 @@ abstract public class Database {
 	
 	protected final JSONFile file;
 	protected final JSONObject database;
+	protected static JSONFile address;
 	
 	/**
 	 * Instantiates a new database.
@@ -51,8 +53,9 @@ abstract public class Database {
 	 * @param path the path
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public static void init(File path) throws IOException  {
+	public static void init(File path, Manager snmpManager) throws IOException  {
 		root = path;
+		address = snmpManager.getAddrFile();
 		
 		JSONObject jo;
 		

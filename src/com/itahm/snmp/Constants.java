@@ -19,6 +19,8 @@ public class Constants {
 	public final static OID 	sysDescr = new OID(new int [] {1,3,6,1,2,1,1,1});
 	// iso.org.dod.internet.mgmt.mib_2.system.sysObjectID
 	public final static OID 	sysObjectID = new OID(new int [] {1,3,6,1,2,1,1,2});
+	// iso.org.dod.internet.mgmt.mib_2.system.sysServices
+	public final static OID 	sysServices = new OID(new int [] {1,3,6,1,2,1,1,7});
 	// iso.org.dod.internet.mgmt.mib_2.system.sysName
 	public final static OID sysName =  new OID(new int [] {1,3,6,1,2,1,1,5});
 	// iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).interfaces(2)
@@ -61,6 +63,11 @@ public class Constants {
 	public final static OID 			ip = new OID(mib_2).append(4); // 7
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).at(3).atTable(1).atEntry(1)
 	
+	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ip(4).ipNetToMediaTable(22)
+	public final static OID ipNetToMediaTable = new OID(new int [] {1,3,6,1,2,1,4,22});
+	public final static OID ipNetToMediaPhysAddress = new OID(new int [] {1,3,6,1,2,1,4,22,1,2});
+	public final static OID ipNetToMediaType = new OID(new int [] {1,3,6,1,2,1,4,22,1,4});
+		
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31)
 	public final static OID ifMib = new OID(new int [] {1,3,6,1,2,1,31});
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31).ifMibObjects(1)
