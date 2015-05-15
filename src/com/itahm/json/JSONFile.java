@@ -16,13 +16,12 @@ import org.json.JSONObject;
 import com.itahm.ITAhMException;
 
 public class JSONFile implements Closeable{
-	private JSONObject json;
+	protected JSONObject json;
 	private RandomAccessFile file = null;
 	private FileChannel channel;
 	private FileLock lock;
 	
 	public JSONFile() {
-		json = new JSONObject();
 	}
 	
 	public JSONFile load(File file) throws IOException, ITAhMException {
@@ -38,12 +37,12 @@ public class JSONFile implements Closeable{
 			this.lock = this.channel.tryLock();
 			
 			if (this.lock == null) {
-				throw new IOException("Can not lock file "+ file.getName());
+				throw new ITAhMException("Can not lock file "+ file.getName());
 			}
 			
 			long size = this.channel.size();
 			if (size != (int)size) {
-				throw new IOException("Can not read more than 2^31 -1 bytes");
+				throw new ITAhMException("too long file size.");
 			}
 			else if (size > 0) {
 				ByteBuffer buffer = ByteBuffer.allocate((int)size);
@@ -58,6 +57,8 @@ public class JSONFile implements Closeable{
 				}
 			}
 			else {
+				this.json = new JSONObject();
+				
 				save();
 			}
 		} catch (IOException e) {
@@ -69,12 +70,74 @@ public class JSONFile implements Closeable{
 		return this;
 	}
 
+	public static JSONObject getJSONObject(File file) throws ITAhMException {
+		JSONObject jo = null;
+	
+		try (
+			RandomAccessFile raf = new RandomAccessFile(file, "rws");
+			FileChannel fc = raf.getChannel();
+			FileLock fl = fc.tryLock();
+		) {
+			if (fl != null) {
+				long size = fc.size();
+				if (size != (int)size) {
+					throw new ITAhMException("too long file size.");
+				}
+				else if (size > 0) {
+					ByteBuffer bb = ByteBuffer.allocate((int)size);
+					fc.read(bb);
+					
+					bb.flip();
+				
+					try {
+						jo = new JSONObject(Charset.defaultCharset().decode(bb).toString());
+					}
+					catch (JSONException jsone) {
+						throw new ITAhMException("invalid json file. "+ file.getName(), jsone);
+					}
+				}
+				else {
+					throw new ITAhMException("empty file.");
+				}
+			}
+		}
+		catch (IOException ioe) {
+			throw new ITAhMException(ioe);
+		}
+		
+		return jo;
+	}
+	
 	public JSONObject getJSONObject() {
 		return this.json;
 	}
-
+	
+	public void put(String key, Object value) {
+		this.json.put(key, value);
+	}
+	
+	public JSONObject get(String key) {
+		if (this.json.has(key)) {
+			return this.json.getJSONObject(key);
+		}
+		
+		return null;
+	}
+	
+	public JSONObject get() {
+		return this.json;
+	}
+	
+	public boolean isEmpty() {
+		return this.json.length() == 0;
+	}
+	
+	public JSONObject remove(String key) {
+		return (JSONObject)this.json.remove(key);
+	}
+	
 	public void clear() throws IOException {
-		this.json = new JSONObject();
+		this.json.clear();
 	}
 	
 	public void save() throws IOException {	
