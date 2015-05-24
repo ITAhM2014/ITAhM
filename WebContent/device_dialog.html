@@ -6,6 +6,8 @@
 		<meta charset="UTF-8">
 		<meta http-equiv="Content-Script-Type" content="text/javascript">
 		<meta http-equiv="Content-Style-Type" content="text/css">
+		<meta http-equiv="pragma" content="no-cache">
+		
 		<link rel="shortcut icon" href="img/favicon.ico">
 		<link rel="stylesheet" href="device_dialog.css">
 		
@@ -13,80 +15,77 @@
 	</head>
 
 	<body>
-		<div class="background">
-			<div class="dialog">
-				<form id="form" autocomplete="off">
-					<h2>Device</h2>
-					<table>
-						<tbody>
-							<tr>
-								<td>name</td>
-								<td>
-									<input type="text"  name="name" class="table text" placeholder="device name" required>
-								</td>
-							</tr>
-							<tr>
-								<td>type</td>
-								<td>
-									<select name="type"  class="table text">
-											<option>unkown</option>
-										<optgroup label="network">
-											<option>router</option>
-											<option>dummy hub</option>
-											<option>L2 switch</option>
-											<option>L3 switch</option>
-											<option>L4 switch</option>
-										</optgroup>
-										<optgroup label="server">
-											<option>web server</option>
-											<option>was server</option>
-											<option>database</option>
-											<option>mainframe</option>
-											<option>storage</option>
-										</optgroup>
-										<optgroup label="security">
-											<option>firewall</option>
-											<option>web application firewall</option>
-											<option value="concentrator">vpn concentrator</option>
-											<option>vpn gateway</option>
-											<option>intrusion prevention system</option>
-											<option>intrusion detection system</option>
-										</optgroup>
-										<optgroup label="wireless">
-											<option>access point</option>
-											<option>sensor</option>
-											<option>wireless ips</option>
-										</optgroup>
-									</select>
-								</td>
-							</tr>
-							<tr>
-								<td>ip address</td>
-								<td>
-									<input type="text" name="address" placeholder="device ip address"
-										pattern="((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-										title="valid v4 ip address required">
-								</td>
-							</tr>
-							<tr>
-								<td>snmp</td>
-								<td>
-									<select name="profile">
-										<option>off
-										<optgroup label="profile" id="profile"></optgroup>
-									</select>
-								</td>
-							</tr>
-						</tbody>
-					</table>
-					
-					<input type="reset" value="cancel">
-					<input type="submit" value="apply">
-					
-				</form>
-			</div>
-		</div>
+	
+		<form id="form" autocomplete="off">
+			<h2>Device</h2>
+			<table>
+				<tbody>
+					<tr>
+						<td>name</td>
+						<td>
+							<input type="text"  name="name" placeholder="device name" required autofocus>
+						</td>
+					</tr>
+					<tr>
+						<td>type</td>
+						<td>
+							<select name="type" >
+									<option>unkown</option>
+								<optgroup label="network">
+									<option>router</option>
+									<option>dummy hub</option>
+									<option>L2 switch</option>
+									<option>L3 switch</option>
+									<option>L4 switch</option>
+								</optgroup>
+								<optgroup label="server">
+									<option>web server</option>
+									<option>was server</option>
+									<option>database</option>
+									<option>mainframe</option>
+									<option>storage</option>
+								</optgroup>
+								<optgroup label="security">
+									<option>firewall</option>
+									<option>web application firewall</option>
+									<option value="concentrator">vpn concentrator</option>
+									<option>vpn gateway</option>
+									<option>intrusion prevention system</option>
+									<option>intrusion detection system</option>
+								</optgroup>
+								<optgroup label="wireless">
+									<option>access point</option>
+									<option>sensor</option>
+									<option>wireless ips</option>
+								</optgroup>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td>ip address</td>
+						<td>
+							<input type="text" name="address" placeholder="device ip address"
+								pattern="((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+								title="valid v4 ip address required">
+						</td>
+					</tr>
+					<tr>
+						<td>snmp</td>
+						<td>
+							<select name="profile">
+								<option>off
+								<optgroup label="profile" id="profile"></optgroup>
+							</select>
+						</td>
+					</tr>
+				</tbody>
+			</table>
 			
+			<input type="reset" value="cancel">
+			<input type="submit" value="apply">
+			
+		</form>
+				
 		<script src="device_dialog.js"></script>
 		
 	</body>

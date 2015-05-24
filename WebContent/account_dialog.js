@@ -1,18 +1,42 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		form = document.getElementById("form");
+	var xhr, form;
 	
-	form.addEventListener("submit", onApply, false);
-	form.addEventListener("reset", onCancel, false);
+	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
-	function onMessage(e) {
-		var json = e.data;
+	function onLoad(e) {	
+	}
 	
-		if (json != null) {
-			form.username.value = json.username;
+	function load(data) {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		form = document.getElementById("form");
+		
+		form.addEventListener("submit", onApply, false);
+		form.addEventListener("reset", onCancel, false);
+		
+		if (data) {
+			form.username.value = data.username;
+			form.password.select();
+		}
+		else {
+			form.username.select();
+		}
+	}
+
+	function onMessage(e) {
+		var data = e.data;
+		
+		if (!data) {
+			return;
+		}
+		
+		switch (data.message) {
+		case "data":
+			load(data.data);
+			
+			break;
 		}
 	}
 	
@@ -45,7 +69,9 @@
 	}
 	
 	function onCancel(e) {
-		parent.postMessage("close", "*");
+		top.postMessage({
+			message: "popup"
+		}, "*");
 	}
 	
 	function onResponse(response) {
@@ -53,17 +79,24 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				parent.location.reload(true);
+				top.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
 		}
 		else if ("json" in response) {
 			var json = response.json;
-			if (json != null) {
-				parent.location.reload(true);
+			
+			switch (json.command) {
+			case "put":
+				top.postMessage({
+					message: "reload",
+					html: "account.html"
+				}, "*");
 			}
 		}
 		else {
-			console.log("fatal error");
+			throw "fatal error";
 		}
 	}
 	

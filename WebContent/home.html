@@ -10,14 +10,49 @@
 		<link rel="stylesheet" href="home.css">
 		
 		<script src="js/JSONRequest.js"></script>
+		<script src="js/snmp.js"></script>
 	</head>
 
 	<body class="loading">
-		<iframe src="header.html" class="header"></iframe>
-		<div class="content">
-			<div class="body">
-				home
-			</div>
+		<div class="body">
+			<form id="form">
+				<table>
+					<tbody>
+						<tr>
+							<td>status</td>
+							<td><input type="text" name="status" readonly></td>
+						</tr>
+						<tr>
+							<td>name</td>
+							<td><input type="text" name="name" readonly></td>
+						</tr>
+						<tr>
+							<td>uptime</td>
+							<td><input type="text" name="uptime" readonly></td>
+						</tr>
+						<tr>
+							<td>description</td>
+							<td><textarea name="descr" readonly></textarea></td>
+						</tr>
+						<tr>
+							<td>enterprise</td>
+							<td><input type="text" name="enterprise" readonly></td>
+						</tr>
+						<tr>
+							<td>processor load</td>
+							<td>
+								<ul id="cpu">
+								</ul>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				
+				<table>
+					<tbody id="ifentry"></tbody>
+				</table>
+				
+			</form>
 		</div>
 		
 		<script src="home.js"></script>

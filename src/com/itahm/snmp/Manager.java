@@ -9,7 +9,6 @@ import java.io.IOException;
 
 import java.util.Calendar;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -54,13 +53,15 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 		pdu.add(new VariableBinding(Constants.ifAlias));
 		pdu.add(new VariableBinding(Constants.ipNetToMediaType));
 		pdu.add(new VariableBinding(Constants.ipNetToMediaPhysAddress));
+		pdu.add(new VariableBinding(Constants.hrSystemUptime));
+		pdu.add(new VariableBinding(Constants.hrProcessorLoad));
 	}
 	
 	//public static long DELAY = 60 * 1000; // 1 min.
 	public static long DELAY = 3 * 1000; // test
 	
 	public Manager() throws IOException {
-		this(new File(""));
+		this(new File("."));
 	}
 	
 	public Manager(File path) throws IOException {
@@ -81,14 +82,28 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 			String [] names = JSONObject.getNames(jo);
 			
 			for (int i=0, _i=names.length; i<_i; i++) {
-				Node.create(root, jo.getJSONObject(names[i]));
+				add(Node.create(root, jo.getJSONObject(names[i])));
 			}
 		}
 		else {
 			add("127.0.0.1", 161, "public");
+			
+			snmpFile.save();
 		}
 		
 		timer.scheduleAtFixedRate(this, 3000, DELAY);
+		
+		System.out.println("snmp manager is running");
+	}
+	
+	private boolean add (Node node) {
+		if (node == null) {
+			return false;
+		}
+		
+		synchronized(this.nodeList) {
+			return this.nodeList.add(node);
+		}
 	}
 	
 	public Node add (String ip, int udp, String community) {
@@ -97,19 +112,13 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 			.put("ip", ip)
 			.put("udp", udp)
 			.put("community", community)
-			.put("ifEntry", new JSONObject());
+			.put("ifEntry", new JSONObject())
+			.put("hrProcessorLoad", new JSONObject());
 		
 		try {
 			snmpTable.put(ip, jo);
 			
-			Node node = Node.create(this.root, jo);
-			if (node != null) {
-				synchronized(this.nodeList) {
-					if (this.nodeList.add(node)) {
-						return node;
-					}
-				}
-			}
+			add(Node.create(this.root, jo));
 		}
 		catch (JSONException | IOException e) {
 			e.printStackTrace();
@@ -130,59 +139,27 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 		PDU request = event.getRequest();
 		PDU response = event.getResponse();
 		Node node = ((Node)event.getUserObject());
+		long now = Calendar.getInstance().getTimeInMillis();
 		
 		((Snmp)event.getSource()).cancel(request, this);
 		
 		if (response == null) {			
 			// TODO response timed out
 			
-			System.out.println("node "+ event.getPeerAddress() +" request timed out");
+			node.set("timeout", now);
 			
 			return;
 		}
 		
 		int status = response.getErrorStatus();
+		node.set("timeout", -1);
 		
 		if (status == PDU.noError) {
 			try {
 				PDU nextRequest = node.parse(request, response);
 				
 				if (nextRequest == null) {
-					JSONObject addrTable = this.addrFile.getJSONObject();
-					Map<String, String> addrMap = node.getAddrTable();
-					String mac;
-					JSONObject data;
-					long now = Calendar.getInstance().getTimeInMillis();
-					
-					synchronized(addrMap) {
-						for (String ip : addrMap.keySet()) {
-							mac = addrMap.get(ip);
-							
-							if (mac == null) {
-								// dynamic arp table ip를 수집했으나 아직 mac이 확인되지 않은 상태 
-								
-								continue;
-							}
-							
-							if (addrTable.has(ip)) {
-								data = addrTable.getJSONObject(ip);
-															
-								if (data.getString("mac").equals(mac)) {
-									data.put("last", now);
-									
-									continue;
-								}
-							}
-							else {
-								addrTable.put(ip, data = new JSONObject());
-							}
-							
-							data.put("from", now)
-								.put("last", now)
-								.put("mac", mac);
-						}
-					}
-					
+					// TODO end of get-next request
 				}
 				else {
 					snmp.send(nextRequest, node, node, this);
@@ -195,12 +172,35 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 			}
 		}
 		else {
-			// TODO String.format("error index[%d] status : %s", response.getErrorIndex(), response.getErrorStatusText())
+			// TODO 
+			System.out.println(String.format("error index[%d] status : %s", response.getErrorIndex(), response.getErrorStatusText()));
 		}
 	}
-	
-	public JSONFile getAddrFile() {
-		return this.addrFile;
+	/*
+	public JSONFile getFile(String name) {
+		if ("address".equals(name)) {
+			return this.addrFile;
+		}
+		else if ("snmp".equals(name)) {
+			return this.snmpFile;
+		}
+		
+		return null;
+	}
+	*/
+	public JSONObject getData(String name, String ip, String date) {
+		File dir = new File(this.root, ip + File.separator + name + File.separator + date.replace("-", File.separator));
+		JSONObject jo = null;
+		
+		if (dir.isDirectory()) {
+			jo = new JSONObject();
+			
+			for (File file : dir.listFiles()) {
+				jo.put(file.getName(), JSONFile.getJSONObject(file));
+			}
+		}
+		
+		return jo;
 	}
 	
 	public void test() {
@@ -215,7 +215,6 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 		String ip;
 		String mac;
 		byte [] tmp;
-		
 		
 		System.out.println("print address table");
 		for (int i=0, _i=keys.length; i<_i; i++) {
@@ -238,15 +237,24 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 	}
 	
 	public void run() {
+		try {
+			this.addrFile.save();
+			this.snmpFile.save();
+		} catch (IOException ioe) {
+			// TODO fatal error
+			
+			ioe.printStackTrace();
+		}
+		
 		synchronized(this.nodeList) {
 			try {
 				for (Node node : this.nodeList) {
 					this.snmp.send(pdu, node, node, this);
 				}
-			} catch (IOException e) {
+			} catch (IOException ioe) {
 				// TODO fatal error
 				
-				e.printStackTrace();
+				ioe.printStackTrace();
 			}
 		}
 	}

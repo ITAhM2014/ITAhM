@@ -34,17 +34,22 @@ abstract public class Database {
 	
 	//protected final static JSONFile icon = new JSONFile();
 	
-	protected final JSONFile file;
-	protected final JSONObject database;
+	protected JSONFile file;
 	protected static JSONFile address;
+	protected static JSONFile snmp;
 	
+	//protected final JSONObject database;
+	protected static Manager snmpManager;
 	/**
 	 * Instantiates a new database.
 	 */
 	
+	protected Database() {
+	}
+	
 	protected Database(JSONFile jf) {
 		file = jf;
-		database = file.getJSONObject();
+		//database = file.getJSONObject();
 	}
 	
 	/**
@@ -53,9 +58,11 @@ abstract public class Database {
 	 * @param path the path
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public static void init(File path, Manager snmpManager) throws IOException  {
+	public static void init(File path, Manager manager) throws IOException  {
 		root = path;
-		address = snmpManager.getAddrFile();
+		snmpManager = manager;
+		//address = manager.getFile("address");
+		//snmp = manager.getFile("snmp");
 		
 		JSONObject jo;
 		
@@ -98,6 +105,10 @@ abstract public class Database {
 		}
 	}
 	
+	protected void load(JSONFile file, String path) throws ITAhMException, IOException {
+		file.load(new File(root, path));
+	}
+	
 	protected String newID() throws IOException {
 		int numID;
 		synchronized(index) {
@@ -114,22 +125,23 @@ abstract public class Database {
 	
 	protected JSONObject execute(String command, String key, JSONObject value) {
 		if ("get".equals(command)) {
-			if (this.database.has(key)) {
-				return this.database.getJSONObject(key);
-			}
+			return this.file.get(key);
 		}
 		else if ("put".equals(command)) {
-			database.put(key, value);
+			this.file.put(key, value);
 			
 			return value;
 		}
 		else if ("delete".equals(command)) {
-			return (JSONObject)database.remove(key);
+			return this.file.remove(key);
 		}
 		
 		return null;
 	}
 	
+	protected JSONObject get() {
+		return this.file.get();
+	}
 	/**
 	 * Execute.
 	 *
@@ -140,40 +152,46 @@ abstract public class Database {
 	 */
 	
 	public void execute(JSONObject request) {
-		String command = request.getString("command");
-		
-		if (request.isNull("data")) {
-			if ("get".equals(command)) {
-				request.put("data", this.database);
+		try {
+			String command = request.getString("command");
+			
+			if (request.isNull("data")) {
+				if ("get".equals(command)) {
+					request.put("data", each());
+				}
 			}
-		}
-		else {
-			JSONObject data = request.getJSONObject("data");
-			
-			@SuppressWarnings("rawtypes")
-			Iterator it = data.keys();
-			String key;
-			JSONObject value;
-			
-			while (it.hasNext()) {
-				key = (String)it.next();
-				value = each(command, key, data.isNull(key)? null: data.getJSONObject(key));
+			else {
+				JSONObject data = request.getJSONObject("data");
 				
-				data.put(key, value == null? JSONObject.NULL: value);
-			}
-			
-			if ("put".equals(command) || "delete".equals(command) || complete()) {
-				try {
-					this.file.save();
-				} catch (IOException ioe) {
-					ioe.printStackTrace();
+				@SuppressWarnings("rawtypes")
+				Iterator it = data.keys();
+				String key;
+				JSONObject value;
+				
+				while (it.hasNext()) {
+					key = (String)it.next();
+					value = each(command, key, data.isNull(key)? null: data.getJSONObject(key));
 					
-					// fatal error
+					data.put(key, value == null? JSONObject.NULL: value);
+				}
+				
+				if ("put".equals(command) || "delete".equals(command) || complete()) {
+					try {
+						this.file.save();
+					} catch (IOException ioe) {
+						ioe.printStackTrace();
+						
+						// fatal error
+					}
 				}
 			}
 		}
+		catch (JSONException jsone) {
+			jsone.printStackTrace();
+		}
 	}
 	
+	abstract protected JSONObject each();
 	abstract protected JSONObject each(String command, String key, JSONObject value);
 	abstract protected boolean complete();
 	

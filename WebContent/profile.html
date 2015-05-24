@@ -6,6 +6,8 @@
 		<meta charset="UTF-8">
 		<meta http-equiv="Content-Script-Type" content="text/javascript">
 		<meta http-equiv="Content-Style-Type" content="text/css">
+		<meta http-equiv="pragma" content="no-cache">
+		
 		<link rel="shortcut icon" href="img/favicon.ico">
 		<link rel="stylesheet" href="profile.css">
 		
@@ -13,21 +15,19 @@
 	</head>
 
 	<body>
-		<iframe src="header.html" class="header"></iframe>
-		<div class="content">
-			<div class="body">
-				<div id="list">
-					<form id="form">
-						<input type="submit" value="add new profile">
-						<div id="control">
-							<input type="submit" value="edit">
-							<input type="reset" value="remove">
-						</div>
-					</form>
-				</div>
+
+		<div class="body">
+			<div id="list">
+				<form id="form">
+					<input type="submit" value="add new profile">
+					<div id="control">
+						<input type="submit" value="edit">
+						<input type="reset" value="remove">
+					</div>
+				</form>
 			</div>
 		</div>
-		<iframe class="dialog" id="dialog" src="profile_dialog.html"></iframe>
+		
 		<script src="profile.js"></script>
 		
 	</body>

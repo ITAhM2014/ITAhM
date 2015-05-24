@@ -11,6 +11,11 @@ public class SignIn extends Database {
 	}
 	
 	@Override
+	protected JSONObject each() {
+		return get();
+	}
+	
+	@Override
 	protected JSONObject each(String command, String key, JSONObject value) {
 		if ("get".equals(command)) {
 			JSONObject account = execute(command, key, value);

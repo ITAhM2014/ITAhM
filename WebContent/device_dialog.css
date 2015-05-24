@@ -2,13 +2,14 @@
 @import "css/common.css";
 
 form {
+	width: 400px;
+	margin: 100px auto;
 	border: 1px solid #ddd;
 	padding: 10px;
 }
 
 table {
 	width: 100%;
-	background-color: #fa0;
 }
 
 input[type=text], select {

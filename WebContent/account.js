@@ -1,21 +1,18 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		form = document.getElementById("form"),
-		dialog = document.getElementById("dialog");
+	var form, dialog;
 	
-	form.addEventListener("submit", onAdd, false);
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
-	
-	function onAdd(e) {
-		e.preventDefault();
-		
-		dialog.classList.add("show");
-	}
+	//window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		form = document.getElementById("form");
+		dialog = document.getElementById("dialog");
+		
+		form.addEventListener("submit", onAdd, false);
+		
 		xhr.request( {
 			database: "account",
 			command: "get",
@@ -23,24 +20,30 @@
 		});
 	}
 	
-	function onMessage(e) {
-		switch (e.data) {
-		case "close":
-			dialog.classList.remove("show");
-			
-			break;
-		}
+	function onAdd(e) {
+		e.preventDefault();
+
+		top.postMessage({
+			message: "popup",
+			html: "account_dialog.html",
+		}, "*");
 	}
 	
 	function onEdit(json, e) {
 		e.preventDefault();
 		
-		dialog.contentWindow.postMessage(json, "*");
-		
-		dialog.classList.add("show");
+		top.postMessage({
+			message: "popup",
+			html: "account_dialog.html",
+			data: json
+		}, "*");
 	}
 	
 	function onRemove(json, e) {
+		if (!confirm("remove this account?")) {
+			return;
+		}
+		
 		var request = {
 				database: "account",
 				command: "delete",
@@ -84,10 +87,10 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				top.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
-			
-			console.log(status);
 		}
 		else if ("json" in response) {
 			var json = response.json;

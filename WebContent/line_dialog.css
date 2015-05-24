@@ -2,8 +2,12 @@
 @import "css/common.css";
 
 form {
+	width: 400px;
+	margin: 100px auto;
 	border: 1px solid #ddd;
-	padding: 10px;
+	padding: 20px;
+	background-color: #fff;
+	box-shadow: 0px 0px 20px 10px #ddd;
 }
 
 table {

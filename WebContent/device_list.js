@@ -1,41 +1,27 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		list = document.getElementById("list"),
-		form = document.getElementById("form"),
-		dialog = document.getElementById("dialog"),
-		removeWrapper = {};
+	var xhr, list, form, dialog, remove = {};
 	
-	form.addEventListener("submit", onAdd, false);
-	form.addEventListener("reset", onRemove, false);
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
-	function onAdd(e) {
-		e.preventDefault();
-		
-		dialog.contentWindow.postMessage(null, "*");
-		
-		dialog.classList.add("show");
-	}
-	
-	function onRemove(e) {
-		var array = [],
-			length = 0;
-		
-		for (var id in removeWrapper) {
-			array[length++] = removeWrapper[id];
-		}
-		
-		if (confirm("remove "+ length +" device(s)?")) {
-			while (length-- > 0) {
-				array[length]();
-			}
-		}
-	}
-	
 	function onLoad(e) {
+		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
+		
+		xhr.request({
+			command: "echo"
+		});
+	}
+	
+	function load() {
+		list = document.getElementById("list");
+		form = document.getElementById("form");
+		//dialog = document.getElementById("dialog");
+		
+		form.addEventListener("submit", onAdd, false);
+		form.addEventListener("reset", onRemove, false);
+		
 		xhr.request( {
 			database: "device",
 			command: "get",
@@ -51,26 +37,56 @@
 			break;
 		}
 	}
+	/*
+	function onAdd(e) {
+		e.preventDefault();
+		
+		dialog.contentWindow.postMessage(null, "*");
+		
+		dialog.classList.add("show");
+	}*/
+	function onAdd(e) {
+		top.postMessage({
+			message: "popup",
+			html: "device_dialog.html"
+		}, "*");
+	}
+	
+	function onRemove(e) {
+		var array = [],
+			length = 0;
+		
+		for (var id in remove) {
+			array[length++] = remove[id];
+		}
+		
+		if (confirm("remove "+ length +" device(s)?")) {
+			while (length-- > 0) {
+				array[length]();
+			}
+		}
+	}
 	
 	function onEdit(json, e) {
 		//e.preventDefault();
-		
-		dialog.contentWindow.postMessage(json, "*");
-		
-		dialog.classList.add("show");
+		top.postMessage({
+			message: "popup",
+			html: "device_dialog.html",
+			data: json
+		}, "*");
 	}
 	
 	function onSelect(json, e) {
 		if (this.checked) {
-			removeWrapper[json.id] = remove.bind(window, json.id);
+			remove[json.id] = _remove.bind(window, json.id);
 		}
 		else {
-			delete removeWrapper[json.id];
+			delete remove[json.id];
 		}
 		
 	}
 	
-	function remove(id) {
+	function _remove(id) {
 		var request = {
 			database: "device",
 			command: "delete",
@@ -83,7 +99,7 @@
 	}
 	
 	function createDevice(json) {
-		var row = list.insertRow(),
+		var row = document.createElement("tr"),
 			checkbox = document.createElement("input"),
 			cols = 5;
 		
@@ -106,9 +122,13 @@
 	}
 	
 	function init(json) {
-		for (var id in json) {createDevice(json[id]);
-			//list.appendChild(createDevice(json[id]));
+		var table = document.createDocumentFragment();
+		
+		for (var id in json) {
+			table.appendChild(createDevice(json[id]));
 		}
+		
+		list.appendChild(table);
 	}
 	
 	function onResponse(response) {
@@ -116,25 +136,33 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				if (parent != window) {
+					parent.postMessage({
+						message: "unauthorized"
+					}, "*");
+				}
 			}
-			
-			console.log(status);
 		}
 		else if ("json" in response) {
 			var json = response.json;
 			
 			switch (json.command) {
+			case "echo":
+				load();
+				
+				break;
 			case "get":
 				init (json.data);
 				
 				break;
 			case "delete":
 				window.location.reload();
+				
+				break;
 			}
 		}
 		else {
-			console.log("fatal error");
+			throw "fatal error";
 		}
 	}
 	

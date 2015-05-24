@@ -1,23 +1,29 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		map = {},
+	var xhr, map = {}, dialog, group;
 //		form = document.getElementById("form"),
+		
+	
+//	form.addEventListener("submit", onAdd, false);
+	window.addEventListener("load", onLoad, false);
+	window.addEventListener("message", onMessage, false);
+	
+	function onLoad(e) {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 		dialog = document.getElementById("dialog"),
 		group = {
 			server: document.getElementById("server"),
 			network: document.getElementById("network"),
 			etc: document.getElementById("etc")
 		};
+		
+		loadIcon();
+	}
 	
-//	form.addEventListener("submit", onAdd, false);
-	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
-
-	function onLoad(e) {
+	function loadIcon() {
 		var icons = document.getElementsByTagName("img"),
-			icon, li;
+		icon, li;
 		
 		for (var i=0, length=icons.length; i<length; i++) {
 			icon = icons[i];
@@ -29,31 +35,22 @@
 		}
 		
 		new IconLoader(onLoadIcon);
-		/*
-		xhr.request( {
-			database: "icon",
-			command: "get"
-		});*/
 	}
 	
 	function onSelect(img, e) {
-		var msg = {
-			src: img.src,
-			type: img.id
-		};
-		
-		dialog.contentWindow.postMessage(msg, "*");
-		
-		dialog.classList.add("show");
+		top.postMessage({
+			message: "popup",
+			html: "icon_dialog.html",
+			data: {
+				src: img.src,
+				type: img.id
+			}
+		}, "*");
 	}
 	
 	
 	function onMessage(e) {
 		switch (e.data) {
-		case "close":
-			dialog.classList.remove("show");
-			
-			break;
 		}
 	}
 	
@@ -117,7 +114,9 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				top.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
 		}
 		else if ("json" in response) {
@@ -131,7 +130,7 @@
 			}
 		}
 		else {
-			console.log("fatal error");
+			throw "fatal error";
 		}
 	}
 	

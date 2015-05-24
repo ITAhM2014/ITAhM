@@ -67,7 +67,15 @@ public class Constants {
 	public final static OID ipNetToMediaTable = new OID(new int [] {1,3,6,1,2,1,4,22});
 	public final static OID ipNetToMediaPhysAddress = new OID(new int [] {1,3,6,1,2,1,4,22,1,2});
 	public final static OID ipNetToMediaType = new OID(new int [] {1,3,6,1,2,1,4,22,1,4});
-		
+	
+	/*
+	 * HOST-RESOURCES-MIB
+	 */
+	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).host(25)
+	public final static OID host = new OID(new int [] {1,3,6,1,2,1,25});
+	public final static OID hrSystemUptime = new OID(new int [] {1,3,6,1,2,1,25,1,1});
+	public final static OID hrProcessorLoad = new OID(new int [] {1,3,6,1,2,1,25,3,3,1,2});
+	
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31)
 	public final static OID ifMib = new OID(new int [] {1,3,6,1,2,1,31});
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31).ifMibObjects(1)
@@ -88,12 +96,6 @@ public class Constants {
 	public final static OID 							ifHCOutBroadcastPkts =  new OID(ifXEntry).append(13); // 11
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31).ifMibObjects(1).ifXTable(1).ifXEntry(1).ifAlias(18)
 	public final static OID ifAlias = new OID(new int [] {1,3,6,1,2,1,31,1,1,1,18});
-	/*
-	 * HOST-RESOURCES-MIB
-	 */
-	public final static OID			host = new OID(mib_2).append(25); // 7
-	public final static OID				hrSystem = new OID(host).append(1); // 8
-	public final static OID					hrSystemProcesses = new OID(hrSystem).append(6); // 9
 	
 	//public final static OID 	private = new OID(internet).append(4); // 5
 	//public final static OID 		enterprises = new OID(internet).append(4).append(1); // 6

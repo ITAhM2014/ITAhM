@@ -1,38 +1,40 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse);
-		form = document.getElementById("form"),
-		icon = document.getElementById("icon"),
-		//applyWrapper = apply.bind(form, null);
+	var xhr, 	form, 	icon;
 	
-	//form.addEventListener("submit", onApply, false);
-	form.addEventListener("reset", onCancel, false);
-	form.url.addEventListener("focus", onFocusIn, false);
-	form.url.addEventListener("blur", onFocusOut, false);
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
-		/*xhr.request({
-			database: "profile",
-			command: "get"
-		});*/
+	}
+	
+	function load(data) {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		form = document.getElementById("form");
+		icon = document.getElementById("icon");
+		
+		icon.src = data.src;
+		form.type.value = data.type;
+		form.url.focus();
+		
+		form.addEventListener("reset", onCancel, false);
+		form.url.addEventListener("focus", onFocusIn, false);
+		form.url.addEventListener("blur", onFocusOut, false);
 	}
 	
 	function onMessage(e) {
-		var json = e.data;
-	
-		if (json == null) {
-			//applyWrapper = apply.bind(form, null);
-			
-			//form.name.focus();
+		var data = e.data;
+		
+		if (!data) {
+			return;
 		}
-		else {
-			icon.src = json.src;
-			form.type.value = json.type;
+		
+		switch (data.message) {
+		case "data":
+			load(data.data);
 			
-			form.url.focus();
+			break;
 		}
 	}
 	
@@ -81,7 +83,9 @@
 	}
 	
 	function onCancel(e) {
-		parent.postMessage("close", "*");
+		parent.postMessage({
+			message: "popup"
+		}, "*");
 	}
 	
 	function init(json) {
@@ -95,15 +99,19 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				if (parent != window) {
-					parent.location.reload(true);
-				}
+				top.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
 		}
 		else if ("json" in response) {
 			var json = response.json;
 			if (json != null) {
 				switch (json.command) {
+				case "echo":
+					load();
+					
+					break;
 				case "get":
 					if (json.database == "profile") {
 						init(json.result);

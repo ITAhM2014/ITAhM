@@ -1,52 +1,45 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		form = document.getElementById("form"),
-		dialog = document.getElementById("dialog"),
+	var xhr, form, dialog,
 		iconMap = {},
 		deviceList = {},
 		lineList = {},
 		lineIndex = {},
 		scale = 1,
-		linkWrapper = link.bind(this),
+		link = _link.bind(this),
 		canvas,
 		deviceLayer,
 		lineLayer,
 		selected;
 	
-	form.addEventListener("submit", onSubmit, false);
-	form.elements["save"].addEventListener("click", onSave, false);
-	form.elements["zoomin"].addEventListener("click", function (e) {
-		canvas.zoom(scale *=1.2);
-	}, false);
-	form.elements["zoomout"].addEventListener("click", function (e) {
-		canvas.zoom(scale /=1.2);
-	}, false);
-	form.elements["link"].addEventListener("click", onLink, false);
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
+		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
+		
 		xhr.request({
 			command: "echo"
 		});
-		
-		/*
-		lineLayer.context({
-			strokeStyle: "#282",
-			lineWidth: 3,
-			font: "10pt arial, \"맑은 고딕\"",
-			textAlign: "center",
-			textBaseline: "middle",
-			fillStyle: "#999"
-		});
-		*/
-		
-		//canvas.on("mousemove", onMouseMove);
 	}
 	
 	function load(map) {
+		form = document.getElementById("form");
+		dialog = document.getElementById("dialog");
+		
+		form.addEventListener("submit", onSubmit, false);
+		form.elements["save"].addEventListener("click", onSave, false);
+		form.elements["zoomin"].addEventListener("click", function (e) {
+			canvas.zoom(scale *=1.2);
+		}, false);
+		form.elements["zoomout"].addEventListener("click", function (e) {
+			canvas.zoom(scale /=1.2);
+		}, false);
+		form.elements["link"].addEventListener("click", onLink, false);
+		
+		link = _link.bind(this);
+		
 		iconMap = map;
 		canvas = new Canvas("map");
 		
@@ -110,14 +103,14 @@
 	}
 	
 	function onLink(e) {
-		tryLink = link.bind(this, selected);
+		tryLink = _link.bind(this, selected);
 	}
 	
 	function tryLink() {
 		return false;
 	}
 	
-	function link(from, to) {
+	function _link(from, to) {
 		if (from == to || !from || !to) {
 			return false;
 		}
@@ -130,29 +123,25 @@
 	function showLineDialog() {
 	}
 
-	function _showLineDialog(from, to) {
+	function _showLineDialog(from, to) {console.log(from, to);
 		var line = getLine(from, to),
 			msg = {
-				message: "line",
-				line: line
+				message: "popup",
+				html: "line_dialog.html",
+				data: line
 			};
-		
-		if (line.from != from.id) {
-			msg["deviceFrom"] = to;
-			msg["deviceTo"] = from;
+		if (line) {
+			if (line.from != from.id) {
+				msg["deviceFrom"] = to;
+				msg["deviceTo"] = from;
+			}
+			else {
+				msg["deviceFrom"] = from;
+				msg["deviceTo"] = to;
+			}
 		}
-		else {
-			msg["deviceFrom"] = from;
-			msg["deviceTo"] = to;
-		}
 		
-		dialog.contentWindow.postMessage(msg, "*");
-		
-		dialog.classList.add("show");
-	}
-	
-	function closeLineDialog() {
-		dialog.classList.remove("show");
+		top.postMessage(msg, "*");
 	}
 	
 	function getLine(from, to) {
@@ -169,8 +158,8 @@
 	
 	function loadDevice() {
 		var device;
-		
-		for (var id in deviceList) {
+		var i=0;
+		for (var id in deviceList) {i++;
 			device = deviceList[id];
 			
 			deviceLayer.add(device);
@@ -316,7 +305,9 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				parent.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
 		}
 		else if ("json" in response) {

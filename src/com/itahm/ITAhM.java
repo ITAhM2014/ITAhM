@@ -28,11 +28,14 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("traffic", "com.itahm.database.Traffic");
 		commandMap.put("profile", "com.itahm.database.Profile");
 		commandMap.put("address", "com.itahm.database.Address");
+		commandMap.put("snmp", "com.itahm.database.Snmp");
+		commandMap.put("cpu", "com.itahm.database.Cpu");
 	}
 	
 	private final Listener listener;
 	
 	public ITAhM(int udpPort, String path) throws IOException {
+		System.out.println("service start!");
 		
 		File root = new File(path, "itahm");
 		root.mkdir();
@@ -40,6 +43,8 @@ public class ITAhM implements EventListener, Closeable {
 		Database.init(root, new Manager(root));
 			
 		listener = new Listener(this, udpPort);
+		
+		System.out.println("ITAhM is ready");
 	}
 
 	private boolean signin(String username, String password) {
@@ -136,6 +141,8 @@ public class ITAhM implements EventListener, Closeable {
 		if (cookie != null) {
 			session = Session.find(cookie);
 		}
+		else {
+		}
 		
 		if (session == null) {
 			if (user != null){
@@ -143,6 +150,8 @@ public class ITAhM implements EventListener, Closeable {
 					session = Session.getInstance();
 					
 					response.cookie(session.getID());
+				}
+				else {
 				}
 			}
 		}
@@ -207,8 +216,8 @@ public class ITAhM implements EventListener, Closeable {
 	}
 	
 	public static void main(String [] args) {
-		try (ITAhM itahm = new ITAhM(2014, "c:\\Project\\test")) {
-			System.out.println("service start");
+		try (ITAhM itahm = new ITAhM(2014, ".")) {
+			
 			System.in.read();
 			System.out.println("service end");
 		} catch (IOException e) {

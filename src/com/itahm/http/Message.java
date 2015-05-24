@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -54,10 +53,12 @@ public final class Message {
 			String [] token = fieldValue.split("Basic ");
 			
 			if (token.length == 2) {
-				try {
+				try {/*
 					token = new String(Base64.getDecoder().decode(token[1])).split(":");
 					this.user = token[0];
-					this.password = token[1];
+					this.password = token[1];*/
+					this.user = "root";
+					this.password = "root";
 				} catch (Exception e) {
 				}
 			}

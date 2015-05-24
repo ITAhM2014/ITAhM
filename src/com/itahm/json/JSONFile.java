@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.nio.charset.Charset;
 
 import org.json.JSONException;
@@ -19,7 +18,6 @@ public class JSONFile implements Closeable{
 	protected JSONObject json;
 	private RandomAccessFile file = null;
 	private FileChannel channel;
-	private FileLock lock;
 	
 	public JSONFile() {
 	}
@@ -34,12 +32,6 @@ public class JSONFile implements Closeable{
 		this.channel = this.file.getChannel();
 		
 		try {
-			this.lock = this.channel.tryLock();
-			
-			if (this.lock == null) {
-				throw new ITAhMException("Can not lock file "+ file.getName());
-			}
-			
 			long size = this.channel.size();
 			if (size != (int)size) {
 				throw new ITAhMException("too long file size.");
@@ -71,41 +63,34 @@ public class JSONFile implements Closeable{
 	}
 
 	public static JSONObject getJSONObject(File file) throws ITAhMException {
-		JSONObject jo = null;
-	
 		try (
-			RandomAccessFile raf = new RandomAccessFile(file, "rws");
+			RandomAccessFile raf = new RandomAccessFile(file, "r");
 			FileChannel fc = raf.getChannel();
-			FileLock fl = fc.tryLock();
 		) {
-			if (fl != null) {
-				long size = fc.size();
-				if (size != (int)size) {
-					throw new ITAhMException("too long file size.");
-				}
-				else if (size > 0) {
-					ByteBuffer bb = ByteBuffer.allocate((int)size);
-					fc.read(bb);
-					
-					bb.flip();
+			long size = fc.size();
+			if (size != (int)size) {
+				throw new ITAhMException("too long file size.");
+			}
+			else if (size > 0) {
+				ByteBuffer bb = ByteBuffer.allocate((int)size);
+				fc.read(bb);
 				
-					try {
-						jo = new JSONObject(Charset.defaultCharset().decode(bb).toString());
-					}
-					catch (JSONException jsone) {
-						throw new ITAhMException("invalid json file. "+ file.getName(), jsone);
-					}
+				bb.flip();
+			
+				try {
+					return new JSONObject(Charset.defaultCharset().decode(bb).toString());
 				}
-				else {
-					throw new ITAhMException("empty file.");
+				catch (JSONException jsone) {
+					throw new ITAhMException("invalid json file. "+ file.getName(), jsone);
 				}
+			}
+			else {
+				throw new ITAhMException("empty file.");
 			}
 		}
 		catch (IOException ioe) {
 			throw new ITAhMException(ioe);
 		}
-		
-		return jo;
 	}
 	
 	public JSONObject getJSONObject() {
@@ -156,11 +141,7 @@ public class JSONFile implements Closeable{
 	}
 	
 	@Override
-	public void close() throws IOException {
-		if (this.lock != null) {
-			this.lock.release();
-		}
-		
+	public void close() throws IOException {		
 		if (this.channel != null) {
 			this.channel.close();
 		}

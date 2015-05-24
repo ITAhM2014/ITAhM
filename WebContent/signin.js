@@ -1,11 +1,19 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var form = document.getElementById("form"),
-		xhr = new JSONRequest(form.server.value, onResponse);
+	var 
+		form;
 		//xhr = new JSONRequest("local.itahm.com:2014", onResponse);
 	
-	form.addEventListener("submit", onSignIn, false);
+	window.addEventListener("load", onLoad, false);
+	
+	function onLoad() {
+		form = document.getElementById("form");
+		
+		form.server.value = parent.location.search.replace("?", "");
+		
+		form.addEventListener("submit", onSignIn, false);
+	}
 	
 	function onSignIn(e) {
 		e.preventDefault();
@@ -13,7 +21,7 @@
 		var username = form.username.value,
 			password = form.password.value;
 		
-		xhr.set("Authorization", "Basic "+ btoa(username +":"+password)).request();
+		new JSONRequest(form.server.value, onResponse).set("Authorization", "Basic "+ btoa(username +":"+password)).request();
 	}
 	
 	function onResponse(response) {
@@ -23,13 +31,15 @@
 			if (status == 401) {
 				alert("invalid USERNAME or PASSWORD");;
 			}
-			
-			console.log(status);
 		}
 		else if ("json" in response) {
-			location.href = "home.html";
+			top.postMessage({
+				message: "signin"
+			}, "*");
 		}
 		else {
+			
 		}
 	}
+	
 }) (window);

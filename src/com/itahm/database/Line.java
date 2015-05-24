@@ -11,6 +11,11 @@ public class Line extends Database {
 	}
 
 	@Override
+	protected JSONObject each() {
+		return get();
+	}
+	
+	@Override
 	public JSONObject each(String command, String key, JSONObject value) {
 		try {
 			if ("put".equals(command) && Integer.parseInt(key) < 0) {

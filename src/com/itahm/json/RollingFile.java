@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import org.json.JSONObject;
+
 public class RollingFile extends JSONFile {
 
 	private final static SimpleDateFormat fileName = new SimpleDateFormat("yyyy"+ File.separator +"MM"+ File.separator +"dd");
@@ -28,12 +30,30 @@ public class RollingFile extends JSONFile {
 		load(new File(path, String.format("%02d", this.last = c.get(Calendar.HOUR_OF_DAY))));
 	}
 	
-	public void roll() throws IOException {
-		Calendar c = Calendar.getInstance();
+	public void roll(String key, long value) throws IOException {
+		Calendar calendar = Calendar.getInstance();
 		
-		if (c.get(Calendar.HOUR_OF_DAY) != this.last) {
-			load(c);
+		if (calendar.get(Calendar.HOUR_OF_DAY) != this.last) {
+			load(calendar);
 		}
+		
+		JSONObject jo;
+		if (this.json.has(key)) {
+			jo = this.json.getJSONObject(key);
+		}
+		else {
+			jo = new JSONObject();
+			
+			this.json.put(key, jo);
+		}
+		
+		String minute = Long.toString(calendar.get(Calendar.MINUTE));
+		if (!jo.has(minute) || jo.getLong(minute) < value) {
+			jo.put(minute, value);
+		}
+		
+		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
+		save();
 	}
 	
 }

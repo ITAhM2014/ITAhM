@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Vector;
 
 import org.json.JSONException;
@@ -21,11 +19,10 @@ import org.snmp4j.smi.Integer32;
 import org.snmp4j.smi.Null;
 import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.TimeTicks;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
-
-import com.itahm.json.RollingFile;
 
 public class Node extends CommunityTarget {
 
@@ -33,18 +30,31 @@ public class Node extends CommunityTarget {
 	
 	private final JSONObject node;
 	private final JSONObject ifEntry;
-	private final RollingFile rollFile;
-	private final HashMap<String, String> map;
+	
+	private final IndexMap ifInOctets;
+	private final IndexMap ifOutOctets;
+	private final IndexMap hrProcessorLoad;
+	private final Address address;
+	
+	private final File nodeRoot;
 	
 	private Node(File path, JSONObject jo) throws IOException {
 		String ip = jo.getString("ip");
 
 		InetAddress.getByName(ip);
-		
+
 		ifEntry = jo.getJSONObject("ifEntry");
+		
 		node = jo;
-		rollFile = new RollingFile(path, ip);
-		map = new HashMap<String, String>();
+		
+		nodeRoot = new File(path, ip);
+		nodeRoot.mkdir();
+		
+		hrProcessorLoad = new IndexMap(new File(nodeRoot, "hrProcessorLoad"));
+		ifInOctets = new IndexMap(new File(nodeRoot, "ifInOctets"));
+		ifOutOctets = new IndexMap(new File(nodeRoot, "ifOutOctets"));
+		
+		address = new Address();
 		
 		setAddress(new UdpAddress(String.format("%s/%d", ip, jo.getInt("udp"))));
 		setCommunity(new OctetString(jo.getString("community")));
@@ -64,27 +74,9 @@ public class Node extends CommunityTarget {
 		return null;
 	}
 	
-	/**
-	 * Roll.
-	 *
-	 * @param file the file
-	 * @param key the key
-	 * @param value the value
-	 */
-	//private void roll(String key, Object value) {	
-	public void roll(String key, Object value) {
-		JSONObject jo = rollFile.getJSONObject();
-		
-		if (jo.has(key)) {
-			jo = jo.getJSONObject(key);
-		}
-		else {
-			jo.put(key, jo = new JSONObject());
-		}
-		
-		jo.put(Long.toString(Calendar.getInstance().getTimeInMillis()), value);
+	public void set(String key, Object value) {
+		this.node.put(key, value);
 	}
-	
 	/**
 	 * Parse.
 	 * 
@@ -93,8 +85,9 @@ public class Node extends CommunityTarget {
 	 * @param response
 	 * @param variable
 	 * @return true if next is required
+	 * @throws IOException 
 	 */
-	public final boolean parse (OID response, Variable variable, OID request) {
+	public final boolean parse (OID response, Variable variable, OID request) throws IOException {
 		if (response.startsWith(Constants.system)) {
 			if (response.startsWith(Constants.sysDescr) && request.startsWith(Constants.sysDescr)) {
 				OctetString value = (OctetString)variable;
@@ -158,14 +151,12 @@ public class Node extends CommunityTarget {
 			else if (response.startsWith(Constants.ifInOctets) && request.startsWith(Constants.ifInOctets)) {
 				Counter32 value = (Counter32)variable;
 				
-				// TODO rolling 
-				value.getValue();
+				ifInOctets.put(index, value.getValue());
 			}
 			else if (response.startsWith(Constants.ifOutOctets) && request.startsWith(Constants.ifOutOctets)) {
 				Counter32 value = (Counter32)variable;
 				
-				// TODO rolling
-				value.getValue();
+				ifOutOctets.put(index, value.getValue());
 			}
 			
 			return true;
@@ -194,14 +185,12 @@ public class Node extends CommunityTarget {
 			else if (response.startsWith(Constants.ifHCInOctets) && request.startsWith(Constants.ifHCInOctets)) {
 				Counter64 value = (Counter64)variable;
 				
-				// TODO rolling
-				value.getValue();
+				ifInOctets.put(index, value.getValue());
 			}
 			else if (response.startsWith(Constants.ifHCOutOctets) && request.startsWith(Constants.ifHCOutOctets)) {
 				Counter64 value = (Counter64)variable;
 				
-				// TODO rolling
-				value.getValue();
+				ifOutOctets.put(index, value.getValue());
 			}
 			
 			return true;
@@ -210,34 +199,44 @@ public class Node extends CommunityTarget {
 			int [] array = response.getValue();
 			int size = array.length;
 			
-			String ip = new String(new byte [] {(byte)array[size -4], (byte)array[size -3], (byte)array[size -2], (byte)array[size -1]});
+			String ip = String.format("%d.%d.%d.%d", array[size -4], array[size -3], array[size -2], array[size -1]);
 			
 			if (response.startsWith(Constants.ipNetToMediaType) && request.startsWith(Constants.ipNetToMediaType)) {
 				Integer32 value = (Integer32)variable;
 				
-				if (value.getValue() == 3 && !this.map.containsKey(ip)) {
-					this.map.put(ip, null);
+				if (value.getValue() == 3) {
+					address.put(ip);
 				}
 			}
 			else if (response.startsWith(Constants.ipNetToMediaPhysAddress) && request.startsWith(Constants.ipNetToMediaPhysAddress)) {
 				OctetString value = (OctetString)variable;
+				byte [] mac = value.getValue();
 				
-				if (this.map.containsKey(ip)) {
-					this.map.put(ip, new String(value.getValue()));
-				}
+				address.put(ip, String.format("%02X-%02X-%02X-%02X-%02X-%02X", mac[0] & 0xff, mac[1] & 0xff, mac[2] & 0xff, mac[3] & 0xff, mac[4] & 0xff, mac[5] & 0xff));
 			}
 			
 			return true;
+		}
+		else if (response.startsWith(Constants.host)) {
+			if (response.startsWith(Constants.hrSystemUptime) && request.startsWith(Constants.hrSystemUptime)) {
+				TimeTicks value = (TimeTicks)variable; 
+				
+				this.node.put("hrSystemUptime", value.toMilliseconds());
+			}
+			else if (response.startsWith(Constants.hrProcessorLoad) && request.startsWith(Constants.hrProcessorLoad)) {
+				Integer32 value = (Integer32)variable;
+				String index = Integer.toString(response.last());
+				
+				hrProcessorLoad.put(index, value.getValue());
+				
+				return true;
+			}
 		}
 		else {
 			
 		}
 		
 		return false;
-	}
-	
-	public final Map<String, String> getAddrTable() {
-		return this.map;
 	}
 	
 	public final PDU parse(PDU request, PDU response) throws IOException {

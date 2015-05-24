@@ -1,17 +1,24 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		form = document.getElementById("form"),
-		profile = document.getElementById("profile"),
-		applyWrapper = apply.bind(form, null);
+	var xhr, form, profile, apply;
 	
-	form.addEventListener("submit", onApply, false);
-	form.addEventListener("reset", onCancel, false);
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
+	}
+	
+	function load() {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		form = document.getElementById("form");
+		profile = document.getElementById("profile");
+		
+		apply = _apply.bind(form, null);
+		
+		form.addEventListener("submit", onApply, false);
+		form.addEventListener("reset", onCancel, false);
+		
 		xhr.request({
 			database: "profile",
 			command: "get"
@@ -19,20 +26,35 @@
 	}
 	
 	function onMessage(e) {
-		var json = e.data;
+		var data = e.data;
+		
+		if (!data) {
+			return;
+		}
+		
+		switch (data.message) {
+		case "data":
+			set(data.data);
+			
+			break;
+		}
+	}
 	
-		if (json == null) {
-			applyWrapper = apply.bind(form, null);
+	function set(device) {
+		load();
+		
+		if (!device) {
+			apply = _apply.bind(form, null);
 			
 			form.name.focus();
 		}
 		else {
-			form.name.value = json.name;
-			form.type.vaule = json.type;
-			form.address.value= json.address;
-			form.profile.value = json.profile;
+			form.name.value = device.name;
+			form.type.vaule = device.type;
+			form.address.value= device.address;
+			form.profile.value = device.profile;
 			
-			applyWrapper = apply.bind(form, json);
+			apply = _apply.bind(form, device);
 			
 			form.name.select();
 		}
@@ -41,10 +63,10 @@
 	function onApply(e) {
 		e.preventDefault();
 		
-		applyWrapper();
+		apply();
 	}
 	
-	function apply(json) {
+	function _apply(json) {
 		var name = this.name.value,
 			type = this.type.value,
 			address = this.address.value,
@@ -74,7 +96,9 @@
 	}
 	
 	function onCancel(e) {
-		parent.postMessage("close", "*");
+		top.postMessage({
+			message: "popup"
+		}, "*");
 	}
 	
 	function init(json) {
@@ -88,9 +112,9 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				if (parent != window) {
-					parent.location.reload(true);
-				}
+				top.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
 		}
 		else if ("json" in response) {
@@ -104,14 +128,17 @@
 					
 					break;
 				case "put":
-					parent.location.reload(true);
+					top.postMessage({
+						message: "reload",
+						html: "device_list.html"
+					}, "*");
 					
 					break;
 				}
 			}
 		}
 		else {
-			console.log("fatal error");
+			throw "fatal error";
 		}
 	}
 	

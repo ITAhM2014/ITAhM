@@ -1,0 +1,62 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+body {
+	font-family: arial, "맑은 고딕";
+	background-color: #fff;
+}
+
+div.top {
+	position: fixed; top: 0; right: 0; left: 0; height: 49px;
+	border-bottom: 1px solid #eee;
+}
+
+div.top ul {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	float: left;
+}
+
+div.top li {
+	padding: .5em;
+}
+
+div.content {
+	position: fixed; top: 50px; right: 0; bottom: 0; left: 0;
+}
+
+div.content>iframe {
+	width: 100%; height: 100%;
+	border: none;
+}
+
+div.dialog {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	background-color: rgba(255,255,255,.8);
+	display: none;
+}
+
+div.dialog iframe {
+	width: 100%; height: 100%;
+	border: none;
+}
+
+body.dialog div.dialog {
+	display: block;
+}
+
+div.loading {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	background: #fff url("img/waiting.gif") no-repeat center;
+	display: none;
+}
+
+body.loading div.loading {
+	display: block;
+}
+
+#form {
+	float: right;
+}

@@ -1,42 +1,30 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		list = document.getElementById("list"),
-		form = document.getElementById("form"),
-		dialog = document.getElementById("dialog"),
-		removeWrapper = {},
-		unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
+	var xhr,list,form,dialog,remove = {}, unit;
 	
-	form.addEventListener("submit", onAdd, false);
-	form.addEventListener("reset", onRemove, false);
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
-	function onAdd(e) {
-		e.preventDefault();
-		
-		dialog.contentWindow.postMessage(null, "*");
-		
-		dialog.classList.add("show");
-	}
-	
-	function onRemove(e) {
-		var array = [],
-			length = 0;
-		
-		for (var id in removeWrapper) {
-			array[length++] = removeWrapper[id];
-		}
-		
-		if (confirm("remove "+ length +" device(s)?")) {
-			while (length-- > 0) {
-				array[length]();
-			}
-		}
-	}
-	
 	function onLoad(e) {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		
+		xhr.request({
+			command: "echo"
+		});
+	}
+	
+	function load() {
+		list = document.getElementById("list");
+		form = document.getElementById("form");
+		dialog = document.getElementById("dialog");
+		
+		form.addEventListener("submit", onAdd, false);
+		form.addEventListener("reset", onRemove, false);
+		
+		
+		unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
+		
 		xhr.request( {
 			database: "line",
 			command: "get",
@@ -52,27 +40,41 @@
 		}
 		
 		switch(data.message) {
-		case "reLoadLine":
-			reLoadLine();
-			
-			break;
-		case "showLineDialog":
-			showLineDialog();
-			
-			break;
-		case "closeLineDialog":
-			closeLineDialog();
-			
-			break;
+		}
+	}
+	
+	function onAdd(e) {
+		e.preventDefault();
+		
+		top.postMessage({
+			message: "popup",
+			html: "line_dialog.html"
+		}, "*");
+	}
+	
+	function onRemove(e) {
+		var array = [],
+			length = 0;
+		
+		for (var id in remove) {
+			array[length++] = remove[id];
+		}
+		
+		if (confirm("remove "+ length +" device(s)?")) {
+			while (length-- > 0) {
+				array[length]();
+			}
 		}
 	}
 	
 	function onEdit(json, e) {
 		//e.preventDefault();
 		
-		dialog.contentWindow.postMessage(json, "*");
-		
-		dialog.classList.add("show");
+		top.postMessage({
+			message: "popup",
+			html: "line_dialog.html",
+			line: json
+		}, "*");
 	}
 	
 	function closeLineDialog() {
@@ -81,15 +83,15 @@
 	
 	function onSelect(json, e) {
 		if (this.checked) {
-			removeWrapper[json.id] = remove.bind(window, json.id);
+			remove[json.id] = _remove.bind(window, json.id);
 		}
 		else {
-			delete removeWrapper[json.id];
+			delete remove[json.id];
 		}
 		
 	}
 	
-	function remove(id) {
+	function _remove(id) {
 		var request = {
 			database: "device",
 			command: "delete",
@@ -103,7 +105,7 @@
 	
 	function createLink(line, index) {
 		var link = line.link[index],
-			row = list.insertRow(),
+			row = document.createElement("tr"),
 			checkbox = document.createElement("input"),
 			cols = 5,
 			bandwidth = link.bandwidth;
@@ -124,19 +126,24 @@
 		
 		checkbox.addEventListener("click", onSelect.bind(checkbox, line, index), false);
 		row.cells[1].addEventListener("click", onEdit.bind(row, line, index), false);
+		
+		return row;
 	}
 	
 	function init(json) {
-		var line, link, index;
+		var line, link, index,
+			table = document.createDocumentFragment();
 		
 		for (var id in json) {
 			line = json[id];
 			link = line.link;
 			
 			for (index=0; index<link.length; index++) {
-				createLink(line, index);
+				table.appendChild(createLink(line, index));
 			}
 		}
+		
+		list.appendChild(table);
 	}
 	
 	function onResponse(response) {
@@ -153,6 +160,10 @@
 			var json = response.json;
 			
 			switch (json.command) {
+			case "echo":
+				load();
+				
+				break;
 			case "get":
 				init (json.data);
 				

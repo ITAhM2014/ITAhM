@@ -2,10 +2,11 @@ package com.itahm.database;
 
 import org.json.JSONObject;
 
-public class Account extends Database {
+public class Snmp extends Database {
 
-	public Account() {
-		super(account);
+	public Snmp() {
+		super(snmp);
+		// TODO Auto-generated constructor stub
 	}
 
 	@Override
@@ -15,18 +16,15 @@ public class Account extends Database {
 	
 	@Override
 	protected JSONObject each(String command, String key, JSONObject value) {
-		return execute(command, key, value);
+		JSONObject result = execute(command, key, value);
+		
+		return result;
 	}
 
 	@Override
 	protected boolean complete() {
-		if (this.file.isEmpty()) {
-			this.file.put("root", new JSONObject().put("username", "root").put("password", "root"));
-
-			return true;
-		}
-		
+		// TODO Auto-generated method stub
 		return false;
 	}
-	
+
 }

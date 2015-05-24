@@ -31,6 +31,14 @@ function InetAddress(bytes) {
 		return null;
 	};
 
+	InetAddress.toIPv4 = function (str) {
+		if (str.length !=4) {
+			throw "InvalidArguments";
+		}
+		
+		return str.charCodeAt(0) +"."+ str.charCodeAt(1) +"."+ str.charCodeAt(2) +"."+ str.charCodeAt(3);
+	}
+	
 	InetAddress.prototype = {
 		init: function (bytes) {
 			if (bytes != null && bytes.constructor == Array && bytes.length == 4

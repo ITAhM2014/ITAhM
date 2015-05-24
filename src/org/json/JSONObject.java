@@ -676,6 +676,10 @@ public class JSONObject {
         return this.map.containsKey(key);
     }
 
+    public void clear() {
+    	this.map.clear();
+    }
+    
     /**
      * Increment a property of a JSONObject. If there is no such property,
      * create one with a value of 1. If there is such a property, and if it is

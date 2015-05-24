@@ -17,6 +17,11 @@ public class Traffic extends Database {
 	}
 	
 	@Override
+	protected JSONObject each() {
+		return get();
+	}
+	
+	@Override
 	public void execute(JSONObject request) {
 		try {
 			String command = request.getString("command");

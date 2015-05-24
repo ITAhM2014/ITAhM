@@ -1,21 +1,18 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		form = document.getElementById("form"),
-		dialog = document.getElementById("dialog");
+	var form, dialog;
 	
-	form.addEventListener("submit", onAdd, false);
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
-	
-	function onAdd(e) {
-		e.preventDefault();
-		
-		dialog.classList.add("show");
-	}
+	//window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		form = document.getElementById("form");
+		dialog = document.getElementById("dialog");
+		
+		form.addEventListener("submit", onAdd, false);
+		
 		xhr.request( {
 			database: "profile",
 			command: "get",
@@ -23,35 +20,37 @@
 		});
 	}
 	
-	function onMessage(e) {
-		switch (e.data) {
-		case "reload":
-			location.reload();
-			
-			break;
-		case "close":
-			dialog.classList.remove("show");
-			
-			break;
-		}
+	function onAdd(e) {
+		e.preventDefault();
+
+		top.postMessage({
+			message: "popup",
+			html: "profile_dialog.html",
+		}, "*");
 	}
 	
-	function onEdit(json, e) {
+	function onEdit(profile, e) {
 		e.preventDefault();
 		
-		dialog.contentWindow.postMessage(json, "*");
-		
-		dialog.classList.add("show");
+		top.postMessage({
+			message: "popup",
+			html: "profile_dialog.html",
+			data: profile
+		}, "*");
 	}
 	
-	function onRemove(json, e) {
+	function onRemove(profile, e) {
+		if (!confirm("remove this profile?")) {
+			return;
+		}
+		
 		var request = {
 				database: "profile",
 				command: "delete",
 				data: {}
 			};
 		
-		request.data[json.name] = null;
+		request.data[profile.name] = null;
 		
 		xhr.request(request);
 	}
@@ -96,7 +95,9 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				top.postMessage({
+					message: "unauthorized"
+				}, "*");
 			}
 			
 			console.log(status);

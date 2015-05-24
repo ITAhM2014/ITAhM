@@ -1,2 +1,12 @@
 @CHARSET "UTF-8";
 @import "css/common.css";
+
+input[name=status] {
+	font-size: 15pt;
+	font-weight: bold;
+	color: #0f0;
+}
+
+input[name=status].down {
+	color: #f00;
+}

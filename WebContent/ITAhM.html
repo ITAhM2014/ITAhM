@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		
+		<title>ITAhM</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="ITAhM.css">
+		
+		<script src="js/JSONRequest.js"></script>
+		
+	</head>
+
+	<body id="body" class="loading">
+
+		<div class="top">
+			<nav>
+				<ul>
+					<li><a href="home.html" target="content">home</a>
+					<li><a href="map.html" target="content">map</a>
+					<li><a href="device_list.html" target="content">device</a>
+					<li><a href="line_list.html" target="content">line</a>
+					<li><a href="address.html" target="content">address</a>
+					<li><a href="account.html" target="content">account</a>
+					<li><a href="profile.html" target="content">profile</a>
+					<li><a href="icon.html" target="content">icon</a>
+					<li><a href="graph.html" target="content">test</a>
+				</ul>
+				<form id="form">
+					<ul>
+						<li><input type="button" name="signout" value="SignOut">
+					</ul>
+				</form>
+			</nav>
+		</div>
+		
+		<div class="content">
+			<iframe name="content" id="content"></iframe>
+		</div>
+		
+		<div class="dialog">
+			<iframe name="dialog" id="dialog"></iframe>
+		</div>
+		
+		<div class="loading"></div>
+		
+		<script src="ITAhM.js"></script>
+		
+	</body>
+	
+</html>

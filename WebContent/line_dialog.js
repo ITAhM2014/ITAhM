@@ -1,38 +1,45 @@
 ;"use strict";
 
 (function (window, undefined) {
+	var xhr, form, line;
 	
-	if (parent == window) {
-		return;
-	}
-	
-	var xhr = new JSONRequest("local.itahm.com:2014", onResponse),
-		form = document.getElementById("form");
-	
-	var line;
-	
-	form.addEventListener("submit", onApply, false);
-	form.addEventListener("reset", onCancel, false);
-	
-	form.elements["index"].addEventListener("change", onSelectLink, false);
-	form.elements["remove"].addEventListener("click", onRemove, false);
-	
-	//window.addEventListener("load", onLoad, false);
+	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
-	//function onLoad(e) {}
+	function onLoad(e) {
+	}
+	
+	function load() {
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		form = document.getElementById("form");
+		
+		form.addEventListener("submit", onApply, false);
+		form.addEventListener("reset", onCancel, false);
+		
+		form.elements["index"].addEventListener("change", onSelectLink, false);
+		form.elements["remove"].addEventListener("click", onRemove, false);
+	}
 	
 	function onMessage(e) {
-		var data = e.data,
-			from, to;
+		var data = e.data;
 	
-		if (!data || data.message != "line") {
+		if (!data) {
 			return;
 		}
 		
-		line = data.line;
-		from = data.deviceFrom;
-		to = data.deviceTo;
+		switch (data.message) {
+		case "data":
+			load();
+			
+			set(data.data);
+			break;
+		}
+	}
+	
+	function set(data) {console.log(data);
+		var line = data.line,
+			from = data.deviceFrom,
+			to = data.deviceTo;
 		
 		if (!line) {	
 			line = {
@@ -191,8 +198,8 @@
 	}
 	
 	function onCancel(e) {
-		parent.postMessage({
-			message: "closeLineDialog"
+		top.postMessage({
+			message: "popup"
 		}, "*");
 	}
 	
@@ -208,6 +215,10 @@
 			var json = response.json;
 			if (json != null) {
 				switch (json.command) {
+				case "echo":
+					load();
+					
+					break;
 				case "put":
 					for (var id in json.data) {
 						break;

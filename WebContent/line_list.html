@@ -6,6 +6,8 @@
 		<meta charset="UTF-8">
 		<meta http-equiv="Content-Script-Type" content="text/javascript">
 		<meta http-equiv="Content-Style-Type" content="text/css">
+		<meta http-equiv="pragma" content="no-cache">
+		
 		<link rel="shortcut icon" href="img/favicon.ico">
 		<link rel="stylesheet" href="line_list.css">
 		
@@ -14,25 +16,20 @@
 
 	<body>
 		
-		<iframe src="header.html" class="header"></iframe>
-		<div class="content">
-			<div class="menu">
-				<form id="form" class="control" autocomplete="off">
-					<input type="submit" name="add" value="add">
-					<input type="reset" name="remove" value="remove">
-				</form>
-			</div>
-			<table class="list">
-				<colgroup>
-					<col>
-					<col>
-					<col span="3">
-				<tbody id="list"></tbody>
-			</table>
+		<div class="menu">
+			<form id="form" class="control" autocomplete="off">
+				<input type="submit" name="add" value="add">
+				<input type="reset" name="remove" value="remove">
+			</form>
 		</div>
+		<table class="list">
+			<colgroup>
+				<col>
+				<col>
+				<col span="3">
+			<tbody id="list"></tbody>
+		</table>
 		
-		<iframe class="dialog" id="dialog" src="line_dialog.html"></iframe>
-			
 		<script src="line_list.js"></script>
 		
 	</body>
