@@ -1,28 +1,29 @@
-package com.itahm.database;
+package com.itahm.request;
 
 import java.io.File;
 
 import org.json.JSONObject;
 
+import com.itahm.Database;
 import com.itahm.ITAhMException;
+import com.itahm.SnmpManager;
 import com.itahm.json.JSONFile;
 
-public class Cpu extends Database {
+public class Cpu extends Request {
 
-	private final File snmp;
-	
-	public Cpu() {
-		snmp = new File(root, "snmp");
-	}
-
-	@Override
-	protected JSONObject each() {
-		return get();
+	public Cpu(SnmpManager snmp, Database database, JSONObject request) {
+		super(snmp, database);
+		
+		execute(request);
 	}
 	
 	@Override
 	protected JSONObject each(String command, String key, JSONObject value) {
-		File dir = new File(snmp, key + File.separator + "cpu" + File.separator + value.getString("date").replace("-", File.separator));
+		if (!"get".equals(command)) {
+			return null;
+		}
+		
+		File dir = new File(this.snmp.getRoot(), key + File.separator + "cpu" + File.separator + value.getString("date").replace("-", File.separator));
 		JSONObject result = null;
 		
 		if (dir.isDirectory()) {
@@ -33,6 +34,7 @@ public class Cpu extends Database {
 					result.put(file.getName(), JSONFile.getJSONObject(file));
 				} catch (ITAhMException itahme) {
 					itahme.printStackTrace();
+					
 					return null;
 				}
 			}

@@ -3,6 +3,7 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,29 +11,29 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.database.SignIn;
+import com.itahm.request.SignIn;
 import com.itahm.http.EventListener;
 import com.itahm.http.Message;
 import com.itahm.http.Listener;
-import com.itahm.database.Database;
 import com.itahm.session.Session;
-import com.itahm.snmp.Manager;
 
 public class ITAhM implements EventListener, Closeable {
 
 	private final static Map<String, String> commandMap = new HashMap<String, String>();
 	{
-		commandMap.put("account", "com.itahm.database.Account");
-		commandMap.put("device", "com.itahm.database.Device");
-		commandMap.put("line", "com.itahm.database.Line");
-		commandMap.put("traffic", "com.itahm.database.Traffic");
-		commandMap.put("profile", "com.itahm.database.Profile");
-		commandMap.put("address", "com.itahm.database.Address");
-		commandMap.put("snmp", "com.itahm.database.Snmp");
-		commandMap.put("cpu", "com.itahm.database.Cpu");
+		commandMap.put("account", "com.itahm.request.Account");
+		commandMap.put("device", "com.itahm.request.Device");
+		commandMap.put("line", "com.itahm.request.Line");
+		commandMap.put("traffic", "com.itahm.request.Traffic");
+		commandMap.put("profile", "com.itahm.request.Profile");
+		commandMap.put("address", "com.itahm.request.Address");
+		commandMap.put("snmp", "com.itahm.request.Snmp");
+		commandMap.put("cpu", "com.itahm.request.Cpu");
 	}
 	
-	private final Listener listener;
+	private final Listener http;
+	private final Database database;
+	private final SnmpManager snmp;
 	
 	public ITAhM(int udpPort, String path) throws IOException {
 		System.out.println("service start!");
@@ -40,9 +41,9 @@ public class ITAhM implements EventListener, Closeable {
 		File root = new File(path, "itahm");
 		root.mkdir();
 		
-		Database.init(root, new Manager(root));
-			
-		listener = new Listener(this, udpPort);
+		database = new Database(root);
+		snmp = new SnmpManager(root);	
+		http = new Listener(this, udpPort);
 		
 		System.out.println("ITAhM is ready");
 	}
@@ -57,7 +58,7 @@ public class ITAhM implements EventListener, Closeable {
 				.put(username, new JSONObject()
 					.put("password", password)));
 		
-		new SignIn(jo);
+		new SignIn(this.snmp, this.database, jo);
 		
 		return !data.isNull(username);
 	}
@@ -84,8 +85,8 @@ public class ITAhM implements EventListener, Closeable {
 		
 		if (className != null) {
 			try {
-				((Database)Class.forName(className).newInstance()).execute(jo);
-			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+				Class.forName(className).getDeclaredConstructor(SnmpManager.class, Database.class, JSONObject.class).newInstance(this.snmp, this.database, jo);
+			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | NoSuchMethodException |SecurityException | IllegalArgumentException | InvocationTargetException e) {
 				e.printStackTrace();
 			}
 		}
@@ -212,7 +213,9 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void close() throws IOException {
-		this.listener.close();
+		this.database.close();
+		this.snmp.close();
+		this.http.close();
 	}
 	
 	public static void main(String [] args) {

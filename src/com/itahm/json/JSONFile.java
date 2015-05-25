@@ -97,16 +97,14 @@ public class JSONFile implements Closeable{
 		return this.json;
 	}
 	
-	public void put(String key, Object value) {
+	public JSONObject put(String key, Object value) {
 		this.json.put(key, value);
+		
+		return this.json;
 	}
 	
 	public JSONObject get(String key) {
-		if (this.json.has(key)) {
-			return this.json.getJSONObject(key);
-		}
-		
-		return null;
+		return this.json.has(key)? this.json.getJSONObject(key): null;
 	}
 	
 	public JSONObject get() {

@@ -1,0 +1,21 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+table {
+	border-collapse: collapse;
+	width: 100%;
+	box-sizing: border-box;
+}
+/*
+tr {
+	border: 1px solid #ddd;
+}
+*/
+tr:nth-child(odd) {
+	background-color: #eee;
+}
+
+td {
+	padding: .5em;
+	font-size: 8pt;
+}

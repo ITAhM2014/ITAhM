@@ -1,4 +1,4 @@
-package com.itahm.snmp;
+package com.itahm;
 
 import java.io.Closeable;
 import java.io.File;
@@ -15,21 +15,26 @@ import java.util.TimerTask;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.snmp4j.PDU;
-import org.snmp4j.Snmp;
 import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.event.ResponseListener;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.json.JSONFile;
+import com.itahm.snmp.Constants;
+import com.itahm.snmp.Node;
 
-public class Manager extends TimerTask implements ResponseListener, Closeable  {
+public class SnmpManager extends TimerTask implements ResponseListener, Closeable  {
 
-	private final Snmp snmp;
+	private final org.snmp4j.Snmp snmp;
 	private final Timer timer;
 	private final File root;
 	private final JSONFile snmpFile = new JSONFile();
 	private final JSONFile addrFile = new JSONFile();
+	
+	public static enum FILE {
+		SNMP, ADDRESS
+	}
 	
 	private final HashSet<Node> nodeList = new HashSet<Node>();
 	private final static PDU pdu = new PDU();
@@ -60,12 +65,12 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 	//public static long DELAY = 60 * 1000; // 1 min.
 	public static long DELAY = 3 * 1000; // test
 	
-	public Manager() throws IOException {
+	public SnmpManager() throws IOException {
 		this(new File("."));
 	}
 	
-	public Manager(File path) throws IOException {
-		snmp = new Snmp(new DefaultUdpTransportMapping());
+	public SnmpManager(File path) throws IOException {
+		snmp = new org.snmp4j.Snmp(new DefaultUdpTransportMapping());
 		timer = new Timer(true);
 		root = new File(path, "snmp");
 		
@@ -127,6 +132,22 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 		return null;
 	}
 	
+	public JSONFile getFile(FILE name) {
+		switch(name) {
+		case ADDRESS:
+			return this.addrFile;
+			
+		case SNMP:
+			return this.snmpFile;
+		}
+		
+		return null;
+	}
+	
+	public File getRoot() {
+		return this.root;
+	}
+	
 	@Override
 	public void close() throws IOException {
 		this.timer.cancel();
@@ -141,7 +162,7 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 		Node node = ((Node)event.getUserObject());
 		long now = Calendar.getInstance().getTimeInMillis();
 		
-		((Snmp)event.getSource()).cancel(request, this);
+		((org.snmp4j.Snmp)event.getSource()).cancel(request, this);
 		
 		if (response == null) {			
 			// TODO response timed out
@@ -260,9 +281,9 @@ public class Manager extends TimerTask implements ResponseListener, Closeable  {
 	}
 	
 	public static void main(String [] args) {
-		Manager manager;
+		SnmpManager manager;
 		try {
-			manager = new Manager();
+			manager = new SnmpManager();
 			
 			//Node node =
 			//manager.add("127.0.0.1", 161, "public");
