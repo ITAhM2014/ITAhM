@@ -10,7 +10,7 @@ public class Profile extends Request {
 	public Profile(SnmpManager snmp, Database database, JSONObject request) {
 		super(snmp, database);
 		
-		file = database.getFile(Database.FILE.DEVICE);
+		file = database.getFile(Database.FILE.PROFILE);
 		
 		execute(request);
 	}

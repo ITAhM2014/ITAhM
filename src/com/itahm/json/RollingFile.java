@@ -2,58 +2,86 @@ package com.itahm.json;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-import org.json.JSONObject;
+import com.itahm.ITAhMException;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class RollingFile.
+ */
 public class RollingFile extends JSONFile {
 
-	private final static SimpleDateFormat fileName = new SimpleDateFormat("yyyy"+ File.separator +"MM"+ File.separator +"dd");
-	
+	/** The last. */
 	private int last;
-	private final File path;
 	
-	public RollingFile(File path, String name) throws IOException {
+	/** The dataRoot. */
+	private File dataRoot;
+	
+	/**
+	 * Instantiates a new rolling file.
+	 *
+	 * @param root the dataRoot
+	 * @param index the index of host, interfaces, etc.
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	public RollingFile(File root, String index) throws IOException {
 		super();
 	
-		this.path = new File(path, name);
-		this.path.mkdir();
+		this.dataRoot = new File(root, index);
+		this.dataRoot.mkdir();
 		
-		load(Calendar.getInstance());
+		roll();
 	}
 	
-	public void load(Calendar c) throws IOException {
-		File path = new File(this.path, fileName.format(c.getTime()));
-		path.mkdirs();
-		
-		load(new File(path, String.format("%02d", this.last = c.get(Calendar.HOUR_OF_DAY))));
-	}
-	
-	public void roll(String key, long value) throws IOException {
+	private String roll() throws ITAhMException, IOException {
 		Calendar calendar = Calendar.getInstance();
+		String now;
+		int hour;
 		
-		if (calendar.get(Calendar.HOUR_OF_DAY) != this.last) {
-			load(calendar);
+		calendar.set(Calendar.MILLISECOND, 0);
+		calendar.set(Calendar.SECOND, 0);
+		
+		now = Long.toString(calendar.getTimeInMillis());
+		hour = calendar.get(Calendar.HOUR_OF_DAY);
+		
+		if (hour == this.last) {
+			return now;
 		}
 		
-		JSONObject jo;
-		if (this.json.has(key)) {
-			jo = this.json.getJSONObject(key);
-		}
-		else {
-			jo = new JSONObject();
+		this.last = hour;
+		
+		String fileName;
+		File dir;
+		
+		calendar.set(Calendar.MINUTE, 0);
+		fileName = Long.toString(calendar.getTimeInMillis());
+		
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
+		dir = new File(this.dataRoot, Long.toString(calendar.getTimeInMillis()));
+		dir.mkdir();
+		
+		load(new File(dir, fileName));
+		
+		return now;
+	}
+	/**
+	 * Roll.
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	
+	public void roll(long value) throws IOException {
+		String minute = roll();
+		
+		if (!this.json.has(minute) || this.json.getLong(minute) < value) {
+			this.json.put(minute, value);
 			
-			this.json.put(key, jo);
+			// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
+			save();
 		}
-		
-		String minute = Long.toString(calendar.get(Calendar.MINUTE));
-		if (!jo.has(minute) || jo.getLong(minute) < value) {
-			jo.put(minute, value);
-		}
-		
-		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
-		save();
 	}
 	
 }

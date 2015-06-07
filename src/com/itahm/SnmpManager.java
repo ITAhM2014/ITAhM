@@ -60,10 +60,15 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		pdu.add(new VariableBinding(Constants.ipNetToMediaPhysAddress));
 		pdu.add(new VariableBinding(Constants.hrSystemUptime));
 		pdu.add(new VariableBinding(Constants.hrProcessorLoad));
+		pdu.add(new VariableBinding(Constants.hrStorageType));
+		pdu.add(new VariableBinding(Constants.hrStorageDescr));
+		pdu.add(new VariableBinding(Constants.hrStorageSize));
+		pdu.add(new VariableBinding(Constants.hrStorageUsed));
+		
 	}
 	
 	//public static long DELAY = 60 * 1000; // 1 min.
-	public static long DELAY = 3 * 1000; // test
+	public static long DELAY = 10 * 1000; // test
 	
 	public SnmpManager() throws IOException {
 		this(new File("."));
@@ -81,19 +86,24 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		snmp.listen();
 		
-		JSONObject jo = snmpFile.getJSONObject();
-		
-		if (jo.length() > 0) {
-			String [] names = JSONObject.getNames(jo);
-			
-			for (int i=0, _i=names.length; i<_i; i++) {
-				add(Node.create(root, jo.getJSONObject(names[i])));
-			}
-		}
-		else {
-			add("127.0.0.1", 161, "public");
+		if (snmpFile.get("127.0.0.1") == null) {
+			snmpFile.put("127.0.0.1", new JSONObject()
+				.put("ip","127.0.0.1")
+				.put("udp", 161)
+				.put("community", "public")
+				.put("ifEntry", new JSONObject())
+				.put("hrProcessorLoad", new JSONObject())
+			);
 			
 			snmpFile.save();
+		}
+		
+		JSONObject jo = snmpFile.getJSONObject();
+		
+		String [] names = JSONObject.getNames(jo);
+		
+		for (int i=0, _i=names.length; i<_i; i++) {
+			add(Node.create(root, jo.getJSONObject(names[i])));
 		}
 		
 		timer.scheduleAtFixedRate(this, 3000, DELAY);
@@ -118,7 +128,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			.put("udp", udp)
 			.put("community", community)
 			.put("ifEntry", new JSONObject())
-			.put("hrProcessorLoad", new JSONObject());
+			.put("hrProcessorEntry", new JSONObject());
 		
 		try {
 			snmpTable.put(ip, jo);
@@ -168,7 +178,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			// TODO response timed out
 			
 			node.set("timeout", now);
-			
+			System.out.println("timeout");
 			return;
 		}
 		
@@ -224,39 +234,6 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		return jo;
 	}
 	
-	public void test() {
-		JSONObject addrMap = this.addrFile.getJSONObject();
-		
-		if (addrMap.length() == 0) {
-			return;
-		}
-		
-		String [] keys = JSONObject.getNames(addrMap);
-		JSONObject data;
-		String ip;
-		String mac;
-		byte [] tmp;
-		
-		System.out.println("print address table");
-		for (int i=0, _i=keys.length; i<_i; i++) {
-			try {
-				ip = keys[i];
-				data = addrMap.getJSONObject(ip);
-				mac = data.getString("mac");
-				
-				tmp = ip.getBytes();
-				System.out.print(String.format("%d.%d.%d.%d >> ", tmp[0] & 0xff, tmp[1] & 0xff, tmp[2] & 0xff, tmp[3] & 0xff));
-				tmp = mac.getBytes();
-				System.out.println(String.format("%02x-%02x-%02x-%02x-%02x-%02x", tmp[0] & 0xff, tmp[1] & 0xff, tmp[2] & 0xff, tmp[3] & 0xff, tmp[4] & 0xff, tmp[5] & 0xff));
-			}
-			catch(JSONException jsone) {
-				jsone.printStackTrace();
-			}
-		}
-		
-		//System.out.println("count of node is "+ this.nodeList.size());
-	}
-	
 	public void run() {
 		try {
 			this.addrFile.save();
@@ -292,7 +269,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			while (more) {
 				switch(System.in.read()) { 
 				case 'd':
-					manager.test();
+					
 					break;
 				case -1:
 					more = false;

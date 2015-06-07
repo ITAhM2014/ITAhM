@@ -15,6 +15,8 @@ public class IndexMap {
 	public IndexMap(File indexRoot) {
 		root = indexRoot;
 		
+		root.mkdir();
+		
 		map = new HashMap<String, RollingFile>();
 	}
 
@@ -22,9 +24,9 @@ public class IndexMap {
 		RollingFile file = map.get(index);
 		
 		if (file == null) {
-			file = map.put(index, new RollingFile(root, index));
+			map.put(index, file = new RollingFile(root, index));
 		}
 		
-		file.roll(index, value);
+		file.roll(value);
 	}
 }

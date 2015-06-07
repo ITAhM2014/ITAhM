@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.Vector;
 
 import org.json.JSONException;
@@ -30,10 +29,13 @@ public class Node extends CommunityTarget {
 	
 	private final JSONObject node;
 	private final JSONObject ifEntry;
-	
+	private final JSONObject hrProcessorEntry;
+	private final JSONObject hrStorageEntry;
 	private final IndexMap ifInOctets;
 	private final IndexMap ifOutOctets;
 	private final IndexMap hrProcessorLoad;
+	private final IndexMap hrStorageUsed;
+	
 	private final Address address;
 	
 	private final File nodeRoot;
@@ -43,23 +45,37 @@ public class Node extends CommunityTarget {
 
 		InetAddress.getByName(ip);
 
+		if (!jo.has("ifEntry")) {
+			jo.put("ifEntry", new JSONObject());
+		}
 		ifEntry = jo.getJSONObject("ifEntry");
+		
+		if (!jo.has("hrProcessorEntry")) {
+			jo.put("hrProcessorEntry", new JSONObject());
+		}
+		hrProcessorEntry = jo.getJSONObject("hrProcessorEntry");
+		
+		if (!jo.has("hrStorageEntry")) {
+			jo.put("hrStorageEntry", new JSONObject());
+		}
+		hrStorageEntry = jo.getJSONObject("hrStorageEntry");
 		
 		node = jo;
 		
 		nodeRoot = new File(path, ip);
 		nodeRoot.mkdir();
 		
-		hrProcessorLoad = new IndexMap(new File(nodeRoot, "hrProcessorLoad"));
-		ifInOctets = new IndexMap(new File(nodeRoot, "ifInOctets"));
-		ifOutOctets = new IndexMap(new File(nodeRoot, "ifOutOctets"));
+		hrProcessorLoad = new IndexMap(new File(nodeRoot, Constants.HRPROCESSORLOAD));
+		ifInOctets = new IndexMap(new File(nodeRoot, Constants.IFINOCTETS));
+		ifOutOctets = new IndexMap(new File(nodeRoot, Constants.IFOUTOCTETS));
+		hrStorageUsed = new IndexMap(new File(nodeRoot, Constants.HRSTORAGEUSED));
 		
 		address = new Address();
 		
 		setAddress(new UdpAddress(String.format("%s/%d", ip, jo.getInt("udp"))));
 		setCommunity(new OctetString(jo.getString("community")));
 		setVersion(SnmpConstants.version2c);
-		setRetries(0);
+		setRetries(3);
 		setTimeout(3000);
 	}
 	
@@ -68,7 +84,7 @@ public class Node extends CommunityTarget {
 			return new Node(path, jo);
 		}
 		catch (JSONException | UnknownHostException e) {
-			
+			e.printStackTrace();
 		}
 		
 		return null;
@@ -211,8 +227,9 @@ public class Node extends CommunityTarget {
 			else if (response.startsWith(Constants.ipNetToMediaPhysAddress) && request.startsWith(Constants.ipNetToMediaPhysAddress)) {
 				OctetString value = (OctetString)variable;
 				byte [] mac = value.getValue();
-				
-				address.put(ip, String.format("%02X-%02X-%02X-%02X-%02X-%02X", mac[0] & 0xff, mac[1] & 0xff, mac[2] & 0xff, mac[3] & 0xff, mac[4] & 0xff, mac[5] & 0xff));
+				if (mac.length == 6) {
+					address.put(ip, String.format("%02X-%02X-%02X-%02X-%02X-%02X", mac[0] & 0xff, mac[1] & 0xff, mac[2] & 0xff, mac[3] & 0xff, mac[4] & 0xff, mac[5] & 0xff));
+				}
 			}
 			
 			return true;
@@ -226,11 +243,51 @@ public class Node extends CommunityTarget {
 			else if (response.startsWith(Constants.hrProcessorLoad) && request.startsWith(Constants.hrProcessorLoad)) {
 				Integer32 value = (Integer32)variable;
 				String index = Integer.toString(response.last());
+				int intValue = value.getValue();
 				
-				hrProcessorLoad.put(index, value.getValue());
+				this.hrProcessorEntry.put(index, intValue);
+				
+				this.hrProcessorLoad.put(index, intValue);
 				
 				return true;
 			}
+			else if (response.startsWith(Constants.hrStorageEntry) && request.startsWith(Constants.hrStorageEntry)) {
+				JSONObject jo;
+				String index = Integer.toString(response.last());
+				
+				if (!this.hrStorageEntry.has(index)) {
+					this.hrStorageEntry.put(index, jo = new JSONObject());
+				}
+				else {
+					jo = this.hrStorageEntry.getJSONObject(index);
+				}
+				
+				if (response.startsWith(Constants.hrStorageType) && request.startsWith(Constants.hrStorageType)) {
+					OID value = (OID)variable;
+					
+					if (value.startsWith(Constants.hrStorageTypes)) {
+						jo.put("hrStorageType", value.last());
+					}
+				}
+				else if (response.startsWith(Constants.hrStorageSize) && request.startsWith(Constants.hrStorageSize)) {
+					Integer32 value = (Integer32)variable;
+					
+					jo.put("hrStorageSize", value.getValue());
+				}
+				else if (response.startsWith(Constants.hrStorageDescr) && request.startsWith(Constants.hrStorageDescr)) {
+					OctetString value = (OctetString)variable;
+					
+					jo.put("hrStorageDescr", new String(value.getValue()));
+				}
+				else if (response.startsWith(Constants.hrStorageUsed) && request.startsWith(Constants.hrStorageUsed)) {
+					Integer32 value = (Integer32)variable;
+					
+					this.hrStorageUsed.put(index, value.getValue());
+				}
+				
+				return true;
+			}
+			
 		}
 		else {
 			
@@ -244,7 +301,7 @@ public class Node extends CommunityTarget {
 		Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
 		Vector<VariableBinding> nextRequests = new Vector<VariableBinding>();
 		VariableBinding requestVB, responseVB;
-
+		
 		for (int i=0, length = responseVBs.size(); i<length; i++) {
 			requestVB = (VariableBinding)requestVBs.get(i);
 			responseVB = (VariableBinding)responseVBs.get(i);
@@ -253,7 +310,7 @@ public class Node extends CommunityTarget {
 				nextRequests.add(responseVB);
 			}
 		}
-		
+
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
 	}
 	

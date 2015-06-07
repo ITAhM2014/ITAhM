@@ -41,7 +41,7 @@
 	
 	function init(json) {
 		var node = json["127.0.0.1"];
-		
+		console.log(node);
 		if (node.timeout > 0) {
 			form.elements["status"].value = "down ("+ new Date(node.timeout) +")";
 			form.elements["status"].classList.add("down");

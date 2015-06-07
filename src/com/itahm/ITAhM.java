@@ -31,6 +31,24 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("cpu", "com.itahm.request.Cpu");
 	}
 	
+	/*private static enum Command {
+		ACCOUNT("com.itahm.request.Account"),
+		PROFILE("com.itahm.request.Profile"),
+		DEVICE("com.itahm.request.Device"),
+		LINE("com.itahm.request.Line"),
+		ADDRESS("com.itahm.request.Address"),
+		SNMP("com.itahm.request.Snmp"),
+		CPU("com.itahm.request.Cpu"),
+		TRAFFIC("com.itahm.request.Traffic");
+		
+		private String className;
+		
+		private Command(String name) {
+			className = name;
+		}
+	}
+	*/
+	
 	private final Listener http;
 	private final Database database;
 	private final SnmpManager snmp;
@@ -90,31 +108,6 @@ public class ITAhM implements EventListener, Closeable {
 				e.printStackTrace();
 			}
 		}
-		
-		/*@SuppressWarnings("unchecked")
-		Iterator<String> iterator = json.keys();
-		String command;
-		
-		while(iterator.hasNext()) {
-			command = iterator.next();
-			
-			try {
-				processEach(command, json.getJSONObject(command));
-			}
-			catch (JSONException e) {
-				if (command.equals("logout")) {
-					Session.close(session);
-				}
-				else if (command.equals("echo")) {
-					
-				}
-				else {
-					e.printStackTrace();
-				}
-				
-				request.put(command, JSONObject.NULL);
-			}
-		}*/
 	}
 	
 	private void stop() {

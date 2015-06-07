@@ -10,17 +10,37 @@ import com.itahm.json.JSONFile;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+ // TODO: Auto-generated Javadoc
+/**
+  * The Class Request.
+  */
  abstract public class Request {
 	
+	/** The file. */
 	protected JSONFile file;
+	
+	/** The database. */
 	protected Database database;
+	
+	/** The snmp. */
 	protected SnmpManager snmp;
 	
+	/**
+	 * Instantiates a new request.
+	 *
+	 * @param snmp the snmp
+	 * @param database the database
+	 */
 	protected Request(SnmpManager snmp, Database database) {
 		this.snmp = snmp;
 		this.database = database;
 	}
 	
+	/**
+	 * Execute.
+	 *
+	 * @param request the request
+	 */
 	protected void execute(JSONObject request) {
 		try {
 			String command = request.getString("command");
@@ -64,7 +84,21 @@ import org.json.JSONObject;
 		}
 	}
 	
+	/**
+	 * Each.
+	 *
+	 * @param command the command
+	 * @param key the key
+	 * @param value the value
+	 * @return the JSON object
+	 */
 	abstract protected JSONObject each(String command, String key, JSONObject value);
+	
+	/**
+	 * Complete.
+	 *
+	 * @return true, if successful
+	 */
 	abstract protected boolean complete();
 	
 }

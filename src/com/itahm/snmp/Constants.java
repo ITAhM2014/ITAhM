@@ -74,6 +74,12 @@ public class Constants {
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).host(25)
 	public final static OID host = new OID(new int [] {1,3,6,1,2,1,25});
 	public final static OID hrSystemUptime = new OID(new int [] {1,3,6,1,2,1,25,1,1});
+	public final static OID hrStorageTypes = new OID(new int [] {1,3,6,1,2,1,25,2,1});
+	public final static OID hrStorageEntry = new OID(new int [] {1,3,6,1,2,1,25,2,3,1});
+	public final static OID hrStorageType = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,2});
+	public final static OID hrStorageDescr = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,3});
+	public final static OID hrStorageSize = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,5});
+	public final static OID hrStorageUsed = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,6});
 	public final static OID hrProcessorLoad = new OID(new int [] {1,3,6,1,2,1,25,3,3,1,2});
 	
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ifMib(31)
@@ -125,6 +131,11 @@ public class Constants {
 	
 	public final static OID 						authenticationFailure = new OID(snmpTraps).append(5); // 10
 	public final static OID 						egpNeighborLoss = new OID(snmpTraps).append(6); // 10
+	
+	public static final String HRPROCESSORLOAD = "hrProcessorLoad";
+	public static final String IFINOCTETS = "ifInOctets"; 
+	public static final String IFOUTOCTETS = "ifOutOctets"; 
+	public static final String HRSTORAGEUSED = "hrStorageUsed";
 	
 	public Constants() {
 		// TODO Auto-generated constructor stub
