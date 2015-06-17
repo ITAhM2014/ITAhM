@@ -7,6 +7,31 @@ input[name=status] {
 	color: #0f0;
 }
 
-input[name=status].down {
-	color: #f00;
+table {
+	border-collapse: collapse;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+canvas {
+	background-color: #000;
+}
+
+table input, table textarea {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+#ifentry tr:not(.up) {
+	background-color: pink;
+}
+
+#ifentry tr:hover {
+	outline: 1px solid #777;
+	cursor: default;
+}
+
+#interface td, #interface th {
+	padding: .5em;
+	font-size: 11px;
 }

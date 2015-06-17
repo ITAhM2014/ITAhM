@@ -1,6 +1,6 @@
 ;"use strict";
 
-function Graph(id, height, max, onresize) {
+function Chart(id, height, max, onresize) {
 	this.init(id, height, max, onresize);
 }
 
@@ -16,10 +16,8 @@ function Graph(id, height, max, onresize) {
 		
 		this.width = Math.floor(Math.max(0, rect.width - marginLeft - marginRight));
 		
-		this.canvas.width = this.width + marginLeft + marginRight;
-		this.canvas.height = this.height + marginTop + marginBottom;
-		
-		drawGrid.call(this);
+		this.chart.width = this.width + marginLeft + marginRight;
+		this.chart.height = this.height + marginTop + marginBottom;
 	
 		if (!this.from) {
 			this.from = Math.floor(new Date().getTime() /60000) *60000 - (this.width -1) *60000;
@@ -39,14 +37,6 @@ function Graph(id, height, max, onresize) {
 		this.resize = setTimeout(resize.bind(this), 300);
 	}
 	
-	function drawGrid() {/*
-		this.context.strokeStyle = "#ddd";
-		
-		this.context.beginPath();
-		this.context.rect(marginLeft -.5, marginTop -.5, this.width +1, this.height +1);
-		this.context.stroke();*/
-	}
-	
 	function onDrag(x, scroll, e) {
 		var context = this.context,
 			width = this.width,
@@ -56,7 +46,7 @@ function Graph(id, height, max, onresize) {
 		
 		scroll += (e.clientX - x);
 		
-		Graph.clear(this.canvas);
+		Chart.clear(this.chart);
 		
 		drawBox(context, width, height);
 		drawMaxLabel(context, this.max);
@@ -68,11 +58,11 @@ function Graph(id, height, max, onresize) {
 	}
 	
 	function onMouseDown(e) {
-		this.canvas.onmousemove= onDrag.bind(this, e.clientX, this.scroll);
+		this.chart.onmousemove= onDrag.bind(this, e.clientX, this.scroll);
 	}
 	
 	function onMouseUp(e) {
-		if (this.canvas.onmousemove) {
+		if (this.chart.onmousemove) {
 	
 			this.from -= this.scroll * 60000;
 			this.onresize(this.from, this.width);
@@ -80,7 +70,7 @@ function Graph(id, height, max, onresize) {
 			this.scroll = 0;
 		}
 		
-		this.canvas.onmousemove = undefined;
+		this.chart.onmousemove = undefined;
 	}
 
 	function drawBox(context, width, height) {
@@ -126,24 +116,24 @@ function Graph(id, height, max, onresize) {
 		return date.getDate() +", "+ date.getHours() +":"+ date.getMinutes();
 	}
 	
-	Graph.prototype = {
+	Chart.prototype = {
 		init: function (id, height, max, onresize) {
 			this.client = document.getElementById(id);
 			this.graph = document.createElement("canvas");
 			this.graphContext = this.graph.getContext("2d");
-			this.canvas = document.createElement("canvas");
-			this.context = this.canvas.getContext("2d");
+			this.chart = document.createElement("canvas");
+			this.context = this.chart.getContext("2d");
 			this.height = Math.floor(height);
 			this.max = max;
 			this.scale =1;
 			this.sheets = {};
 			this.scroll = 0;
 			this.onresize = onresize;
-			this.client.appendChild(this.canvas);
+			this.client.appendChild(this.chart);
 			
-			this.canvas.addEventListener("mousedown", onMouseDown.bind(this), false);
-			this.canvas.addEventListener("mouseup", onMouseUp.bind(this), false);
-			this.canvas.addEventListener("mouseout", onMouseUp.bind(this), false);
+			this.chart.addEventListener("mousedown", onMouseDown.bind(this), false);
+			this.chart.addEventListener("mouseup", onMouseUp.bind(this), false);
+			this.chart.addEventListener("mouseout", onMouseUp.bind(this), false);
 			
 			window.addEventListener("resize", onResize.bind(this), false);
 			
@@ -155,7 +145,7 @@ function Graph(id, height, max, onresize) {
 				color = ["#00f", "#0f0", "#f00", "#ff0", "#f0f", "#0ff"],
 				colorIndex = 0,
 				size = this.width,
-				canvas = this.canvas,
+				canvas = this.chart,
 				context = this.context,
 				gCanvas = this.graph,
 				gContext = this.graphContext,
@@ -191,7 +181,7 @@ function Graph(id, height, max, onresize) {
 				gContext.stroke();
 			}
 			
-			Graph.clear(this.canvas);
+			Chart.clear(this.chart);
 			context.drawImage(this.graph, marginLeft, marginTop);
 			
 			drawBox(context, this.width, this.height);
@@ -201,7 +191,7 @@ function Graph(id, height, max, onresize) {
 		
 	};
 
-	Graph.clear = function (canvas) {
+	Chart.clear = function (canvas) {
 		var context = canvas.getContext("2d");
 		
 		context.save();
@@ -227,7 +217,7 @@ function Graph(id, height, max, onresize) {
 		cpu = document.getElementById("cpu");
 		
 		
-		graph = new Graph("graph", 100, 100, onResize);
+		graph = new Chart("graph", 100, 100, onResize);
 	}
 	
 	function onResize(from, size) {

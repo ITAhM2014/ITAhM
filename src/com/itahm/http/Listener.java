@@ -77,7 +77,8 @@ public class Listener implements Runnable, Closeable {
 	private void preProcessRequest(SocketChannel channel, Message request) throws IOException{
 		Message response = new Message()
 			.set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			.set("Access-Control-Allow-Origin", "http://local.itahm.com")
+			//.set("Access-Control-Allow-Origin", "http://local.itahm.com")
+			.set("Access-Control-Allow-Origin", "http://app.itahm.com")
 			.set("Access-Control-Allow-Credentials", "true");
 		
 		if (request != null) {

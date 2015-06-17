@@ -3,12 +3,10 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-//import java.util.Vector;
-
-
 
 import java.util.Calendar;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -36,7 +34,8 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		SNMP, ADDRESS
 	}
 	
-	private final HashSet<Node> nodeList = new HashSet<Node>();
+	private final Map<String, Node> nodeList = new HashMap<String, Node>();
+	
 	private final static PDU pdu = new PDU();
 	{
 		pdu.setType(PDU.GETNEXT);
@@ -44,6 +43,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		pdu.add(new VariableBinding(Constants.sysObjectID));
 		pdu.add(new VariableBinding(Constants.sysName));
 		pdu.add(new VariableBinding(Constants.sysServices));
+		pdu.add(new VariableBinding(Constants.ifIndex));
 		pdu.add(new VariableBinding(Constants.ifDescr));
 		pdu.add(new VariableBinding(Constants.ifType));
 		pdu.add(new VariableBinding(Constants.ifSpeed));
@@ -62,6 +62,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		pdu.add(new VariableBinding(Constants.hrProcessorLoad));
 		pdu.add(new VariableBinding(Constants.hrStorageType));
 		pdu.add(new VariableBinding(Constants.hrStorageDescr));
+		pdu.add(new VariableBinding(Constants.hrStorageAllocationUnits));
 		pdu.add(new VariableBinding(Constants.hrStorageSize));
 		pdu.add(new VariableBinding(Constants.hrStorageUsed));
 		
@@ -100,11 +101,9 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		JSONObject jo = snmpFile.getJSONObject();
 		
-		String [] names = JSONObject.getNames(jo);
-		
-		for (int i=0, _i=names.length; i<_i; i++) {
-			add(Node.create(root, jo.getJSONObject(names[i])));
-		}
+		for (String ip: JSONObject.getNames(jo)) {
+			add(Node.create(root, jo.getJSONObject(ip)));
+		};
 		
 		timer.scheduleAtFixedRate(this, 3000, DELAY);
 		
@@ -112,13 +111,17 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	}
 	
 	private boolean add (Node node) {
-		if (node == null) {
-			return false;
+		synchronized(this.nodeList) {
+			String ip = node.getIPAddress();
+			
+			if (!this.nodeList.containsKey(ip)) {
+				this.nodeList.put(ip, node);
+				
+				return true;
+			}
 		}
 		
-		synchronized(this.nodeList) {
-			return this.nodeList.add(node);
-		}
+		return false;
 	}
 	
 	public Node add (String ip, int udp, String community) {
@@ -128,7 +131,8 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			.put("udp", udp)
 			.put("community", community)
 			.put("ifEntry", new JSONObject())
-			.put("hrProcessorEntry", new JSONObject());
+			.put("hrProcessorEntry", new JSONObject())
+			.put("hrStorageEntry", new JSONObject());
 		
 		try {
 			snmpTable.put(ip, jo);
@@ -152,6 +156,10 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		}
 		
 		return null;
+	}
+	
+	public JSONObject get(String ip) {
+		return this.nodeList.get(ip).getJSON();
 	}
 	
 	public File getRoot() {
@@ -219,7 +227,8 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		return null;
 	}
 	*/
-	public JSONObject getData(String name, String ip, String date) {
+	/*
+	private JSONObject getData(String name, String ip, String date) {
 		File dir = new File(this.root, ip + File.separator + name + File.separator + date.replace("-", File.separator));
 		JSONObject jo = null;
 		
@@ -233,7 +242,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		return jo;
 	}
-	
+	*/
 	public void run() {
 		try {
 			this.addrFile.save();
@@ -244,9 +253,12 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			ioe.printStackTrace();
 		}
 		
+		Node node;
 		synchronized(this.nodeList) {
 			try {
-				for (Node node : this.nodeList) {
+				for (String ip : this.nodeList.keySet()) {
+					node = this.nodeList.get(ip);
+					
 					this.snmp.send(pdu, node, node, this);
 				}
 			} catch (IOException ioe) {

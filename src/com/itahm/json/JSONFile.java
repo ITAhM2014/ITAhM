@@ -36,8 +36,13 @@ public class JSONFile implements Closeable{
 	public JSONFile() {
 	}
 	
-	public JSONFile(File file) throws ITAhMException, IOException {
-		load(file);
+	public JSONFile(File file) throws ITAhMException {
+		try {
+			load(file);
+		} catch (IOException ioe) {
+			throw new ITAhMException(ioe);
+		}
+		
 	}
 	
 	/**
@@ -47,8 +52,9 @@ public class JSONFile implements Closeable{
 	 * @return the JSON file
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 * @throws ITAhMException the IT ah m exception
+	 * @throws FileNotFoundException 
 	 */
-	public JSONFile load(File file) throws IOException, ITAhMException {
+	public JSONFile load(File file) throws ITAhMException, IOException {
 		if (this.file != null) {
 			close();
 			clear();
@@ -79,10 +85,10 @@ public class JSONFile implements Closeable{
 				
 				save();
 			}
-		} catch (IOException e) {
+		} catch (IOException ioe) {
 			this.file.close();
 			
-			throw e;
+			throw ioe;
 		}
 		
 		return this;
@@ -146,6 +152,17 @@ public class JSONFile implements Closeable{
 	}
 	
 	/**
+	 * Sets the JSON object.
+	 *
+	 * @throws IOException 
+	 */
+	public void setJSONObject(JSONObject jo) throws IOException {
+		this.json = jo;
+		
+		save();
+	}
+	
+	/**
 	 * Put.
 	 *
 	 * @param key the key
@@ -156,6 +173,23 @@ public class JSONFile implements Closeable{
 		this.json.put(key, value);
 		
 		return this.json;
+	}
+	
+	/**
+	 * Put.
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @return true if 기존 값이 없거나 새로운 값이 더 큰 경우
+	 */
+	public boolean tryPut(String key, long value) {
+		if (!this.json.has(key) || this.json.getLong(key) < value) {
+			this.json.put(key, value);
+			
+			return true;
+		}
+		
+		return false;
 	}
 	
 	/**

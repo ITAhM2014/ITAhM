@@ -12,22 +12,21 @@ import org.json.JSONObject;
 import com.itahm.Database;
 import com.itahm.SnmpManager;
 import com.itahm.json.RollingData;
-import com.itahm.snmp.Node;
 
 // TODO: Auto-generated Javadoc
 /**
  * The Class Cpu.
  */
-public class Cpu extends Request {
+public class Memory extends Request {
 
 	/**
-	 * Instantiates a new cpu.
+	 * Instantiates a new memory.
 	 *
 	 * @param snmp the snmp
 	 * @param database the database
 	 * @param request the request
 	 */
-	public Cpu(SnmpManager snmp, Database database, JSONObject request) {
+	public Memory(SnmpManager snmp, Database database, JSONObject request) {
 		super(snmp, database);
 		
 		execute(request);
@@ -51,10 +50,12 @@ public class Cpu extends Request {
 		
 		long base;
 		int size;
+		int index;
 		
 		try {
 			base = value.getLong("base");
 			size = value.getInt("size");
+			index = value.getInt("index");
 		}
 		catch (JSONException jsone) {
 			jsone.printStackTrace();
@@ -62,28 +63,25 @@ public class Cpu extends Request {
 			return null;
 		}
 		
-		Node node = Node.node(key);
-		
-		if (node == null) {
-			return null;
-		}
-		
-		
-		JSONObject result = new JSONObject();
-		File procRoot = new File(this.snmp.getRoot(), key);
-		procRoot = new File(procRoot, "hrProcessorLoad");
+		JSONObject result = new JSONObject();		
+		File memRoot = new File(this.snmp.getRoot(), key);
+		memRoot = new File(memRoot, "hrStorageUsed");
+		JSONObject node = this.snmp.get(key);
+		String indexString = Integer.toString(index);
 		long from;
 		long date;
 		Map<Long, Long> data;
-		JSONObject jo;
+		int unit = node.getJSONObject("hrStorageEntry").getJSONObject(indexString).getInt("hrStorageAllocationUnits");
+		Long longValue;
 		
 		from = base - (size -1) *60000;
-		for (File indexRoot : procRoot.listFiles()){
-			data = new RollingData(indexRoot, from, size).build();
-			jo = new JSONObject();
-			result.put(indexRoot.getName(), jo);
-			for (date = from; date <= base; date += 60000) {
-				jo.put(Long.toString(date), data.get(date));
+		
+		data = new RollingData(new File(memRoot, indexString), from, size).build();
+		
+		for (date = from; date <= base; date += 60000) {
+			longValue = data.get(date);
+			if (longValue != null) {
+				result.put(Long.toString(date),  longValue * unit /1024 /1024);
 			}
 		}
 		

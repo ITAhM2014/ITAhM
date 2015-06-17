@@ -8,9 +8,11 @@
 	window.addEventListener("load", onLoad, false);
 	
 	function onLoad() {
+		var search = parent.location.search;
+		
 		form = document.getElementById("form");
 		
-		form.server.value = parent.location.search.replace("?", "");
+		form.server.value = search? search.replace("?", ""): "";
 		
 		form.addEventListener("submit", onSignIn, false);
 	}

@@ -280,3 +280,63 @@ function sysObjectID(oid) {
 	}
 }
 
+function Bandwidth(bps) {
+	var unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
+	
+	this.bandwidth = bps;
+	
+	for(var i=0, _i=unit.length; i<_i; i++) {
+		if (bps > 999) {
+			bps /= 1000;
+		}
+		else {
+			break;
+		}
+	}
+	
+	this.toString = function () {
+		return bps + unit[i];
+	}
+	
+	this.getUnit = function () {
+		return unit[i];
+	}
+	
+	this.getValue = function () {
+		return bps;
+	}
+}
+
+Bandwidth.toString = function (bandwidth) {
+	var unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
+	
+	for(var i=0, _i=unit.length; i<_i; i++) {
+		if (bandwidth > 999) {
+			bandwidth /= 1000;
+		}
+		else {
+			break;
+		}
+	}
+	
+	return (Math.round(bandwidth * 100) /100) + unit[i];
+}
+
+function Uptime(date) {
+}
+
+Uptime.toString = function (date) {
+	var uptime = date /1000,
+		days, hours, minutes, seconds;
+	
+	days = Math.floor(uptime /24 /3600);
+	uptime -= days *24 *3600;
+	
+	hours = Math.floor((uptime /3600));
+	uptime -= hours * 3600;
+	
+	minutes = Math.floor((uptime /60));
+	uptime -= minutes * 60;
+
+	return days +" days " + hours +" hours " + minutes +" minutes " + Math.floor(uptime) +" seconds";
+}

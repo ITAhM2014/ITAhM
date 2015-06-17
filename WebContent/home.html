@@ -10,49 +10,65 @@
 		<link rel="stylesheet" href="home.css">
 		
 		<script src="js/JSONRequest.js"></script>
+		<script src="js/Chart.js"></script>
 		<script src="js/snmp.js"></script>
 	</head>
 
 	<body class="loading">
 		<div class="body">
-			<form id="form">
-				<table>
-					<tbody>
-						<tr>
-							<td>status</td>
-							<td><input type="text" name="status" readonly></td>
-						</tr>
-						<tr>
-							<td>name</td>
-							<td><input type="text" name="name" readonly></td>
-						</tr>
-						<tr>
-							<td>uptime</td>
-							<td><input type="text" name="uptime" readonly></td>
-						</tr>
-						<tr>
-							<td>description</td>
-							<td><textarea name="descr" readonly></textarea></td>
-						</tr>
-						<tr>
-							<td>enterprise</td>
-							<td><input type="text" name="enterprise" readonly></td>
-						</tr>
-						<tr>
-							<td>processor load</td>
-							<td>
-								<ul id="cpu">
-								</ul>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-				
-				<table>
-					<tbody id="ifentry"></tbody>
-				</table>
-				
-			</form>
+			<h3>device information</h3>
+				<form id="form">
+					<table>
+						<tbody>
+							<tr>
+								<td>status</td>
+								<td><input type="text" name="status" readonly></td>
+							</tr>
+							<tr>
+								<td>ip address</td>
+								<td><input type="text" name="ip" readonly></td>
+							</tr>
+							<tr>
+								<td>name</td>
+								<td><input type="text" name="name" readonly></td>
+							</tr>
+							<tr>
+								<td>uptime</td>
+								<td><input type="text" name="uptime" readonly></td>
+							</tr>
+							<tr>
+								<td>description</td>
+								<td><textarea name="descr" readonly></textarea></td>
+							</tr>
+							<tr>
+								<td>enterprise</td>
+								<td><input type="text" name="enterprise" readonly></td>
+							</tr>
+						</tbody>
+					</table>
+				</form>
+			<h3>processor load</h3>
+			<div id="cpu"></div>
+			
+			<h3>physical memory</h3>
+			<div id="memory"></div>
+			
+			<h3>interface [<span id="selectedPort"></span>]</h3>
+			<div id="traffic"></div>
+			<table id="interface">
+				<thead>
+					<tr>
+						<th>name</th>
+						<th>type</th>
+						<th>speed</th>
+						<th>admin status</th>
+						<th>operation status</th>
+						<th>input</th>
+						<th>output</th>
+					</tr>
+				</thead>
+				<tbody id="ifentry"></tbody>
+			</table>
 		</div>
 		
 		<script src="home.js"></script>

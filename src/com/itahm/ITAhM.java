@@ -29,41 +29,22 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("address", "com.itahm.request.Address");
 		commandMap.put("snmp", "com.itahm.request.Snmp");
 		commandMap.put("cpu", "com.itahm.request.Cpu");
+		commandMap.put("memory", "com.itahm.request.Memory");
 	}
-	
-	/*private static enum Command {
-		ACCOUNT("com.itahm.request.Account"),
-		PROFILE("com.itahm.request.Profile"),
-		DEVICE("com.itahm.request.Device"),
-		LINE("com.itahm.request.Line"),
-		ADDRESS("com.itahm.request.Address"),
-		SNMP("com.itahm.request.Snmp"),
-		CPU("com.itahm.request.Cpu"),
-		TRAFFIC("com.itahm.request.Traffic");
-		
-		private String className;
-		
-		private Command(String name) {
-			className = name;
-		}
-	}
-	*/
 	
 	private final Listener http;
 	private final Database database;
 	private final SnmpManager snmp;
 	
-	public ITAhM(int udpPort, String path) throws IOException {
-		System.out.println("service start!");
+	public ITAhM(int tcpPort, String path) throws IOException {
+		System.out.println("ITAhM service is started");
 		
 		File root = new File(path, "itahm");
 		root.mkdir();
 		
 		database = new Database(root);
 		snmp = new SnmpManager(root);	
-		http = new Listener(this, udpPort);
-		
-		System.out.println("ITAhM is ready");
+		http = new Listener(this, tcpPort);
 	}
 
 	private boolean signin(String username, String password) {
@@ -205,22 +186,35 @@ public class ITAhM implements EventListener, Closeable {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		this.database.close();
-		this.snmp.close();
-		this.http.close();
-	}
-	
-	public static void main(String [] args) {
-		try (ITAhM itahm = new ITAhM(2014, ".")) {
-			
-			System.in.read();
-			System.out.println("service end");
+		
+		try {
+			this.snmp.close();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (ITAhMException itahme) {
-			itahme.printStackTrace();
 		}
+		
+		try {
+			this.http.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		System.out.println("ITAhM service is end");
+	}
+	
+	public static void main(String [] args) throws IOException {
+		final ITAhM itahm = new ITAhM(2014, ".");
+		
+		Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            @Override
+            public void run()
+            {
+            	itahm.close();
+            }
+        });
 	}
 	
 }

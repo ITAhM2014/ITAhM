@@ -6,15 +6,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.itahm.json.RollingFile;
+import com.itahm.json.RollingFile.TYPE;
 
 public class IndexMap {
 
 	private final File root;
+	private final TYPE type;
 	private final Map<String, RollingFile> map;
 	
-	public IndexMap(File indexRoot) {
+	public IndexMap(File indexRoot, TYPE rsctype) {
 		root = indexRoot;
-		
+		type = rsctype;
 		root.mkdir();
 		
 		map = new HashMap<String, RollingFile>();
@@ -24,7 +26,7 @@ public class IndexMap {
 		RollingFile file = map.get(index);
 		
 		if (file == null) {
-			map.put(index, file = new RollingFile(root, index));
+			map.put(index, file = new RollingFile(root, index, this.type));
 		}
 		
 		file.roll(value);
