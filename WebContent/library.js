@@ -46,6 +46,11 @@ var library = {
 			alt: "layer4 switch",
 			src: "img/l4switch.png"
 		},
+		l3switch: {
+			group: "network",
+			alt: "layer4 switch",
+			src: "img/l4switch.png"
+		},
 		router: {
 			group: "network",
 			alt: "router",

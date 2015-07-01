@@ -332,7 +332,11 @@ public class RollingFile {
 		}
 	}
 	
-	public void getData(long base, int size, SCALE scale, String method) {
+	public JSONObject getData(long base, int size) {
+		return getData(base, size, SCALE.MINUTE, "");
+	}
+	
+	public JSONObject getData(long base, int size, SCALE scale, String method) {
 		long begin;
 		long end;
 		
@@ -343,22 +347,20 @@ public class RollingFile {
 		calendar.set(Calendar.SECOND, 0);
 		
 		switch (scale) {
-		case MINUTE:	
+		case MINUTE:
 			end = calendar.getTimeInMillis();
 			begin = end - (size -1) * MINUTE;
 			
-			getMinuteData(begin, end);
+			return getMinuteData(begin, end);
 			
-			break;
 		case MINUTE5:
 			calendar.set(Calendar.MINUTE, calendar.get(Calendar.MINUTE) /5 *5);
 			
 			end = calendar.getTimeInMillis();
 			begin = end - (size -1) *MINUTE5;
 			
-			getMinute5Data(begin, end, method);
+			return getMinute5Data(begin, end, method);
 			
-			break;
 		case HOUR6:
 			calendar.set(Calendar.MINUTE, 0);
 			calendar.set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY) /6 *6);
@@ -366,17 +368,18 @@ public class RollingFile {
 			end = calendar.getTimeInMillis();
 			begin = end - (size -1) * HOUR6;
 			
-			getHour6Data(begin, end, method);
-			break;
+			return getHour6Data(begin, end, method);
 		}
+		
+		return null;
 	}
 	
-	public JSONObject getMinuteData(long begin, long end) {
+	private JSONObject getMinuteData(long begin, long end) {
 		JSONObject result = new JSONObject();
 		JSONData data = new JSONData(root);
 		Long value;
 		
-		for (long date = begin; date < end; date += MINUTE5) {
+		for (long date = begin; date < end; date += MINUTE) {
 			value = data.get(date);
 			
 			if (value != null) {
@@ -387,7 +390,7 @@ public class RollingFile {
 		return result;
 	}
 	
-	public JSONObject getMinute5Data(long begin, long end, String method) {
+	private JSONObject getMinute5Data(long begin, long end, String method) {
 		JSONObject result = new JSONObject();
 		JSONSummaryData data = new JSONSummaryData(root, method);
 		Long value;

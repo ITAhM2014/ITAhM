@@ -1,72 +1,83 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr, form, profile, apply;
+	var xhr, device, form, profile,
+		func = {};
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
+	window.addEventListener("keydown", function (e) {
+		if (e.keyCode == 27) {
+			form.reset();
+		}
+	}, false);
+	window.focus();
 	
 	function onLoad(e) {
-	}
-	
-	function load() {
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 		form = document.getElementById("form");
 		profile = document.getElementById("profile");
-		
-		apply = _apply.bind(form, null);
 		
 		form.addEventListener("submit", onApply, false);
 		form.addEventListener("reset", onCancel, false);
 		
-		xhr.request({
-			database: "profile",
-			command: "get"
-		});
+		func["apply"] = apply.bind(form, null);
+		
+		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 	}
 	
-	function onMessage(e) {
-		var data = e.data;
-		
-		if (!data) {
-			return;
-		}
-		
-		switch (data.message) {
-		case "data":
-			set(data.data);
-			
-			break;
-		}
-	}
-	
-	function set(device) {
-		load();
-		
+
+	function load() {
 		if (!device) {
-			apply = _apply.bind(form, null);
+			func["apply"] = apply.bind(form, null);
 			
 			form.name.focus();
 		}
 		else {
 			form.name.value = device.name;
-			form.type.vaule = device.type;
+			form.type.value = device.type;
 			form.address.value= device.address;
 			form.profile.value = device.profile;
 			
-			apply = _apply.bind(form, device);
+			func["apply"] = apply.bind(form, device);
 			
 			form.name.select();
+		}
+		
+		loadend();
+	}
+	
+	function loadend() {
+		top.postMessage({
+			message: "loadend"
+		}, "http://app.itahm.com");
+	}
+	
+	function onMessage(e) {
+		var data = e.data,
+			message;
+		
+		if (!data) {
+			return;
+		}
+		
+		message = data.message;
+		device = data.data;
+		
+		if (message === "data") {
+			xhr.request({
+				database: "profile",
+				command: "get"
+			});	
 		}
 	}
 	
 	function onApply(e) {
 		e.preventDefault();
 		
-		apply();
+		func["apply"]();
 	}
 	
-	function _apply(json) {
+	function apply(json) {console.log(this.type.value);
 		var name = this.name.value,
 			type = this.type.value,
 			address = this.address.value,
@@ -98,13 +109,7 @@
 	function onCancel(e) {
 		top.postMessage({
 			message: "popup"
-		}, "*");
-	}
-	
-	function init(json) {
-		for (var name in json) {
-			profile.appendChild(document.createElement("option")).text = name;
-		}
+		}, "http://app.itahm.com");
 	}
 	
 	function onResponse(response) {
@@ -118,23 +123,24 @@
 			}
 		}
 		else if ("json" in response) {
-			var json = response.json;
-			if (json != null) {
-				switch (json.command) {
-				case "get":
-					if (json.database == "profile") {
-						init(json.data);
+			var json = response.json,
+				command = json.command,
+				data = json.data;
+				
+			if (command === "get") {
+				if (json.database == "profile") {
+					for (var name in data) {
+						profile.appendChild(document.createElement("option")).text = name;
 					}
 					
-					break;
-				case "put":
-					top.postMessage({
-						message: "reload",
-						html: "device_list.html"
-					}, "*");
-					
-					break;
+					load();
 				}
+			}
+			else if (command === "put") {
+				top.postMessage({
+					message: "reload",
+					html: "device_list.html"
+				}, "*");
 			}
 		}
 		else {

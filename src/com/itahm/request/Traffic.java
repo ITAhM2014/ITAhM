@@ -1,3 +1,6 @@
+/*
+ * 
+ */
 package com.itahm.request;
 
 import java.io.File;
@@ -11,14 +14,28 @@ import com.itahm.SnmpManager;
 import com.itahm.json.RollingData;
 import com.itahm.snmp.Counter;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class Traffic.
+ */
 public class Traffic extends Request {
 
+	/**
+	 * Instantiates a new traffic.
+	 *
+	 * @param snmp the snmp
+	 * @param database the database
+	 * @param request the request
+	 */
 	public Traffic(SnmpManager snmp, Database database, JSONObject request) {
 		super(snmp, database);
 		
 		execute(request);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.itahm.request.Request#each(java.lang.String, java.lang.String, org.json.JSONObject)
+	 */
 	@Override
 	protected JSONObject each(String command, String key, JSONObject value) {
 		if (!"get".equals(command)) {
@@ -85,6 +102,9 @@ public class Traffic extends Request {
 		return result;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.itahm.request.Request#complete()
+	 */
 	@Override
 	protected boolean complete() {
 		// TODO Auto-generated method stub

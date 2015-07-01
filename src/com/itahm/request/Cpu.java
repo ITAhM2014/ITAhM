@@ -3,15 +3,12 @@
  */
 package com.itahm.request;
 
-import java.io.File;
-import java.util.Map;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.Database;
 import com.itahm.SnmpManager;
-import com.itahm.json.RollingData;
+import com.itahm.json.RollingMap.Resource;
 import com.itahm.snmp.Node;
 
 // TODO: Auto-generated Javadoc
@@ -51,11 +48,22 @@ public class Cpu extends Request {
 		
 		long base;
 		int size;
+		int index;
+		int scale;
 		
 		try {
 			base = value.getLong("base");
 			size = value.getInt("size");
+			index = value.getInt("index");
+			
+			if (value.has("scale")) {
+				scale = value.getInt("scale");
+			}
+			else {
+				scale = 1;
+			}
 		}
+		
 		catch (JSONException jsone) {
 			jsone.printStackTrace();
 			
@@ -68,26 +76,9 @@ public class Cpu extends Request {
 			return null;
 		}
 		
+		JSONObject jo = node.getJSON(Resource.HRPROCESSORLOAD, Integer.toString(index), base, size, scale);
 		
-		JSONObject result = new JSONObject();
-		File procRoot = new File(this.snmp.getRoot(), key);
-		procRoot = new File(procRoot, "hrProcessorLoad");
-		long from;
-		long date;
-		Map<Long, Long> data;
-		JSONObject jo;
-		
-		from = base - (size -1) *60000;
-		for (File indexRoot : procRoot.listFiles()){
-			data = new RollingData(indexRoot, from, size).build();
-			jo = new JSONObject();
-			result.put(indexRoot.getName(), jo);
-			for (date = from; date <= base; date += 60000) {
-				jo.put(Long.toString(date), data.get(date));
-			}
-		}
-		
-		return result;
+		return jo;
 	}
 
 	/* (non-Javadoc)

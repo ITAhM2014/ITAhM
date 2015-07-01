@@ -11,6 +11,7 @@ div.dialog {
 	margin: 100px auto;
 	padding: 10px;
 	box-shadow: -.2em -.2em .2em .2em 5px #fff;
+	background-color: #fff;
 }
 
 form {

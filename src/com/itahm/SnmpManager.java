@@ -158,9 +158,9 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		return null;
 	}
 	
-	public JSONObject get(String ip) {
-		return this.nodeList.get(ip).getJSON();
-	}
+	//public JSONObject get(String ip) {
+//		return this.nodeList.get(ip).getJSON();
+	//}
 	
 	public File getRoot() {
 		return this.root;

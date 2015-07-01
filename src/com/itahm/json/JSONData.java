@@ -22,6 +22,8 @@ public class JSONData {
 	public Long get(long date) {
 		if (!initialized) {
 			initialize(date);
+			
+			initialized = true;
 		}
 		
 		String key = Long.toString(date);
@@ -30,8 +32,9 @@ public class JSONData {
 			if (date >= this.nextDay) {
 				nextDay();
 			}
-			
-			nextHour();
+			else {
+				nextHour();
+			}
 		}
 		
 		if (this.data != null && this.data.has(key)) {
@@ -55,18 +58,23 @@ public class JSONData {
 		
 		this.nextDay = calendar.getTimeInMillis();
 		
-		nextHour();
+		nextDay();
 	}
 
 	private void nextHour() {
 		this.curHour = this.nextHour;
 		this.nextHour += RollingFile.HOUR;
 		
-		this.data = JSONFile.getJSONObject(new File(new File(this.root, Long.toString(this.curDay)), Long.toString(this.curHour)));
+		String curDay = Long.toString(this.curDay);
+		String curHour = Long.toString(this.curHour);
+		
+		this.data = JSONFile.getJSONObject(new File(new File(this.root, curDay), curHour));
 	}
 	
 	private void nextDay() {
 		this.curDay = this.nextDay;
 		this.nextDay += RollingFile.DAY;
+		
+		nextHour();
 	}
 }

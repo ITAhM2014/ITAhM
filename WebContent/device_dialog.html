@@ -30,15 +30,16 @@
 						<td>type</td>
 						<td>
 							<select name="type" >
-									<option>unkown</option>
+									<option>unknown</option>
 								<optgroup label="network">
 									<option>router</option>
 									<option>dummy hub</option>
-									<option>L2 switch</option>
-									<option>L3 switch</option>
+									<option value="workgroup">L2 switch</option>
+									<option value="l3switch">L3 switch</option>
 									<option>L4 switch</option>
 								</optgroup>
 								<optgroup label="server">
+									<option>server</option>
 									<option>web server</option>
 									<option>was server</option>
 									<option>database</option>
@@ -73,7 +74,7 @@
 						<td>snmp</td>
 						<td>
 							<select name="profile">
-								<option>off
+								<option value="">off
 								<optgroup label="profile" id="profile"></optgroup>
 							</select>
 						</td>

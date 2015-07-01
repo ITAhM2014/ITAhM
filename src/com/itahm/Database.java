@@ -66,6 +66,19 @@ public class Database implements Closeable {
 		device = new JSONFile();
 		try {
 			device.load(new File(root, "device"));
+			if (device.isEmpty()) {
+				device.put("0", new JSONObject()
+					.put("id", "0")
+					.put("address", "127.0.0.1")
+					.put("x", 0).put("y", 0)
+					.put("name", "localhost")
+					.put("snmp", true)
+					.put("profile", "public")
+					.put("type", "server")
+					);
+				
+				device.save();
+			}
 		}
 		catch(ITAhMException itahme) {
 			device.close();

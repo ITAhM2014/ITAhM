@@ -27,8 +27,8 @@ public class Device extends Request {
 				if (id < 0) {
 					return null;
 				}
-				
-				value.put("id", Integer.toString(id));
+
+				value.put("id", key = Integer.toString(id));
 			}
 			
 			this.file.put(key, value);

@@ -6,6 +6,13 @@
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
+	window.addEventListener("keydown", function (e) {
+		if (e.keyCode == 27) {
+			form.reset();
+		}
+	}, false);
+	window.focus();
+	
 	
 	function onLoad(e) {	
 	}
@@ -27,6 +34,14 @@
 		else {
 			form.name.focus();
 		}
+		
+		loadend();
+	}
+	
+	function loadend() {
+		top.postMessage({
+			message: "loadend",
+		}, "http://app.itahm.com");
 	}
 	
 	function onMessage(e) {

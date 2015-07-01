@@ -15,39 +15,31 @@
 	</head>
 
 	<body class="loading">
-		<div class="body">
+		<div class="left">
 			<h3>device information</h3>
-				<form id="form">
-					<table>
-						<tbody>
-							<tr>
-								<td>status</td>
-								<td><input type="text" name="status" readonly></td>
-							</tr>
-							<tr>
-								<td>ip address</td>
-								<td><input type="text" name="ip" readonly></td>
-							</tr>
-							<tr>
-								<td>name</td>
-								<td><input type="text" name="name" readonly></td>
-							</tr>
-							<tr>
-								<td>uptime</td>
-								<td><input type="text" name="uptime" readonly></td>
-							</tr>
-							<tr>
-								<td>description</td>
-								<td><textarea name="descr" readonly></textarea></td>
-							</tr>
-							<tr>
-								<td>enterprise</td>
-								<td><input type="text" name="enterprise" readonly></td>
-							</tr>
-						</tbody>
-					</table>
-				</form>
-			<h3>processor load</h3>
+			<div class="table">
+				<div>
+					<span>status</span><span id="txt_status"></span>
+				</div>
+				<div>
+					<span>ip address</span><span id="txt_ip"></span>
+				</div>
+				<div>
+					<span>name</span><span id="txt_name"></span>
+				</div>
+				<div>
+					<span>uptime</span><span id="txt_uptime"></span>
+				</div>
+				<div>
+					<span>description</span><span id="txt_description"></span>
+				</div>
+				<div>
+					<span>enterprise</span><span id="txt_enterprise"></span>
+				</div>
+			</div>
+		</div>
+		<div  class="right">			
+			<h3>processor load<button id="btn_zoomin">+</button><button id="btn_zoomout">-</button></h3>
 			<div id="cpu"></div>
 			
 			<h3>physical memory</h3>

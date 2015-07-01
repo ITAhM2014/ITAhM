@@ -25,7 +25,8 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 
-import com.itahm.json.RollingFile.TYPE;
+import com.itahm.json.RollingFile;
+import com.itahm.json.RollingFile.SCALE;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.json.RollingMap;
 
@@ -41,11 +42,6 @@ public class Node extends CommunityTarget {
 	private final JSONObject hrStorageEntry;
 	
 	private final RollingMap rollingMap;
-	
-	private final IndexMap hrProcessorLoad;
-	private final IndexMap ifInOctets;
-	private final IndexMap ifOutOctets;
-	private final IndexMap hrStorageUsed;
 	
 	private final Map<String, Counter> inCounter;
 	private final Map<String, Counter> outCounter;
@@ -82,11 +78,6 @@ public class Node extends CommunityTarget {
 		
 		rollingMap = new RollingMap(nodeRoot);
 		
-		hrProcessorLoad = new IndexMap(new File(nodeRoot, Constants.HRPROCESSORLOAD), TYPE.GAUGE);
-		ifInOctets = new IndexMap(new File(nodeRoot, Constants.IFINOCTETS), TYPE.COUNTER);
-		ifOutOctets = new IndexMap(new File(nodeRoot, Constants.IFOUTOCTETS), TYPE.COUNTER);
-		hrStorageUsed = new IndexMap(new File(nodeRoot, Constants.HRSTORAGEUSED), TYPE.GAUGE);
-		
 		inCounter = new HashMap<String, Counter>();
 		outCounter = new HashMap<String, Counter>();
 		hcInCounter = new HashMap<String, Counter>();
@@ -120,9 +111,9 @@ public class Node extends CommunityTarget {
 		this.node.put(key, value);
 	}
 	
-	public JSONObject getJSON() {
-		return this.node;
-	}
+	//public JSONObject getJSON() {
+	//	return this.node;
+	//}
 	
 	public String getIPAddress() {
 		return this.node.getString("ip");
@@ -390,15 +381,22 @@ public class Node extends CommunityTarget {
 				else if (response.startsWith(Constants.hrStorageSize) && request.startsWith(Constants.hrStorageSize)) {
 					Integer32 value = (Integer32)variable;
 					
-					jo.put("hrStorageSize", value.getValue());
+					if (jo.has("hrStorageAllocationUnits")) {
+						double unit = (double)	jo.getInt("hrStorageAllocationUnits");
+						
+						jo.put("hrStorageSize", (int)(value.getValue() * unit /1024 /1024));
+					}
 					
 					return true;
 				}
 				else if (response.startsWith(Constants.hrStorageUsed) && request.startsWith(Constants.hrStorageUsed)) {
 					Integer32 value = (Integer32)variable;
 					
-					this.rollingMap.put(Resource.HRSTORAGEUSED, index, value.getValue());
-					//this.hrStorageUsed.put(index, value.getValue());
+					if (jo.has("hrStorageAllocationUnits")) {
+						double unit = (double)	jo.getInt("hrStorageAllocationUnits");
+						
+						this.rollingMap.put(Resource.HRSTORAGEUSED, index, (int)(value.getValue() * unit /1024 /1024));
+					}
 					
 					return true;
 				}
@@ -425,11 +423,39 @@ public class Node extends CommunityTarget {
 
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
 	}
-	/*
-	public JSONObject getJSON(String resource, String index) {
+	
+	public JSONObject getJSON(Resource resource, String index, long base, int size, int intScale) {
+		SCALE scale;
 		
+		if (intScale == 1) {
+			return getJSON(resource, index, base, size);
+		}
+		else if (intScale == 2) {
+			scale = SCALE.MINUTE5;
+		}
+		else {
+			scale = SCALE.HOUR6;
+		}
+		
+		RollingFile rollingFile = this.rollingMap.getFile(resource, index);
+		
+		if (rollingFile == null) {
+			return null;
+		}
+		
+		return rollingFile.getData(base, size, scale, "avg");
 	}
-
+	
+	public JSONObject getJSON(Resource resource, String index, long base, int size) {
+		RollingFile rollingFile = this.rollingMap.getFile(resource, index);
+		
+		if (rollingFile != null) {
+			return rollingFile.getData(base, size);
+		}
+		
+		return null;
+	}
+/*
 	public JSONObject getJSON(String resource, String index, SCALE scale, String method) {
 		
 	}

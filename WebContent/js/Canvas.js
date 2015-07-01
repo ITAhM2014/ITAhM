@@ -35,8 +35,9 @@ function getPos(canvas, e) {
 
 (function(window, undefined) {
 	
-	function fire(eventHandler, event) {
-		var index, length;
+	function fire(name, event) {
+		var eventHandler = this.eventHandler[name],
+			index, length;
 		
 		if (eventHandler) {
 			for (var i=0, _i=eventHandler.length; i<_i; i++) {
@@ -49,15 +50,20 @@ function getPos(canvas, e) {
 		return true;
 	}
 	
+	/**
+	 * this.mouseMove = dragStart or dragMove or mouseMove
+	 */
 	function onMouseMove(e) {
-		var pos = getPos(this.canvas, e);
+		var pos = getPos(this.canvas, e),
+			x = pos.x,
+			y = pos.y;
 		
-		this.mouseMove(pos.x, pos.y);
+		this.mouseMove(x, y, e.ctrlKey);
 	}
 	
 	function onMouseDown(e) {
 		if (e.button != 0) {
-			//e.preventDefault();
+			e.preventDefault();
 			
 			return;
 		}
@@ -80,6 +86,12 @@ function getPos(canvas, e) {
 	}
 	
 	function onMouseUp(e) {
+		if (e.button != 0) {
+			e.preventDefault();
+			
+			return;
+		}
+		
 		var pos = getPos(this.canvas, e),
 			x = pos.x,
 			y = pos.y;
@@ -87,6 +99,12 @@ function getPos(canvas, e) {
 		this.mouseUp(x, y);
 		
 		this.mouseMove = mouseMove;
+	}
+	
+	function onMouseWheel(e) {
+		var scale = e.wheelDelta > 0? this.scale *1.2: this.scale /1.2;
+		
+		this.zoom(scale);
 	}
 	
 	function click(binding, x, y) {
@@ -98,7 +116,13 @@ function getPos(canvas, e) {
 		}
 		
 		if (node != this.selected) {
-			if (fire(this.eventHandler["select"], node)) {
+			if (fire.call(this, "select", {
+				x: Math.round((x - this.width /2) / this.scale),
+				y: Math.round((y - this.height /2) / this.scale),
+				canvasX: x,
+				canvasY: y,
+				node: node
+			})) {
 				if (node) {
 					hit.layer.top(node);
 				}
@@ -148,10 +172,14 @@ function getPos(canvas, e) {
 		this.mouseMove(x, y);
 	}
 	
-	function mouseMove (x, y) {
-		fire(this.eventHandler["mousemove"], {
+	function mouseMove (x, y, ctrlKey) {
+		var hit = this.hitTest(x, y);
+		
+		fire.call(this, "mousemove", {
 			x: Math.round((x - this.width /2) / this.scale),
-			y: Math.round((y - this.height /2) / this.scale)
+			y: Math.round((y - this.height /2) / this.scale),
+			ctrlKey: ctrlKey? true: false,
+			node: hit? hit["node"]: undefined
 		});
 	}
 	
@@ -176,8 +204,8 @@ function getPos(canvas, e) {
 	}
 	
 	function dragEnd(binding, x, y) {
-		var x = Math.round((x - binding.x) / this.scale),
-			y = Math.round((y - binding.y) / this.scale),
+		var x = Math.floor(((x - binding.x) / this.scale) /5 +.5) *5,
+			y = Math.floor(((y - binding.y) / this.scale) /5 +.5) *5,
 			array;
 		
 		clear(this.mask.canvas);
@@ -208,7 +236,7 @@ function getPos(canvas, e) {
 	}
 	
 	function move(node, x, y) {
-		if (node.x && node.y) {
+		if (node.x !== undefined && node.y !== undefined) {
 			node.x += x;
 			node.y += y;
 		}
@@ -256,6 +284,7 @@ function getPos(canvas, e) {
 			this.canvas.addEventListener("mousemove", onMouseMove.bind(this), false);
 			this.canvas.addEventListener("mousedown", onMouseDown.bind(this), false);
 			this.canvas.addEventListener("mouseup", onMouseUp.bind(this), false);
+			this.canvas.addEventListener("mousewheel", onMouseWheel.bind(this), false);
 			//map.addEventListener("mouseout", onMouseUp.bind(this), false);
 			
 			window.addEventListener("resize", this.resize.bind(this), false);
@@ -551,8 +580,12 @@ function getPos(canvas, e) {
 			for (var i=0, _i=array.length; i< _i; i++) {
 				array[i].draw(this.context);
 			}
-		}
+		},
 		
+		clear: function () {
+			Canvas.clear(this.canvas);
+			Canvas.clear(this.shadow);
+		}
 	};
 	
 }) (window);

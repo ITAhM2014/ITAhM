@@ -1,10 +1,28 @@
 @CHARSET "UTF-8";
 @import "css/common.css";
 
+body {
+	overflow: hidden;
+}
+
 input[name=status] {
 	font-size: 15pt;
 	font-weight: bold;
 	color: #0f0;
+}
+
+div.table span {
+	display: inline-block;
+	box-sizing: border-box;
+	margin: .5em 0;
+}
+
+div.table span:first-child {
+	width: 20%;
+}
+
+div.table span:last-child {
+	width: 80%;
 }
 
 table {
@@ -34,4 +52,16 @@ table input, table textarea {
 #interface td, #interface th {
 	padding: .5em;
 	font-size: 11px;
+}
+
+.left {
+	padding: 30px;
+	box-sizing: border-box;
+	position: absolute; width: 400px; top: 0; bottom: 0; left: 0;
+}
+
+.right {
+	position: absolute; top: 0; right: 0; bottom: 0; left: 400px;
+	overflow-x: hidden;
+	overflow-y: auto;
 }

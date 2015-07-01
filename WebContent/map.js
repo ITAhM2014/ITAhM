@@ -1,22 +1,35 @@
 ;"use strict";
 
+/**
+ * elements 는 global variable
+ */
+var elements = {}, form, dialog;
+
 (function (window, undefined) {
-	var xhr, form, dialog,
+	var xhr,
 		iconMap = {},
 		deviceList = {},
 		lineList = {},
 		lineIndex = {},
 		scale = 1,
-		link = _link.bind(this),
 		canvas,
 		deviceLayer,
 		lineLayer,
-		selected;
+		selected,
+		func = {
+			selectNode: selectNode
+		};
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
+	/**
+	 * elements 초기화
+	 */
 	function onLoad(e) {
+		form = document.getElementById("form");
+		dialog = document.getElementById("dialog");
+		
 		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
 		
 		xhr.request({
@@ -25,39 +38,45 @@
 	}
 	
 	function load(map) {
-		form = document.getElementById("form");
-		dialog = document.getElementById("dialog");
-		
 		form.addEventListener("submit", onSubmit, false);
 		form.elements["save"].addEventListener("click", onSave, false);
-		form.elements["zoomin"].addEventListener("click", function (e) {
-			canvas.zoom(scale *=1.2);
-		}, false);
-		form.elements["zoomout"].addEventListener("click", function (e) {
-			canvas.zoom(scale /=1.2);
-		}, false);
-		form.elements["link"].addEventListener("click", onLink, false);
+		//form.elements["zoomin"].addEventListener("click", function (e) {
+		//	canvas.zoom(scale *=1.2);
+		//}, false);
+		//form.elements["zoomout"].addEventListener("click", function (e) {
+		//	canvas.zoom(scale /=1.2);
+		//}, false);
+		//form.elements["link"].addEventListener("click", onLink, false);
 		
-		link = _link.bind(this);
+		//btnLink.addEventListener("click", onLink, false);
 		
 		iconMap = map;
 		canvas = new Canvas("map");
 		
 		canvas.on("select", onSelect);
+		canvas.on("mousemove", onMouseMove);
 		
 		lineLayer = canvas.layer(drawLine);
 		deviceLayer = canvas.layer(drawDevice);
+		connectLayer = canvas.layer();
 		
 		deviceLayer.context({
-			font: "bold 15px arial, \"맑은 고딕\"",
+			font: "bold 12px tahoma, arial, \"맑은 고딕\"",
 			textBaseline:  "bottom",
 		});
 	
 		lineLayer.context({
-			font: "normal 13px arial, \"맑은 고딕\"",
+			font: "normal 12px tahoma, arial, \"맑은 고딕\"",
 			//textBaseline:  "bottom",
 			fillStyle: "#777",
+			textAlign: "center",
 			strokeStyle: "#777"
+		});
+		
+		connectLayer.context().setLineDash([5,2]);
+		connectLayer.context({
+			lineWidth: 5,
+			strokeStyle: "#9e9"
 		});
 		
 		xhr.request({
@@ -87,61 +106,77 @@
 		xhr.request(request);
 	}
 	
-	function onSelect(node) {
-		var result;
-		
-		if (tryLink(node)) {
-			result = false;
-		}
-		else {
-			selected = node;
-		}
-		
-		tryLink = function () {return false};
-		
-		return result;
+	function onSelect(e) {
+		return func["selectNode"](e);
 	}
 	
-	function onLink(e) {
-		tryLink = _link.bind(this, selected);
-	}
-	
-	function tryLink() {
-		return false;
-	}
-	
-	function _link(from, to) {
-		if (from == to || !from || !to) {
-			return false;
-		}
+	function selectNode(e) {
+		var node = e.node;
 		
-		(showLineDialog = _showLineDialog.bind(this, from, to))();
+		selected = node;
 		
 		return true;
 	}
 	
-	function showLineDialog() {
-	}
-
-	function _showLineDialog(from, to) {console.log(from, to);
-		var line = getLine(from, to),
-			msg = {
-				message: "popup",
-				html: "line_dialog.html",
-				data: line
-			};
-		if (line) {
-			if (line.from != from.id) {
-				msg["deviceFrom"] = to;
-				msg["deviceTo"] = from;
-			}
-			else {
-				msg["deviceFrom"] = from;
-				msg["deviceTo"] = to;
-			}
+	function connectNode(e) {
+		var node = e.node;
+		
+		connectLayer.clear();
+		
+		func["selectNode"] = selectNode;
+		
+		if (node) {
+			showLineDialog(selected, node);
 		}
 		
-		top.postMessage(msg, "*");
+		return false;
+	}
+
+	function onMouseMove(e) {
+		var node = e.node;
+		
+		if (selected) {
+			if (e.ctrlKey) {
+				if (func["selectNode"] == selectNode) {
+					func["selectNode"] = connectNode;
+				}
+				
+				var context = connectLayer.context();
+				
+				connectLayer.clear();
+				
+				context.beginPath();
+				context.moveTo(selected.x, selected.y);
+				
+				if (node && node != selected) {
+					context.lineTo(node.x, node.y);
+				}
+				else {	
+					context.lineTo(e.x, e.y);
+				}
+				
+				context.stroke();
+			}
+			else if(func["selectNode"] == connectNode) {
+				connectLayer.clear();
+				
+				func["selectNode"] = selectNode;
+			}
+		}
+	}
+	
+	function onLink() {
+		func["selectNode"] = connectNode;
+	}
+
+	function showLineDialog(from, to) {
+		top.postMessage({
+			message: "popup",
+			html: "line_dialog.html",
+			data: {
+				line : getLine(from, to) || Line.create(from.id, to.id)
+			}
+		}, "http://app.itahm.com");
 	}
 	
 	function getLine(from, to) {
@@ -278,26 +313,6 @@
 	}
 	
 	function onMessage(e) {
-		var data = e.data;
-		
-		if (!data) {
-			return;
-		}
-		
-		switch(data.message) {
-		case "reLoadLine":
-			reLoadLine();
-			
-			break;
-		case "showLineDialog":
-			showLineDialog();
-			
-			break;
-		case "closeLineDialog":
-			closeLineDialog();
-			
-			break;
-		}
 	}
 	
 	function onResponse(response) {

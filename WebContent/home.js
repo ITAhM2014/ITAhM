@@ -1,24 +1,34 @@
 ;"use strict";
+var elements = {};
 
 (function (window, undefined) {
-	var xhr, form, ifentry, cpu, memory, traffic, selectedPort, node;
+	var xhr, form, ifentry, cpu, memory, traffic, selectedPort, node, colorIndex,
+		color = ["#00f", "#0f0", "#f00", "#ff0", "#f0f", "#0ff", "#008", "#080"];
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
+		elements["body"] = document.getElementsByTagName("body")[0];
+		elements["status"] = document.getElementById("txt_status");
+		elements["ip"] = document.getElementById("txt_ip");
+		elements["name"] = document.getElementById("txt_name");
+		elements["uptime"] = document.getElementById("txt_uptime");
+		elements["description"] = document.getElementById("txt_description");
+		elements["enterprise"] = document.getElementById("txt_enterprise");
+		
+		elements["zoomin"] = document.getElementById("btn_zoomin");
+		elements["zoomout"] = document.getElementById("btn_zoomout");
+		
 		form = document.getElementById("form");
 		ifentry = document.getElementById("ifentry");
 		
+		elements["zoomin"].addEventListener("click", onZoomIn, false);
+		elements["zoomout"].addEventListener("click", onZoomOut, false);
+		
 		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 		
-		xhr.request( {
-			database: "snmp",
-			command: "get",
-			data: {
-				"127.0.0.1": null
-			}
-		});
+		sendRequest("snmp");
 	}
 	
 	function onMessage(e) {
@@ -51,7 +61,7 @@
 		var hrStorageEntry = node["hrStorageEntry"],
 			storage = hrStorageEntry[getMemoryIndex()];
 			
-		return Math.round(storage["hrStorageSize"] * storage["hrStorageAllocationUnits"] /1024 /1024);
+		return storage["hrStorageSize"];
 	}
 	
 	function getDefaultPort() {
@@ -73,28 +83,32 @@
 		
 		getDefaultPort();
 		
-		cpu = new Chart("cpu", 100, 100, onRedrawCPU);
-		memory = new Chart("memory", 100, getMaxMemory(node), onRedrawMemory);
-		traffic = new Chart("traffic", 100, selectedPort["ifSpeed"], onRedrawTraffic);
+		cpu = new Chart("cpu", 100, 100, "100%", onRedrawCPU);
+		
+		var maxMemory = getMaxMemory(node);
+		memory = new Chart("memory", 100, maxMemory, maxMemory+ "MB", onRedrawMemory);
+		
+		var maxSpeed = selectedPort["ifSpeed"];
+		traffic = new Chart("traffic", 100, maxSpeed, Bandwidth.toString(maxSpeed), onRedrawTraffic);
 		
 		document.getElementById("selectedPort").textContent = selectedPort["ifName"];
 		
 		if (node.timeout > 0) {
-			form.elements["status"].value = "down ("+ new Date(node.timeout) +")";
-			form.elements["status"].classList.add("down");
+			elements["status"].textContent = "down ("+ new Date(node.timeout) +")";
+			elements["status"].classList.add("down");
 		}
 		else {
-			form.elements["status"].value = "up";
-			form.elements["status"].classList.remove("down");
+			elements["status"].textContent = "up";
+			elements["status"].classList.remove("down");
 		}
 		
-		form.elements["ip"].value = "127.0.0.1";
+		elements["ip"].textContent = "127.0.0.1";
 		
-		form.elements["uptime"].value = Uptime.toString(node["hrSystemUptime"]);
+		elements["uptime"].textContent = Uptime.toString(node["hrSystemUptime"]);
 		
-		form.elements["name"].value = node.sysName;
-		form.elements["descr"].value = node.sysDescr;
-		form.elements["enterprise"].value = sysObjectID(node.sysObjectID);
+		elements["name"].textContent = node.sysName;
+		elements["description"].textContent = node.sysDescr;
+		elements["enterprise"].textContent = sysObjectID(node["sysObjectID"]);
 		
 		/*
 		var index
@@ -102,8 +116,8 @@
 			cpu.appendChild(document.createElement("li")).textContent = node.hrProcessorLoad[index] +" %";
 		}
 		*/
-		for (index in node.ifEntry) {
-			initIFEntry(node.ifEntry[index]);
+		for (index in node["ifEntry"]) {
+			initIFEntry(node["ifEntry"][index]);
 		}
 	}
 	
@@ -130,31 +144,31 @@
 	}
 	
 	function drawCPU(data) {
-		var color = ["#00f", "#0f0", "#f00", "#ff0", "#f0f", "#0ff"],
-			colorIndex = 0;
+		cpu.draw(data, color[colorIndex++]);
 		
-		cpu.begin("100%");
-		
-		for (var index in data) {
-			cpu.draw(data[index], color[colorIndex++]);
-		}
-			
-		cpu.end();
 	}
 	
 	function drawMemory(data) {
-		memory.begin(getMaxMemory(node)+ "MB");
+		//memory.begin(getMaxMemory(node)+ "MB");
 		memory.draw(data, "orange");
 		memory.end();
 	}
 	
 	function drawTraffic(data) {
-		traffic.begin(Bandwidth.toString(selectedPort["ifSpeed"]));
+		//traffic.begin(Bandwidth.toString(selectedPort["ifSpeed"]));
 		traffic.draw(data["ifInOctets"], "blue");
 		traffic.draw(data["ifOutOctets"], "red");
 		traffic.end();
 	}
 	
+	function onZoomIn() {
+		cpu.tmp(true);
+	}
+	
+	function onZoomOut() {
+		cpu.tmp(false);
+	}
+
 	function onSelectPort(port) {
 		selectedPort = port;
 		
@@ -164,22 +178,32 @@
 	}
 	
 	function sendRequest(database, base, size, scale, index) {
+		var o = null;
+		
+		if (arguments.length > 1) {
+			o = {
+				base: base,
+				size: size,
+				scale: scale,
+				index: index
+			};
+		}
+		
 		xhr.request( {
 			database: database,
 			command: "get",
 			data: {
-				"127.0.0.1": {
-					base: base,
-					size: size,
-					scale: scale,
-					index: index
-				}
+				"127.0.0.1": o
 			}
 		});
 	}
 	
 	function onRedrawCPU(base, size, scale) {
-		sendRequest("cpu", base, size, scale);
+		colorIndex = 0;
+		
+		for (var index in node["hrProcessorEntry"]) {
+			sendRequest("cpu", base, size, scale, index);
+		}
 	}
 	
 	function onRedrawMemory(base, size, scale) {
@@ -188,6 +212,10 @@
 	
 	function onRedrawTraffic(base, size, scale) {
 		sendRequest("traffic", base, size, scale, selectedPort["ifIndex"]);
+	}
+	
+	function loadEnd() {
+		elements["body"].classList.remove("loading");
 	}
 	
 	function onResponse(response) {
@@ -206,6 +234,8 @@
 			switch (json.command) {
 			case "get":
 				if (json.database == "snmp") {
+					loadEnd();
+					
 					load(json.data);
 				}
 				else {

@@ -37,14 +37,7 @@
 			break;
 		}
 	}
-	/*
-	function onAdd(e) {
-		e.preventDefault();
-		
-		dialog.contentWindow.postMessage(null, "*");
-		
-		dialog.classList.add("show");
-	}*/
+	
 	function onAdd(e) {
 		top.postMessage({
 			message: "popup",

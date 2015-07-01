@@ -28,7 +28,7 @@ public class Line extends Request {
 					return null;
 				}
 				
-				value.put("id", Integer.toString(id));
+				value.put("id", key = Integer.toString(id));
 			}
 			
 			this.file.put(key, value);

@@ -22,6 +22,8 @@ public class JSONSummaryData {
 	public Long get(long date) {
 		if (!initialized) {
 			initialize(date);
+			
+			initialized = true;
 		}
 		
 		String key = Long.toString(date);

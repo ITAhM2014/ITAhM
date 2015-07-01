@@ -12,3 +12,12 @@
 form {
 	position: absolute; top: 0; right: 0;
 }
+
+#controller {
+	display: none;
+	position: absolute;
+}
+
+#controller.show {
+	display: block;
+}

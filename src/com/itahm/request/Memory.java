@@ -3,15 +3,13 @@
  */
 package com.itahm.request;
 
-import java.io.File;
-import java.util.Map;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.Database;
 import com.itahm.SnmpManager;
-import com.itahm.json.RollingData;
+import com.itahm.json.RollingMap.Resource;
+import com.itahm.snmp.Node;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -63,29 +61,13 @@ public class Memory extends Request {
 			return null;
 		}
 		
-		JSONObject result = new JSONObject();		
-		File memRoot = new File(this.snmp.getRoot(), key);
-		memRoot = new File(memRoot, "hrStorageUsed");
-		JSONObject node = this.snmp.get(key);
-		String indexString = Integer.toString(index);
-		long from;
-		long date;
-		Map<Long, Long> data;
-		int unit = node.getJSONObject("hrStorageEntry").getJSONObject(indexString).getInt("hrStorageAllocationUnits");
-		Long longValue;
+		Node node = Node.node(key);
 		
-		from = base - (size -1) *60000;
-		
-		data = new RollingData(new File(memRoot, indexString), from, size).build();
-		
-		for (date = from; date <= base; date += 60000) {
-			longValue = data.get(date);
-			if (longValue != null) {
-				result.put(Long.toString(date),  longValue * unit /1024 /1024);
-			}
+		if (node == null) {
+			return null;
 		}
 		
-		return result;
+		return node.getJSON(Resource.HRSTORAGEUSED, Integer.toString(index), base, size);
 	}
 
 	/* (non-Javadoc)

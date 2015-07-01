@@ -63,4 +63,14 @@ public class RollingMap {
 		
 		rollingFile.roll(value);
 	}
+	
+	/**
+	 * 
+	 * @param resource
+	 * @param index
+	 * @return rollingFile, 요청한 resource와 index에 mapping되는 rollingFile이 존재하지 않는 경우 null
+	 */
+	public RollingFile getFile(Resource resource, String index) {
+		return this.map.get(resource).get(index);
+	}
 }

@@ -1,5 +1,7 @@
 ;"use strict";
 
+var elements = {};
+
 (function (window, undefined) {
 	var server, xhr, body, dialog, form;
 	
@@ -34,15 +36,21 @@
 			reload(data.html);
 			
 			break;
+		case "loadend":
+			body.classList.remove("loading");
+			
+			break;
 		}
 	}
 
 	function onLoad(e) {
 		server = location.search.replace("?", "");
-		body = document.getElementById("body");
+		body = document.getElementsByTagName("body")[0];
 		dialog = document.getElementById("dialog");
 		content = document.getElementById("content");
 		form = document.getElementById("form");
+		
+		elements["signout"] = document.getElementById("btn_signout");
 		
 		if (server == "") {
 			location.href = "ITAhM.html?"+ prompt("server address[:tcp port]");
@@ -58,7 +66,7 @@
 	}
 	
 	function load() {
-		form.signout.addEventListener("click", onSignOut, false);
+		elements["signout"].addEventListener("click", onSignOut, false);
 		
 		content.src = "home.html";
 		
@@ -71,9 +79,9 @@
 	}
 	
 	function signOut() {
-		popup("signin.html");
-		
 		content.src = "about:blank";
+		
+		popup("signin.html");
 	}
 	
 	function onResponse(response) {
@@ -123,10 +131,9 @@
 		dialog.contentWindow.postMessage({
 			message: "data",
 			data: data
-		}, "*");
+		}, "http://app.itahm.com");
 		
 		body.classList.add("dialog");
-		body.classList.remove("loading");
 	}
 	
 })(window);

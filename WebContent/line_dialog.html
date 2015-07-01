@@ -12,66 +12,47 @@
 		<link rel="stylesheet" href="line_dialog.css">
 		
 		<script src="js/JSONRequest.js"></script>
+		<script src="js/util.js"></script>
 	</head>
 
 	<body>
-	
-		<form id="form" autocomplete="off">
+		
+		<div class="dialog">
 			<h2>line</h2>
-			
-			<div class="flex">
-				<select name="index"><option>new</select>
-				<span> of </span>
-				<input type="text" name="num_link" readonly>
-			</div>
+			<form id="form" autocomplete="off">
+				<div class="box left">
+					<h4 id="dev_from" class="ellipsis">device from</h4>
+					<input type="text" id="if_from" class="full" list="if_list_from" size="12" placeholder="interface">
+					<datalist id="if_list_from"></datalist>
+				</div>
 				
-			<table>
-				<colgroup>
-					<col width="40%">
-				</colgroup>
-
-				<tbody>
-					<tr>
-						<td>name</td>
-						<td>
-							<input type="text"  name="name" placeholder="name of link">
-						</td>
-					</tr>
-					<tr>
-						<td>bandwidth</td>
-						<td class="flex">
-							<input type="text"  name="bandwidth" placeholder="bandwidth" value="100" required>
-							<select name="unit">
-								<option value="1000000000">Gbps
-								<option value="1000000" selected>Mbps
-								<option value="1000">Kbps
-								<option value="1">bps
-							</select>
-						</td>
-					</tr>
-					<tr>
-						<td>
-							<input type="text" name="from" class="ellipsis" tabindex="-1" readonly>
-						<td>
-							<input type="text" name="ifdesc_from" class="table text" placeholder="interface description">
-						</td>
-					</tr>
-					<tr>
-						<td>
-							<input type="text" name="to" class="ellipsis" tabindex="-1" readonly >
-						<td>
-							<input type="text" name="ifdesc_to" class="table text" placeholder="interface description">
-						</td>
-					</tr>
-				</tbody>
-			</table>
+				<div class="box right">
+					<h4 id="dev_to" class="ellipsis">device to</h4>
+					<input type="text" id="if_to" class="full" list="if_list_to" size="12" placeholder="interface">
+					<datalist id="if_list_to"></datalist>
+				</div>
+				
+				<div class="box center">
+					<select id="index" class="half"><option>new</select>
+					<span class="half"> of <span id="count">0</span></span>
+					<input type="text"  id="name" class="full" placeholder="name of link">
+					<div class="bandwidth">
+						<input type="text"  id="bandwidth" class="half" placeholder="bandwidth" value="100" required><select id="unit" class="half">
+							<option value="1000000000">Gbps
+							<option value="1000000" selected>Mbps
+							<option value="1000">Kbps
+							<option value="1">bps
+						</select>
+					</div>
+					<label><input type="checkbox" id="btn_remove">remove</label>
+				</div>
+				
+				<input type="reset" value="cancel">
+				<input type="submit" value="apply">
+			</form>
 			
-			<label><input type="checkbox" name="remove">remove</label>
-			<input type="reset" value="cancel">
-			<input type="submit" value="apply">
-			<input name="id">
-		</form>
-			
+		</div>
+		
 		<script src="line_dialog.js"></script>
 		
 	</body>
