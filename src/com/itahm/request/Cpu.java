@@ -25,9 +25,7 @@ public class Cpu extends Request {
 	 * @param request the request
 	 */
 	public Cpu(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database);
-		
-		execute(request);
+		super(snmp, database, request);
 	}
 	
 	/**
@@ -41,7 +39,7 @@ public class Cpu extends Request {
 	 * @return the JSON object
 	 */
 	@Override
-	protected JSONObject each(String command, String key, JSONObject value) {
+	protected JSONObject customEach(String command, String key, JSONObject value) {
 		if (!"get".equals(command)) {
 			return null;
 		}
@@ -80,13 +78,5 @@ public class Cpu extends Request {
 		
 		return jo;
 	}
-
-	/* (non-Javadoc)
-	 * @see com.itahm.request.Request#complete()
-	 */
-	@Override
-	protected boolean complete() {
-		// TODO Auto-generated method stub
-		return false;
-	}	
+	
 }

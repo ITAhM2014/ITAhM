@@ -11,9 +11,14 @@ var elements = {}, dialog;
 		deviceList = {},
 		lineList = {},
 		lineIndex = {},
+		scale = 1,
 		canvas,
 		deviceLayer,
-		lineLayer;
+		lineLayer,
+		selected,
+		func = {
+			selectNode: selectNode
+		};
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
@@ -24,11 +29,10 @@ var elements = {}, dialog;
 	function onLoad(e) {
 		dialog = document.getElementById("dialog");
 		
-		elements["body"] = document.getElementsByTagName("body")[0];
 		elements["zoomin"] = document.getElementById("zoomin");
 		elements["zoomout"] = document.getElementById("zoomout");
-		elements["capture"] = document.getElementById("capture");
-		elements["edit"] = document.getElementById("edit");
+		elements["save"] = document.getElementById("save");
+		elements["close"] = document.getElementById("close");
 		
 		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
 		
@@ -44,8 +48,8 @@ var elements = {}, dialog;
 		elements["zoomout"].addEventListener("click", function (e) {
 			canvas.zoom(false);
 		}, false);
-		elements["capture"].addEventListener("click", onCapture, false);
-		elements["edit"].addEventListener("click", onEdit, false);
+		elements["save"].addEventListener("click", onSave, false);
+		elements["close"].addEventListener("click", onClose, false);
 		
 		iconMap = map;
 		canvas = new Canvas("map");
@@ -55,6 +59,7 @@ var elements = {}, dialog;
 		
 		lineLayer = canvas.layer(drawLine);
 		deviceLayer = canvas.layer(drawDevice);
+		connectLayer = canvas.layer();
 		
 		deviceLayer.context({
 			font: "bold 12px tahoma, arial, \"맑은 고딕\"",
@@ -67,6 +72,16 @@ var elements = {}, dialog;
 			fillStyle: "#777",
 			textAlign: "center",
 			strokeStyle: "#777"
+		});
+		
+		var context = connectLayer.context();
+		if (context.setLineDash) {
+			context.setLineDash([5,2]);
+		}
+		
+		connectLayer.context({
+			lineWidth: 5,
+			strokeStyle: "#9e9"
 		});
 		
 		xhr.request({
@@ -92,22 +107,99 @@ var elements = {}, dialog;
 		xhr.request(request);
 	}
 	
+	function onClose() {
+		if (confirm("do you want to quit edit mode\nwithout saving?")) {
+			location.href = "map.html";
+		}
+	}
+	
 	function onCapture(e) {
 		window.open(canvas.capture());
 	}
 	
-	function onEdit(e) {
-		location.href = "map_edit.html";
+	function onSelect(e) {
+		return func["selectNode"](e);
 	}
 	
-	function onSelect(e) {
-		// TODO 장비 popup
-		console.log(e.node);
+	function selectNode(e) {
+		var node = e.node;
+		
+		selected = node;
+		
+		return true;
+	}
+	
+	function connectNode(e) {
+		var node = e.node;
+		
+		connectLayer.clear();
+		
+		func["selectNode"] = selectNode;
+		
+		if (node) {
+			showLineDialog(selected, node);
+		}
+		
 		return false;
 	}
-	
+
 	function onMouseMove(e) {
-		elements["body"].style.cursor = e.node? "pointer": "default";
+		var node = e.node;
+		
+		if (selected) {
+			if (e.ctrlKey) {
+				if (func["selectNode"] == selectNode) {
+					func["selectNode"] = connectNode;
+				}
+				
+				var context = connectLayer.context();
+				
+				connectLayer.clear();
+				
+				context.beginPath();
+				context.moveTo(selected.x, selected.y);
+				
+				if (node && node != selected) {
+					context.lineTo(node.x, node.y);
+				}
+				else {	
+					context.lineTo(e.x, e.y);
+				}
+				
+				context.stroke();
+			}
+			else if(func["selectNode"] == connectNode) {
+				connectLayer.clear();
+				
+				func["selectNode"] = selectNode;
+			}
+		}
+	}
+	
+	function onLink() {
+		func["selectNode"] = connectNode;
+	}
+
+	function showLineDialog(from, to) {
+		top.postMessage({
+			message: "popup",
+			html: "line_dialog.html",
+			data: {
+				line : getLine(from, to) || Line.create(from.id, to.id)
+			}
+		}, "http://app.itahm.com");
+	}
+	
+	function getLine(from, to) {
+		var index = lineIndex[from.id];
+		
+		if (index) {
+			var id = index[to.id];
+			
+			if (id) {
+				return lineList[id];
+			}
+		}
 	}
 	
 	function loadDevice() {
@@ -169,6 +261,15 @@ var elements = {}, dialog;
 			context = draw.context,
 			radius = Math.round(Math.max(width, height) *.5 *1.5),
 			shadow;
+		
+		if (device == selected) {
+			context.save();
+			context.globalAlpha = .2;
+			context.beginPath();
+			context.arc(device.x, device.y, Math.max(width, height), 0, Math.PI *2);
+			context.fill();
+			context.restore();
+		}
 		
 		context.drawImage(icon, x, y, width, height);
 		context.fillText(device.name, x, y)

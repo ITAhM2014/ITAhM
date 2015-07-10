@@ -8,43 +8,21 @@ import com.itahm.Database;
 public class Device extends Request {
 	
 	public Device(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database);
-		
-		file = database.getFile(Database.FILE.DEVICE);
-		
-		execute(request);
+		super(snmp, database, request, Database.FILE.DEVICE);
 	}
 	
 	@Override
-	public JSONObject each(String command, String key, JSONObject value) {
-		if ("get".equals(command)) {
-			return this.file.get(key);
-		}
-		else if ("put".equals(command)) {
-			if (Integer.parseInt(key) < 0) {
-				int id = database.newID();
+	public JSONObject customEach(String command, String key, JSONObject value) {
+		if ("put".equals(command) && Integer.parseInt(key) < 0) {
+			int id = database.newID();
 				
-				if (id < 0) {
-					return null;
-				}
-
-				value.put("id", key = Integer.toString(id));
+			if (id < 0) {
+				return null;
 			}
-			
-			this.file.put(key, value);
-			
-			return value;
-		}
-		else if ("delete".equals(command)) {
-			return this.file.remove(key);
+				
+			value.put("id", key = Integer.toString(id));
 		}
 		
-		return null;
+		return each(command, key, value);
 	}
-	
-	@Override
-	public boolean complete() {
-		return false;
-	}
-	
 }

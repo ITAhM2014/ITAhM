@@ -6,13 +6,13 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.request.SignIn;
-import com.itahm.http.EventListener;
 import com.itahm.http.Message;
 import com.itahm.http.Listener;
 import com.itahm.session.Session;
@@ -35,6 +35,7 @@ public class ITAhM implements EventListener, Closeable {
 	private final Listener http;
 	private final Database database;
 	private final SnmpManager snmp;
+	private final Map<SocketChannel, Message> eventQueue;
 	
 	public ITAhM(int tcpPort, String path) throws IOException {
 		System.out.println("ITAhM service is started");
@@ -43,8 +44,9 @@ public class ITAhM implements EventListener, Closeable {
 		root.mkdir();
 		
 		database = new Database(root);
-		snmp = new SnmpManager(root);	
+		snmp = new SnmpManager(root, this);	
 		http = new Listener(this, tcpPort);
+		eventQueue = new HashMap<SocketChannel, Message>();
 	}
 
 	private boolean signin(String username, String password) {
@@ -62,7 +64,7 @@ public class ITAhM implements EventListener, Closeable {
 		return !data.isNull(username);
 	}
 	
-	private void processRequest(JSONObject json, Session session) {
+	private boolean processRequest(JSONObject json, Session session) {
 		try {
 			if (json.has("database")) {
 				processRequest(json, json.getString("database"));
@@ -70,13 +72,16 @@ public class ITAhM implements EventListener, Closeable {
 			else {
 				if ("signout".equals(json.getString("command"))) {
 					session.close();
-					
-					json.put("result", true);
+				}
+				else if ("event".equals(json.getString("command"))) {
+					return false;
 				}
 			}
 		}
 		catch(JSONException jsone) {
 		}
+		
+		return true;
 	}
 	
 	private void processRequest(JSONObject jo, String database) {
@@ -103,8 +108,9 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void onClose(SocketChannel channel) {
-		// TODO Auto-generated method stub
-		
+		synchronized(this.eventQueue) {
+			this.eventQueue.remove(channel);
+		}
 	}
 
 	@Override
@@ -132,52 +138,61 @@ public class ITAhM implements EventListener, Closeable {
 		}
 		else {
 		}
-		
+		/**
+		 * session 확인하는 부분. 삭제하지 말것
 		if (session == null) {
 			try {
 				response.status("HTTP/1.1 401 Unauthorized").send(channel);
 			} catch (IOException ioe) {
-				ioe.printStackTrace();
-				
-				stop();
+				onError(ioe);
 			}
 			
 			return;
 		}
 		
 		session.update();
-		
-		response.status("HTTP/1.1 200 OK");
-		
+		*/
 		try {
 			try {
 				JSONObject jo = request.body();
 				
-				processRequest(jo, session);
-				
-				/*
-				if (jo.has("result")) {
-					Object result = jo.get("result");
-					
-					if (result instanceof File) {
-						response.send(channel, (File)result);
-					}
+				if (processRequest(jo, session)) {
+					response.status("HTTP/1.1 200 OK").send(channel, jo.toString());
 				}
-				*/
-				response.send(channel, jo.toString());
-			}
-			catch (JSONException jsone) {
-				// maybe empty body
-				
-				response.send(channel);
-			}
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		
-			stop();
+				else {
+					synchronized(eventQueue) {
+						eventQueue.put(channel, response);
+					}
+				}	
+			} catch (JSONException jsone) {
+				 // signin 등과 같이내용 없는 요청이 올 경우
+				response.status("HTTP/1.1 200 OK").send(channel);
+			} 
+		}catch (IOException ioe) {
+			onError(ioe);
 		}	
 	}
 
+	@Override
+	public void onEvent() {
+		synchronized(this.eventQueue) {
+			try {
+				Iterator<SocketChannel> iterator = eventQueue.keySet().iterator();
+				SocketChannel channel;
+				
+				while (iterator.hasNext()) {
+					channel = iterator.next();
+					
+					eventQueue.get(channel).status("HTTP/1.1 200 OK").send(channel, new JSONObject().put("event", "test").toString());
+					
+					iterator.remove();
+				}
+			} catch (IOException ioe) {
+				onError(ioe);
+			}
+		}
+	}
+	
 	@Override
 	public void onError(Exception e) {
 		e.printStackTrace();

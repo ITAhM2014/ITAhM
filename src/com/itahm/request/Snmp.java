@@ -8,22 +8,12 @@ import com.itahm.SnmpManager;
 public class Snmp extends Request {
 
 	public Snmp(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database);
-		
-		file = snmp.getFile(SnmpManager.FILE.SNMP);
-		
-		execute(request);
+		super(snmp, database, request, SnmpManager.FILE.SNMP);
 	}
 
 	@Override
-	protected JSONObject each(String command, String key, JSONObject value) {
+	protected JSONObject customEach(String command, String key, JSONObject value) {
 		return "get".equals(command)? this.file.get(key): null;
 	}
-
-	@Override
-	protected boolean complete() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
+	
 }

@@ -2,11 +2,15 @@
 var elements = {};
 
 (function (window, undefined) {
-	var xhr, form, ifentry, cpu, memory, traffic, selectedPort, node, colorIndex,
-		color = ["#00f", "#0f0", "#f00", "#ff0", "#f0f", "#0ff", "#008", "#080"];
+	var xhr, form, ifentry, cpuChart, memoryChart, trafficChart, selectedPort, node, colorIndex,
+		curFocusedChart, curFocusedElement,
+		schedule,
+		colors = ["#f00", "#0f0", "#00f", "#ff0", "#f0f", "#0ff", "#800", "#080", "#008", "#880", "#808", "#088"];
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
+	window.addEventListener("click", onBlur, false);
+	window.addEventListener("mousewheel", onWheel, false);
 	
 	function onLoad(e) {
 		elements["body"] = document.getElementsByTagName("body")[0];
@@ -16,12 +20,22 @@ var elements = {};
 		elements["uptime"] = document.getElementById("txt_uptime");
 		elements["description"] = document.getElementById("txt_description");
 		elements["enterprise"] = document.getElementById("txt_enterprise");
-		
+		elements["cpu"] = document.getElementById("cpu");
+		elements["memory"] = document.getElementById("memory");
+		elements["traffic"] = document.getElementById("traffic");
 		elements["zoomin"] = document.getElementById("btn_zoomin");
 		elements["zoomout"] = document.getElementById("btn_zoomout");
+		elements["cpu_notes"] = document.getElementById("cpu_notes");
 		
 		form = document.getElementById("form");
 		ifentry = document.getElementById("ifentry");
+		
+		elements["cpu"].addEventListener("click", onFocus, false);
+		elements["cpu"].addEventListener("mouseout", onBlur, false);
+		elements["memory"].addEventListener("click", onFocus, false);
+		elements["memory"].addEventListener("mouseout", onBlur, false);
+		elements["traffic"].addEventListener("click", onFocus, false);
+		elements["traffic"].addEventListener("mouseout", onBlur, false);
 		
 		elements["zoomin"].addEventListener("click", onZoomIn, false);
 		elements["zoomout"].addEventListener("click", onZoomOut, false);
@@ -59,9 +73,10 @@ var elements = {};
 	
 	function getMaxMemory() {
 		var hrStorageEntry = node["hrStorageEntry"],
-			storage = hrStorageEntry[getMemoryIndex()];
+			index = getMemoryIndex(),
+			storage = hrStorageEntry[index];
 			
-		return storage["hrStorageSize"];
+		return Math.round(storage["hrStorageSize"] * storage["hrStorageAllocationUnits"] /1024 /1024);
 	}
 	
 	function getDefaultPort() {
@@ -83,13 +98,9 @@ var elements = {};
 		
 		getDefaultPort();
 		
-		cpu = new Chart("cpu", 100, 100, "100%", onRedrawCPU);
-		
-		var maxMemory = getMaxMemory(node);
-		memory = new Chart("memory", 100, maxMemory, maxMemory+ "MB", onRedrawMemory);
-		
-		var maxSpeed = selectedPort["ifSpeed"];
-		traffic = new Chart("traffic", 100, maxSpeed, Bandwidth.toString(maxSpeed), onRedrawTraffic);
+		cpuChart = new Chart("cpu", 100, "100%", onRedrawCPU);
+		memoryChart = new Chart("memory", 100, getMaxMemory(node) + "MB", onRedrawMemory);
+		trafficChart = new Chart("traffic", 100, Bandwidth.toString(selectedPort["ifSpeed"]), onRedrawTraffic);
 		
 		document.getElementById("selectedPort").textContent = selectedPort["ifName"];
 		
@@ -110,12 +121,18 @@ var elements = {};
 		elements["description"].textContent = node.sysDescr;
 		elements["enterprise"].textContent = sysObjectID(node["sysObjectID"]);
 		
-		/*
-		var index
-		for (index in node.hrProcessorLoad) {
-			cpu.appendChild(document.createElement("li")).textContent = node.hrProcessorLoad[index] +" %";
+		var colorIndex = 0,
+			index,
+			processor,
+			notes = elements["cpu_notes"];
+		
+		for (index in node["hrProcessorEntry"]) {
+			processor = document.createElement("span");
+			notes.appendChild(processor);
+			processor.textContent = " processor"+ index;
+			processor.style.color = colors[colorIndex++];
 		}
-		*/
+		
 		for (index in node["ifEntry"]) {
 			initIFEntry(node["ifEntry"][index]);
 		}
@@ -144,37 +161,79 @@ var elements = {};
 	}
 	
 	function drawCPU(data) {
-		cpu.draw(data, color[colorIndex++]);
-		
+		cpuChart.draw(data, colors[colorIndex++]);
 	}
 	
 	function drawMemory(data) {
-		//memory.begin(getMaxMemory(node)+ "MB");
-		memory.draw(data, "orange");
-		memory.end();
+		memoryChart.draw(data, "orange");
+		//memoryChart.end();
 	}
 	
 	function drawTraffic(data) {
-		//traffic.begin(Bandwidth.toString(selectedPort["ifSpeed"]));
-		traffic.draw(data["ifInOctets"], "blue");
-		traffic.draw(data["ifOutOctets"], "red");
-		traffic.end();
+		trafficChart.draw(data["ifInOctets"], "#0f0");
+		trafficChart.draw(data["ifOutOctets"], "#f80");
 	}
 	
 	function onZoomIn() {
-		cpu.tmp(true);
+		cpuChart.zoom(true);
 	}
 	
 	function onZoomOut() {
-		cpu.tmp(false);
+		cpuChart.zoom(false);
 	}
 
+	function onWheel(e) {
+		if (!curFocusedChart) {
+			return;
+		}
+	
+		e.preventDefault();
+	
+		clearTimeout(schedule);
+	
+		schedule = setTimeout(function () {	
+			curFocusedChart.zoom(e.wheelDelta > 0? true: false);
+		}, 100);
+	}	
+	
+	function onFocus(e) {
+		e.stopPropagation();
+		
+		onBlur();
+		
+		var element = this,
+			id = element.id;
+		
+		if (id == "cpu") {
+			curFocusedChart = cpuChart;
+		}
+		else if (id == "memory") {
+			curFocusedChart = memoryChart;
+		}
+		else if (id == "traffic") {
+			curFocusedChart = trafficChart
+		}
+		
+		curFocusedElement = element;
+		
+		element.classList.add("focused");
+	}
+	
+	function onBlur() {
+		if (curFocusedElement) {
+			curFocusedElement.classList.remove("focused");
+		}
+		
+		curFocusedElement = undefined;
+		curFocusedChart = undefined;
+	}
+	
 	function onSelectPort(port) {
 		selectedPort = port;
 		
 		document.getElementById("selectedPort").textContent = selectedPort["ifName"];
 		
-		traffic = new Chart("traffic", 100, selectedPort["ifSpeed"], onRedrawTraffic);
+		trafficChart = new Chart("traffic", 100, selectedPort["ifSpeed"], onRedrawTraffic);
 	}
 	
 	function sendRequest(database, base, size, scale, index) {

@@ -3,7 +3,7 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-
+import java.nio.channels.SocketChannel;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +18,7 @@ import org.snmp4j.event.ResponseListener;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import com.itahm.http.Message;
 import com.itahm.json.JSONFile;
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.Node;
@@ -25,6 +26,7 @@ import com.itahm.snmp.Node;
 public class SnmpManager extends TimerTask implements ResponseListener, Closeable  {
 
 	private final org.snmp4j.Snmp snmp;
+	private final EventListener itahm;
 	private final Timer timer;
 	private final File root;
 	private final JSONFile snmpFile = new JSONFile();
@@ -71,11 +73,12 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	//public static long DELAY = 60 * 1000; // 1 min.
 	public static long DELAY = 10 * 1000; // test
 	
-	public SnmpManager() throws IOException {
-		this(new File("."));
+	public SnmpManager(EventListener eventListener) throws IOException {
+		this(new File("."), eventListener);
 	}
 	
-	public SnmpManager(File path) throws IOException {
+	public SnmpManager(File path, EventListener eventListener) throws IOException {
+		itahm = eventListener;
 		snmp = new org.snmp4j.Snmp(new DefaultUdpTransportMapping());
 		timer = new Timer(true);
 		root = new File(path, "snmp");
@@ -99,10 +102,10 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			snmpFile.save();
 		}
 		
-		JSONObject jo = snmpFile.getJSONObject();
+		JSONObject snmpData = snmpFile.getJSONObject();
 		
-		for (String ip: JSONObject.getNames(jo)) {
-			add(Node.create(root, jo.getJSONObject(ip)));
+		for (String ip: JSONObject.getNames(snmpData)) {
+			addNode(Node.create(itahm, root, snmpData.getJSONObject(ip)));
 		};
 		
 		timer.scheduleAtFixedRate(this, 3000, DELAY);
@@ -110,7 +113,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		System.out.println("snmp manager is running");
 	}
 	
-	private boolean add (Node node) {
+	private boolean addNode (Node node) {
 		synchronized(this.nodeList) {
 			String ip = node.getIPAddress();
 			
@@ -124,7 +127,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		return false;
 	}
 	
-	public Node add (String ip, int udp, String community) {
+	public Node addNode (String ip, int udp, String community) {
 		JSONObject snmpTable = snmpFile.getJSONObject();
 		JSONObject jo = new JSONObject()
 			.put("ip", ip)
@@ -137,7 +140,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		try {
 			snmpTable.put(ip, jo);
 			
-			add(Node.create(this.root, jo));
+			addNode(Node.create(this.itahm, this.root, jo));
 		}
 		catch (JSONException | IOException e) {
 			e.printStackTrace();
@@ -178,20 +181,19 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		PDU request = event.getRequest();
 		PDU response = event.getResponse();
 		Node node = ((Node)event.getUserObject());
-		long now = Calendar.getInstance().getTimeInMillis();
 		
 		((org.snmp4j.Snmp)event.getSource()).cancel(request, this);
 		
 		if (response == null) {			
 			// TODO response timed out
 			
-			node.set("timeout", now);
-			System.out.println("timeout");
+			node.timeOut();
 			return;
 		}
 		
 		int status = response.getErrorStatus();
-		node.set("timeout", -1);
+		
+		node.setResponseTime();
 		
 		if (status == PDU.noError) {
 			try {
@@ -215,34 +217,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			System.out.println(String.format("error index[%d] status : %s", response.getErrorIndex(), response.getErrorStatusText()));
 		}
 	}
-	/*
-	public JSONFile getFile(String name) {
-		if ("address".equals(name)) {
-			return this.addrFile;
-		}
-		else if ("snmp".equals(name)) {
-			return this.snmpFile;
-		}
-		
-		return null;
-	}
-	*/
-	/*
-	private JSONObject getData(String name, String ip, String date) {
-		File dir = new File(this.root, ip + File.separator + name + File.separator + date.replace("-", File.separator));
-		JSONObject jo = null;
-		
-		if (dir.isDirectory()) {
-			jo = new JSONObject();
-			
-			for (File file : dir.listFiles()) {
-				jo.put(file.getName(), JSONFile.getJSONObject(file));
-			}
-		}
-		
-		return jo;
-	}
-	*/
+	
 	public void run() {
 		try {
 			this.addrFile.save();
@@ -254,10 +229,13 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		}
 		
 		Node node;
+		long requestTime = Calendar.getInstance().getTimeInMillis();
+		
 		synchronized(this.nodeList) {
 			try {
 				for (String ip : this.nodeList.keySet()) {
 					node = this.nodeList.get(ip);
+					node.setRequestTime(requestTime);
 					
 					this.snmp.send(pdu, node, node, this);
 				}
@@ -272,10 +250,40 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	public static void main(String [] args) {
 		SnmpManager manager;
 		try {
-			manager = new SnmpManager();
-			
-			//Node node =
-			//manager.add("127.0.0.1", 161, "public");
+			manager = new SnmpManager(new EventListener () {
+
+				@Override
+				public void onConnect(SocketChannel channel) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void onClose(SocketChannel channel) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void onRequest(SocketChannel channel, Message request,
+						Message response) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void onError(Exception e) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void onEvent() {
+					// TODO Auto-generated method stub
+					
+				}
+				
+			});
 			
 			boolean more = true;
 			while (more) {

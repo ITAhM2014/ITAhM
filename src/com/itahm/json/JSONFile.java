@@ -203,15 +203,6 @@ public class JSONFile implements Closeable{
 	}
 	
 	/**
-	 * Gets the.
-	 *
-	 * @return the JSON object
-	 */
-	public JSONObject get() {
-		return this.json;
-	}
-	
-	/**
 	 * Checks if is empty.
 	 *
 	 * @return true, if is empty

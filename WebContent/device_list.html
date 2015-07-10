@@ -16,14 +16,32 @@
 
 	<body>
 
-		<div class="menu">
+		<div class="top">
 			<form id="form" class="control" autocomplete="off">
 				<input type="submit" name="add" value="add">
 				<input type="reset" name="remove" value="remove">
+				<select name="label">
+					<option value="all" selected>all labels
+				</select>
 			</form>
+			<table>
+				<colgroup span="5">
+					<col>
+					<col>
+					<col span="3">
+				<thead>
+					<tr>
+						<th></th>
+						<th>name</th>
+						<th>type</th>
+						<th>ip address</th>
+						<th>profile</th>
+					</tr>
+				</thead>
+			</table>
 		</div>
 		<div class="list">
-			<table class="list">
+			<table>
 				<colgroup span="5">
 					<col>
 					<col>

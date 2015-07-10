@@ -8,22 +8,11 @@ import com.itahm.SnmpManager;
 public class Address extends Request {
 
 	public Address(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database);
-		
-		file = snmp.getFile(SnmpManager.FILE.ADDRESS);
-		
-		execute(request);
+		super(snmp, database, request, SnmpManager.FILE.ADDRESS);
 	}
 	
 	@Override
-	protected JSONObject each(String command, String key, JSONObject value) {
+	protected JSONObject customEach(String command, String key, JSONObject value) {
 		return "get".equals(command)? this.file.get(key): null;
 	}
-
-	@Override
-	protected boolean complete() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
 }

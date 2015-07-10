@@ -1,26 +1,25 @@
 @CHARSET "UTF-8";
 @import "css/common.css";
 
-div.menu {
-	position: fixed; top: 0; right: 0; left: 0; height: 40px;
+.top {
+	position: fixed; top: 0; right: 0; left: 0; height: 60px;
 }
 
-div.list {
-	position: fixed; top: 40px; right: 0; bottom: 0; left: 0;
-	overflow: auto;
+.list {
+	position: fixed; top: 60px; right: 0; bottom: 0; left: 0;
+	overflow-y: auto;
 }
 
 table {
 	border-collapse: collapse;
 	width: 100%;
-	box-sizing: border-box;
 }
 
-tr {
+tbody tr {
 	border: 1px solid #ddd;
 }
 
-tr:nth-child(odd) {
+tbody tr:nth-child(odd) {
 	background-color: #eee;
 }
 

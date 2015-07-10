@@ -37,10 +37,6 @@ public class RollingFile {
 	 */
 	public static final long DAY = 86400000;
 	
-	public static enum TYPE {
-		GAUGE, COUNTER;
-	}
-	
 	public static enum SCALE {
 		MINUTE, MINUTE5, HOUR6
 	}
@@ -65,7 +61,6 @@ public class RollingFile {
 	private File dir;
 	private JSONFile file;
 	private JSONObject data;
-	private final TYPE type;
 	
 	/**
 	 * Instantiates a new rolling file.
@@ -75,7 +70,7 @@ public class RollingFile {
 	 * @param type gauge or counter
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public RollingFile(File rscRoot, String index, TYPE type) throws IOException {
+	public RollingFile(File rscRoot, String index) throws IOException {
 		root = new File(rscRoot, index);
 		root.mkdir();
 		
@@ -87,8 +82,6 @@ public class RollingFile {
 		
 		avgSummary = new JSONFile(new File(root, "avg"));
 		avgData = maxSummary.getJSONObject();
-		
-		this.type = type;
 		
 		Calendar calendar = Calendar.getInstance();
 		
@@ -147,7 +140,7 @@ public class RollingFile {
 		key = Long.toString(now);
 		
 		if (calendar.get(Calendar.MINUTE) %5 == 0) {
-			summarize(now, value);
+			dailySummarize(now);
 			
 			if (hour %6 == 0 && calendar.get(Calendar.MINUTE) == 0) {
 				summarize(now);
@@ -186,7 +179,7 @@ public class RollingFile {
 	 * @param last counter 타입인 경우 값 차이를 구하기 위함
 	 * @throws IOException 
 	 */
-	private void summarize(long now, long last) throws IOException {
+	private void dailySummarize(long now) throws IOException {
 		String key;
 		long var, i, cnt, value;
 		long max = 0;
@@ -198,49 +191,22 @@ public class RollingFile {
 			key = Long.toString(var);
 			
 			if (this.data.has(key)) {
-				switch (this.type) {
-				case GAUGE:
-					value = this.data.getLong(key);
-					
-					if (b) {
-						max = Math.max(max, value);
-						min = Math.min(min, value);
-						sum += value;
-					}
-					else {
-						max = value;
-						min = value;
-						sum = value;
-						
-						b = true;
-					}
-					
-					cnt++;
-					
-					break;
-				case COUNTER:
-					value = this.data.getLong(key);
-					
-					if (b) {
-						max = Math.max(max, last - value);
-						min = Math.min(min, last - value);
-						
-						last = value;
-					
-					}
-					else {
-						max = last - value;
-						min = last - value;
-						sum = last - value;
-						
-						b = true;
-					}
+				value = this.data.getLong(key);
 				
-					last = value;
+				if (b) {
+					max = Math.max(max, value);
+					min = Math.min(min, value);
+					sum += value;
+				}
+				else {
+					max = value;
+					min = value;
+					sum = value;
 					
-					break;
+					b = true;
 				}
 				
+				cnt++;
 			}
 		}
 		

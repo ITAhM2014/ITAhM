@@ -7,7 +7,7 @@ body {
 	/*background-color: #fff;*/
 }
 
-input, textarea, li, td, select, legend, span, label {
+input, textarea, li, td, th, select, legend, span, label {
 	font-size: 12px;
 	font-family: tahoma, arial, "맑은 고딕";
 }

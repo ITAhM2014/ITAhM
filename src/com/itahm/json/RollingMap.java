@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.itahm.json.RollingFile.TYPE;
-
 public class RollingMap {
 	
 	public static enum Resource {
@@ -46,19 +44,7 @@ public class RollingMap {
 		RollingFile rollingFile = map.get(index);
 		
 		if (rollingFile == null) {
-			TYPE type;
-			
-			switch(resource) {
-			case IFINOCTETS:
-			case IFOUTOCTETS:
-				type = TYPE.COUNTER;
-				break;
-			
-			default:
-				type = TYPE.GAUGE;
-			}
-			
-			map.put(index, rollingFile = new RollingFile(new File(this.root, resource.toString()), index, type));
+			map.put(index, rollingFile = new RollingFile(new File(this.root, resource.toString()), index));
 		}
 		
 		rollingFile.roll(value);

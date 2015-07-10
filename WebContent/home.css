@@ -33,6 +33,7 @@ table {
 
 canvas {
 	background-color: #000;
+	vertical-align: bottom;
 }
 
 table input, table textarea {
@@ -55,13 +56,34 @@ table input, table textarea {
 }
 
 .left {
-	padding: 30px;
+	padding: 10px;
 	box-sizing: border-box;
-	position: absolute; width: 400px; top: 0; bottom: 0; left: 0;
+	position: fixed; width: 400px; top: 0; bottom: 0; left: 0;
 }
 
 .right {
-	position: absolute; top: 0; right: 0; bottom: 0; left: 400px;
+	padding: 10px;
+	box-sizing: border-box;
+	position: fixed; top: 0; right: 0; bottom: 0; left: 400px;
+	overflow-y: scroll;
 	overflow-x: hidden;
-	overflow-y: auto;
+}
+
+.focused {
+	outline: 5px solid #ff0;
+}
+
+.notes {
+	color: #fff;
+	background-color: #000;
+	text-align: center;
+	font-weight: bold;
+}
+
+.output {
+	color: #f80;
+}
+
+.input {
+	color: #0f0;
 }

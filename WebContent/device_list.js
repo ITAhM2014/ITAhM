@@ -1,32 +1,48 @@
 ;"use strict";
 
+var elements = {};
+
 (function (window, undefined) {
-	var xhr, list, form, dialog, remove = {};
+	var xhr, form, dialog, remove = {},
+		labels = {},
+		tmpList = document.createDocumentFragment();
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	
 	function onLoad(e) {
-		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
-		
-		xhr.request({
-			command: "echo"
-		});
-	}
-	
-	function load() {
-		list = document.getElementById("list");
 		form = document.getElementById("form");
-		//dialog = document.getElementById("dialog");
+		elements["form"] = form;
+		elements["label"] = form.elements["label"];
+		elements["list"] = document.getElementById("list");
 		
 		form.addEventListener("submit", onAdd, false);
 		form.addEventListener("reset", onRemove, false);
+		elements["label"].addEventListener("change", onSelectLabel, false);
+		
+		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
 		
 		xhr.request( {
 			database: "device",
 			command: "get",
 			data: null
 		});
+	}
+	
+	function load(list) {
+		var tmp = document.createDocumentFragment();
+		
+		for (var id in list) {
+			tmp.appendChild(createRow(list[id]));
+		}
+		
+		elements["list"].appendChild(tmp);
+		
+		for (var label in labels) {
+			tmp.appendChild(document.createElement("option")).text = label;
+		}
+		
+		elements["label"].appendChild(tmp);
 	}
 	
 	function onMessage(e) {
@@ -79,6 +95,29 @@
 		
 	}
 	
+	function onSelectLabel(e) {
+		var label = this.value,
+			rows = labels[label],
+			list = elements["list"],
+			node,
+			tmp = document.createDocumentFragment();
+		
+		if (label === "all") {
+			list.appendChild(tmpList);
+		}
+		else {
+			while(node = list.firstChild) {
+				tmpList.appendChild(node);
+			}
+		
+			for (var i=0, _i=rows.length; i<_i; i++) {
+				tmp.appendChild(rows[i]);
+			}
+			
+			list.appendChild(tmp);
+		}
+	}
+	
 	function _remove(id) {
 		var request = {
 			database: "device",
@@ -91,7 +130,7 @@
 		xhr.request(request);
 	}
 	
-	function createDevice(json) {
+	function createRow(deviceData) {
 		var row = document.createElement("tr"),
 			checkbox = document.createElement("input"),
 			cols = 5;
@@ -103,25 +142,45 @@
 		checkbox.type = "checkbox";
 		
 		row.cells[0].appendChild(checkbox);
-		row.cells[1].textContent = json.name;
-		row.cells[2].textContent = json.type;
-		row.cells[3].textContent = json.address;
-		row.cells[4].textContent = json.profile;
+		row.cells[1].textContent = deviceData.name;
+		row.cells[2].textContent = deviceData.type;
+		row.cells[3].textContent = deviceData.address;
+		row.cells[4].textContent = deviceData.profile;
 		
-		checkbox.addEventListener("click", onSelect.bind(checkbox, json), false);
-		row.cells[1].addEventListener("click", onEdit.bind(row, json), false);
+		checkbox.addEventListener("click", onSelect.bind(checkbox, deviceData), false);
+		row.cells[1].addEventListener("click", onEdit.bind(row, deviceData), false);
+		
+		parseLabel(deviceData, row);
 		
 		return row;
 	}
 	
-	function init(json) {
-		var table = document.createDocumentFragment();
+	function parseLabel(deviceData, element) {
+		var labelString = deviceData.label,
+			labelArray,
+			label,
+			group,
+			length;
 		
-		for (var id in json) {
-			table.appendChild(createDevice(json[id]));
+		if (!labelString) {
+			return;
 		}
 		
-		list.appendChild(table);
+		labelArray = labelString.split(",");
+		length = labelArray.length;
+		
+		for (var i=0; i<length; i++) {
+			label = labelArray[i].trim();
+			
+			group = labels[label];
+			if (group === undefined) {
+				group = [];
+				
+				labels[label] = group;
+			}
+			
+			group[group.length] = element;
+		}
 	}
 	
 	function onResponse(response) {
@@ -140,12 +199,8 @@
 			var json = response.json;
 			
 			switch (json.command) {
-			case "echo":
-				load();
-				
-				break;
 			case "get":
-				init (json.data);
+				load(json.data);
 				
 				break;
 			case "delete":

@@ -34,6 +34,7 @@ function getPos(canvas, e) {
  **************************************************************************************************/
 
 (function(window, undefined) {
+	var schedule;
 	
 	function fire(name, event) {
 		var eventHandler = this.eventHandler[name],
@@ -102,9 +103,33 @@ function getPos(canvas, e) {
 	}
 	
 	function onMouseWheel(e) {
-		var scale = e.wheelDelta > 0? this.scale *1.2: this.scale /1.2;
+		e.preventDefault();
 		
-		this.zoom(scale);
+		clearTimeout(schedule);
+		
+		schedule = setTimeout(function () {
+			var scale = e.wheelDelta > 0? this.scale *1.2: this.scale /1.2;
+			
+			zoom.call(this, scale);
+		}.bind(this), 100);
+	}
+	
+	function zoom(scale) {
+		var layer;
+		
+		this.scale = scale;
+		
+		for (var i=1, _i=this.layers.length; i<_i; i++) {
+			layer = this.layers[i];
+			
+			clear(layer.canvas);
+			clear(layer.shadow);
+			
+			layer.context().setTransform(scale, 0, 0, scale, Math.round(layer.canvas.width *.5), Math.round(layer.canvas.height *.5));
+			layer.shadow.getContext("2d").setTransform(scale, 0, 0, scale, Math.round(layer.shadow.width *.5), Math.round(layer.shadow.height *.5));
+			
+			layer.invalidate();
+		}
 	}
 	
 	function click(binding, x, y) {
@@ -302,22 +327,10 @@ function getPos(canvas, e) {
 			return layer;
 		},
 		
-		zoom: function (scale) {
-			var layer;
+		zoom: function (zoonIn) {
+			var scale = zoonIn? this.scale *1.2: this.scale /1.2;
 			
-			this.scale = scale;
-			
-			for (var i=1, _i=this.layers.length; i<_i; i++) {
-				layer = this.layers[i];
-				
-				clear(layer.canvas);
-				clear(layer.shadow);
-				
-				layer.context().setTransform(scale, 0, 0, scale, Math.round(layer.canvas.width *.5), Math.round(layer.canvas.height *.5));
-				layer.shadow.getContext("2d").setTransform(scale, 0, 0, scale, Math.round(layer.shadow.width *.5), Math.round(layer.shadow.height *.5));
-				
-				layer.invalidate();
-			}
+			zoom.call(this, scale);
 		},
 	
 		resize: function(e) {
@@ -368,20 +381,24 @@ function getPos(canvas, e) {
 			}
 		},
 		
-		/*
-		select: function (node, toggle) {
-			var index = this.selected.indexOf(node);
+		capture: function () {
+			var canvas = document.createElement("canvas"),
+				context = canvas.getContext("2d"),
+				width = this.width,
+				height = this.height;
 			
-			if (index != -1) {
-				if (toggle) {
-					this.selected.splice(index, 1);
-				}
+			canvas.width = width;
+			canvas.height = height;
+			
+			context.translate(-width, -height);
+			
+			for (var i=1, _i=this.layers.length; i<_i; i++) {
+				context.drawImage(this.layers[i].canvas, 0, 0);
 			}
-			else {
-				this.selected[this.selected.length] = node;
-			}
+			
+			return canvas.toDataURL();
 		},
-		*/
+		
 		on: function (type, handler) {
 			var eventHandler = this.eventHandler;
 			

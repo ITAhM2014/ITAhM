@@ -21,6 +21,14 @@
 		form.addEventListener("reset", onCancel, false);
 		form.url.addEventListener("focus", onFocusIn, false);
 		form.url.addEventListener("blur", onFocusOut, false);
+		
+		loadend();
+	}
+	
+	function loadend() {
+		top.postMessage({
+			message: "loadend"
+		}, "http://app.itahm.com");
 	}
 	
 	function onMessage(e) {

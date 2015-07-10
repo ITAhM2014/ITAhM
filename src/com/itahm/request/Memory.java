@@ -25,9 +25,7 @@ public class Memory extends Request {
 	 * @param request the request
 	 */
 	public Memory(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database);
-		
-		execute(request);
+		super(snmp, database, request);
 	}
 	
 	/**
@@ -41,7 +39,7 @@ public class Memory extends Request {
 	 * @return the JSON object
 	 */
 	@Override
-	protected JSONObject each(String command, String key, JSONObject value) {
+	protected JSONObject customEach(String command, String key, JSONObject value) {
 		if (!"get".equals(command)) {
 			return null;
 		}
@@ -69,13 +67,5 @@ public class Memory extends Request {
 		
 		return node.getJSON(Resource.HRSTORAGEUSED, Integer.toString(index), base, size);
 	}
-
-	/* (non-Javadoc)
-	 * @see com.itahm.request.Request#complete()
-	 */
-	@Override
-	protected boolean complete() {
-		// TODO Auto-generated method stub
-		return false;
-	}	
+	
 }

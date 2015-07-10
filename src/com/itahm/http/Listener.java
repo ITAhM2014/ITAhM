@@ -13,6 +13,8 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
+import com.itahm.EventListener;
+
 public class Listener implements Runnable, Closeable {
 
 	private final ServerSocketChannel channel;
@@ -46,9 +48,12 @@ public class Listener implements Runnable, Closeable {
 		Set<SelectionKey> selectedKeys = null;
 		Iterator<SelectionKey> iterator = null;
 		SelectionKey key = null;
+		int count;
 		
 		while(!this.shutdown) {
-			if (selector.select() > 0) {
+			count = selector.select();
+			
+			if (count > 0) {
 				selectedKeys = selector.selectedKeys();
 	
 				iterator = selectedKeys.iterator();
@@ -65,6 +70,8 @@ public class Listener implements Runnable, Closeable {
 				}
 			}
 		}
+		
+		System.out.println("shutdown");
 	}
 	
 	private void onConnect(SocketChannel channel) throws IOException {
@@ -74,33 +81,39 @@ public class Listener implements Runnable, Closeable {
 		this.server.onConnect(channel);
 	}
 	
-	private void preProcessRequest(SocketChannel channel, Message request) throws IOException{
+	private Message getPreProcessMessage() throws IOException{
 		Message response = new Message()
 			.set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			//.set("Access-Control-Allow-Origin", "http://local.itahm.com")
 			.set("Access-Control-Allow-Origin", "http://app.itahm.com")
 			.set("Access-Control-Allow-Credentials", "true");
 		
-		if (request != null) {
-			String method = request.method();
-			
-			if (!"HTTP/1.1".equals(request.version())) {
-				response.status("HTTP/1.1 505 HTTP Version Not Supported").send(channel);
-			}
-			else {
-				if ("OPTIONS".equals(method)) {
-					response.status("HTTP/1.1 200 OK").set("Allow", "OPTIONS, POST").send(channel);
-				}
-				else if ("POST".equals(method)) {
-					this.server.onRequest(channel, request, response);
-				}
-				else {
-					response.status("HTTP/1.1 405 Method Not Allowed").set("Allow", "OPTIONS, POST").send(channel);
-				}
-			}
+		return response;
+	}
+	
+	private void preProcessRequest(SocketChannel channel) throws IOException{
+		Message response = getPreProcessMessage();
+		
+		response.status("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
+	}
+	
+	private void preProcessRequest(SocketChannel channel, Message request) throws IOException{
+		Message response = getPreProcessMessage();
+		
+		String method = request.method();
+		
+		if (!"HTTP/1.1".equals(request.version())) {
+			response.status("HTTP/1.1 505 HTTP Version Not Supported").send(channel);
 		}
 		else {
-			response.status("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
+			if ("OPTIONS".equals(method)) {
+				response.status("HTTP/1.1 200 OK").set("Allow", "OPTIONS, POST, GET").send(channel);
+			}
+			else if ("POST".equals(method) || "GET".equals(method)) {
+				this.server.onRequest(channel, request, response);
+			}
+			else {
+				response.status("HTTP/1.1 405 Method Not Allowed").set("Allow", "OPTIONS, POST").send(channel);
+			}
 		}
 	}
 	
@@ -122,8 +135,8 @@ public class Listener implements Runnable, Closeable {
 				}
 				// else continue
 			}
-			catch (HttpException pe) {pe.printStackTrace();
-				preProcessRequest(channel, null);
+			catch (HttpException pe) {
+				preProcessRequest(channel);
 			}
 			
 			this.buffer.clear();
@@ -141,7 +154,7 @@ public class Listener implements Runnable, Closeable {
 		if (this.shutdown) {
 			return;
 		}
-			
+		
 		this.shutdown = true;
 			
 		this.selector.wakeup();
@@ -168,8 +181,7 @@ public class Listener implements Runnable, Closeable {
 	}
 
 	public static void main(String[] args) throws IOException {
-		try (Listener listener = new Listener(new EventListener() {
-
+		final Listener listener = new Listener(new EventListener() {
 			@Override
 			public void onConnect(SocketChannel channel) {
 				try {
@@ -193,7 +205,7 @@ public class Listener implements Runnable, Closeable {
 			@Override
 			public void onRequest(SocketChannel channel, Message request, Message response) {
 				try {
-					System.out.println("request >> "+ channel.getRemoteAddress());
+					System.out.println("request from "+ channel.getRemoteAddress() +" : "+ request.body());
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -202,17 +214,30 @@ public class Listener implements Runnable, Closeable {
 
 			@Override
 			public void onError(Exception e) {
+				e.printStackTrace();
+			}
+
+			@Override
+			public void onEvent() {
 				// TODO Auto-generated method stub
 				
 			}
 			
-		}, 2014);
-		) {
-			System.in.read();
-			
-			listener.close();
-		}
-		
+		}, 2015);
+
+		Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            @Override
+            public void run()
+            {
+            	try {
+					listener.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	        }
+        });
 	}
 	
 }

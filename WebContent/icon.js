@@ -1,11 +1,10 @@
 ;"use strict";
 
+var elements = {};
+
 (function (window, undefined) {
 	var xhr, map = {}, dialog, group;
-//		form = document.getElementById("form"),
-		
 	
-//	form.addEventListener("submit", onAdd, false);
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
 	

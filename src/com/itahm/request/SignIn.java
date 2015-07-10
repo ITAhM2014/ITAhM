@@ -8,15 +8,11 @@ import com.itahm.SnmpManager;
 public class SignIn extends Request {
 
 	public SignIn(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database);
-		
-		file = database.getFile(Database.FILE.ACCOUNT);
-		
-		execute(request);
+		super(snmp, database, request, Database.FILE.ACCOUNT);
 	}
 	
 	@Override
-	protected JSONObject each(String command, String key, JSONObject value) {
+	protected JSONObject customEach(String command, String key, JSONObject value) {
 		if (!"get".equals(command)) {
 			return null;
 		}
@@ -30,9 +26,4 @@ public class SignIn extends Request {
 		return null;
 	}
 	
-	@Override
-	protected boolean complete() {
-		return false;
-	}
-
 }

@@ -37,6 +37,7 @@
 			form.type.value = device.type;
 			form.address.value= device.address;
 			form.profile.value = device.profile;
+			form.label.value = device.label || "";
 			
 			func["apply"] = apply.bind(form, device);
 			
@@ -77,11 +78,12 @@
 		func["apply"]();
 	}
 	
-	function apply(json) {console.log(this.type.value);
+	function apply(json) {
 		var name = this.name.value,
 			type = this.type.value,
 			address = this.address.value,
 			profile = this.profile.value,
+			label = trimLabel(this.label.value),
 			request = {
 				database: "device",
 				command: "put",
@@ -102,8 +104,24 @@
 		json["type"] = type;
 		json["address"] = address;
 		json["profile"] = profile;
+		json["label"] = label;
 		
 		xhr.request (request);
+	}
+	
+	function trimLabel(labelString) {
+		if (typeof labelString !== "string") {
+			return "";
+		}
+		
+		var labelArray = labelString.split(","),
+			length = labelArray.length;
+		
+		for (var i=0; i<length; i++) {
+			labelArray[i] = " "+ labelArray[i].trim();
+		}
+		
+		return labelArray.join(",");
 	}
 	
 	function onCancel(e) {
