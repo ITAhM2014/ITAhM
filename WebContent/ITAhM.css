@@ -21,6 +21,7 @@ div.top ul {
 
 div.top li {
 	padding: .5em;
+	display: inline-block;
 }
 
 div.content {

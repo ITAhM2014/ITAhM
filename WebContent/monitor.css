@@ -1,0 +1,114 @@
+@CHARSET "UTF-8";
+@import "css/common.css";
+
+body {
+	overflow: hidden;
+}
+
+input[name=status] {
+	font-size: 15pt;
+	font-weight: bold;
+	color: #0f0;
+}
+
+div.table span {
+	display: inline-block;
+	box-sizing: border-box;
+	margin: .5em 0;
+}
+
+div.table span:first-child {
+	width: 20%;
+}
+
+div.table span:last-child {
+	width: 80%;
+}
+
+table {
+	border-collapse: collapse;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+canvas {
+	background-color: #000;
+	vertical-align: bottom;
+}
+
+table input, table textarea {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+#ifentry tr:not(.up) {
+	background-color: pink;
+}
+
+#ifentry tr:hover {
+	outline: 1px solid #777;
+	cursor: default;
+}
+
+#interface td, #interface th {
+	padding: .5em;
+	font-size: 11px;
+}
+
+.left {
+	padding: 10px;
+	box-sizing: border-box;
+	position: fixed; width: 400px; top: 0; bottom: 0; left: 0;
+}
+
+.tab {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	position: fixed; top: 0; right: 0; left: 400px; height: 30px;
+	/*background-color: #ddd;*/
+}
+
+.tab li {
+	display: inline-block;
+	box-sizing: border-box;
+	line-height: 30px;
+	text-align: center;
+	width: 60px;
+	margin: 0px 1px;
+	background-color: #000;
+	color: #ddd;
+	border-radius: 5px 5px 0 0;
+}
+	
+.content {
+	padding: 10px;
+	box-sizing: border-box;
+	position: fixed; top: 30px; right: 0; bottom: 0; left: 400px;
+	overflow: hidden;
+	overflow-y: scroll;
+	display: none;
+}
+
+.content:target {
+	display: block;
+}
+
+.focused {
+	outline: 5px solid #ff0;
+}
+
+.notes {
+	color: #fff;
+	background-color: #000;
+	text-align: center;
+	font-weight: bold;
+}
+
+.output {
+	color: #f80;
+}
+
+.input {
+	color: #0f0;
+}

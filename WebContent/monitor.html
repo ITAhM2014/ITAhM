@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>ITAhM[monitor]</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<link rel="shortcut icon" href="img/favicon.ico">
+		<link rel="stylesheet" href="monitor.css">
+		
+		<script src="js/JSONRequest.js"></script>
+		<script src="js/Chart.js"></script>
+		<script src="js/snmp.js"></script>
+	</head>
+
+	<body class="loading...">
+		
+		<div class="left">
+			<h3>device information</h3>
+			<div class="table">
+				<div>
+					<span>status</span><span id="txt_status"></span>
+				</div>
+				<div>
+					<span>ip address</span><span id="txt_ip"></span>
+				</div>
+				<div>
+					<span>name</span><span id="txt_name"></span>
+				</div>
+				<div>
+					<span>uptime</span><span id="txt_uptime"></span>
+				</div>
+				<div>
+					<span>description</span><span id="txt_description"></span>
+				</div>
+				<div>
+					<span>enterprise</span><span id="txt_enterprise"></span>
+				</div>
+			</div>
+			
+			<h3>processor load</h3>
+			<ul id="cpu"></ul>
+		
+			<h3>physical memory</h3>
+			<ul id="memory"></ul>
+			
+			<h3>interface usage</h3>
+			<ul id="traffic"></ul>
+			
+			<h3>storage</h3>
+			<ul id="traffic"></ul>
+		</div>
+		
+		<div  class="right">		
+			<ul class="tab">
+				<li><a href="#search">search</a>
+				<li><a href="#realtime">real time</a>
+			</ul>
+			<div id="search" class="content">search</div>
+			<div id="realtime" class="content">realtime</div>
+		</div>
+		
+		<script src="monitor.js"></script>
+		
+	</body>
+	
+</html>

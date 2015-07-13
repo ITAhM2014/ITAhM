@@ -6,7 +6,7 @@
 var elements = {}, dialog;
 
 (function (window, undefined) {
-	var xhr,
+	var server, xhr,
 		iconMap = {},
 		deviceList = {},
 		lineList = {},
@@ -30,7 +30,8 @@ var elements = {}, dialog;
 		elements["capture"] = document.getElementById("capture");
 		elements["edit"] = document.getElementById("edit");
 		
-		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
+		server = parent.location.search.replace("?", "");
+		xhr = new JSONRequest(server, onResponse);
 		
 		xhr.request({
 			command: "echo"
@@ -101,13 +102,21 @@ var elements = {}, dialog;
 	}
 	
 	function onSelect(e) {
-		// TODO 장비 popup
-		console.log(e.node);
+		var device = e.node;
+		
+		if (device && device["address"] && device["profile"]) {
+			window.open("monitor.html").arguments = {
+				server: server, 
+				device: device
+			};
+		}
 		return false;
 	}
 	
 	function onMouseMove(e) {
-		elements["body"].style.cursor = e.node? "pointer": "default";
+		var device = e.node;
+		
+		elements["body"].style.cursor = device && device["address"] && device["profile"]? "pointer": "default";
 	}
 	
 	function loadDevice() {

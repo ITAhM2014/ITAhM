@@ -334,25 +334,27 @@ function getPos(canvas, e) {
 		},
 	
 		resize: function(e) {
-			var rect = this.canvas.getBoundingClientRect(),
-				width = rect.width,
-				height = rect.height,
-				layer, x, y;
+			clearTimeout(this.schedule);
 			
-			this.width = width;
-			this.height = height;
-			
-			x = Math.round(width /2);
-			y = Math.round(height /2);
-			
-			for (var i=0, _i=this.layers.length; i<_i; i++) {
-				layer = this.layers[i];
+			this.schedule = setTimeout(function () {
+				var rect = this.canvas.getBoundingClientRect(),
+					width = rect.width,
+					height = rect.height,
+					layer, x, y;
 				
-				layer.size(width, height);
-				layer.invalidate();
-			}
-			
-			//this.mask.size(width, height);
+				this.width = width;
+				this.height = height;
+				
+				x = Math.round(width /2);
+				y = Math.round(height /2);
+				
+				for (var i=0, _i=this.layers.length; i<_i; i++) {
+					layer = this.layers[i];
+					
+					layer.size(width, height);
+					layer.invalidate();
+				}
+			}.bind(this), 100);
 		},
 		
 		empty: function () {
