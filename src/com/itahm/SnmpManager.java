@@ -62,6 +62,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		pdu.add(new VariableBinding(Constants.ipNetToMediaPhysAddress));
 		pdu.add(new VariableBinding(Constants.hrSystemUptime));
 		pdu.add(new VariableBinding(Constants.hrProcessorLoad));
+		pdu.add(new VariableBinding(Constants.hrStorageIndex));
 		pdu.add(new VariableBinding(Constants.hrStorageType));
 		pdu.add(new VariableBinding(Constants.hrStorageDescr));
 		pdu.add(new VariableBinding(Constants.hrStorageAllocationUnits));

@@ -41,9 +41,9 @@ public class Node extends CommunityTarget {
 	
 	private final JSONObject node;
 	private final JSONObject ifEntry;
-	//private final JSONObject hrProcessorEntry;
+	private JSONObject ifIndex;
 	private final JSONObject hrStorageEntry;
-	
+	private JSONObject hrStorageIndex;
 	private final RollingMap rollingMap;
 	
 	private final Map<String, Counter> inCounter;
@@ -77,11 +77,25 @@ public class Node extends CommunityTarget {
 			ifEntry = nodeData.getJSONObject("ifEntry");
 		}
 		
+		if (!nodeData.has("ifIndex")) {
+			nodeData.put("ifIndex", ifIndex = new JSONObject());
+		}
+		else {
+			ifIndex = nodeData.getJSONObject("ifIndex");
+		}
+		
 		if (!nodeData.has("hrStorageEntry")) {
 			nodeData.put("hrStorageEntry", hrStorageEntry = new JSONObject());
 		}
 		else {
 			hrStorageEntry = nodeData.getJSONObject("hrStorageEntry");
+		}
+		
+		if (!nodeData.has("hrStorageIndex")) {
+			nodeData.put("hrStorageIndex", hrStorageIndex = new JSONObject());
+		}
+		else {
+			hrStorageIndex = nodeData.getJSONObject("hrStorageIndex");
 		}
 		
 		node = nodeData;
@@ -159,24 +173,24 @@ public class Node extends CommunityTarget {
 	 * @throws IOException 
 	 */
 	public final boolean parse (OID response, Variable variable, OID request) throws IOException {
-		if (response.startsWith(Constants.system)) {
-			if (response.startsWith(Constants.sysDescr) && request.startsWith(Constants.sysDescr)) {
+		if (request.startsWith(Constants.system)) {
+			if (request.startsWith(Constants.sysDescr) && response.startsWith(Constants.sysDescr)) {
 				OctetString value = (OctetString)variable;
 				
 				this.node.put("sysDescr", new String(value.getValue()));
 			}
-			else if (response.startsWith(Constants.sysObjectID) && request.startsWith(Constants.sysObjectID)) {
+			else if (request.startsWith(Constants.sysObjectID) && response.startsWith(Constants.sysObjectID)) {
 				OID value = (OID)variable;
 				
 				this.node.put("sysObjectID", value.toDottedString());
 			}
-			else if (response.startsWith(Constants.sysName) && request.startsWith(Constants.sysName)) {
+			else if (request.startsWith(Constants.sysName) && response.startsWith(Constants.sysName)) {
 				OctetString value = (OctetString)variable;
 				
 				this.node.put("sysName", new String(value.getValue()));
 			}
 		}
-		else if (response.startsWith(Constants.ifEntry)) {
+		else if (request.startsWith(Constants.ifEntry)) {
 			JSONObject ifData;
 			String index = Integer.toString(response.last());
 			
@@ -187,35 +201,42 @@ public class Node extends CommunityTarget {
 				ifData = this.ifEntry.getJSONObject(index);
 			}
 			
-			if (response.startsWith(Constants.ifIndex) && request.startsWith(Constants.ifIndex)) {
-				Integer32 value = (Integer32)variable;
-				
-				ifData.put("ifIndex", value.getValue());
-				
-				return true;
+			if (request.startsWith(Constants.ifIndex)) {
+				 if(response.startsWith(Constants.ifIndex)) {
+					Integer32 value = (Integer32)variable;
+					
+					ifIndex.put(index, value.getValue());
+					
+					return true;
+				 }
+				 else {
+					this.node.put("ifIndex", ifIndex);
+						
+					ifIndex = new JSONObject();
+				 }
 			}
-			else if (response.startsWith(Constants.ifDescr) && request.startsWith(Constants.ifDescr)) {
+			else if (request.startsWith(Constants.ifDescr) && response.startsWith(Constants.ifDescr)) {
 				OctetString value = (OctetString)variable;
 				
 				ifData.put("ifDescr", new String(value.getValue()));
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifType) && request.startsWith(Constants.ifType)) {
+			else if (request.startsWith(Constants.ifType) && response.startsWith(Constants.ifType)) {
 				Integer32 value = (Integer32)variable;
 				
 				ifData.put("ifType", value.getValue());
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifSpeed) && request.startsWith(Constants.ifSpeed)) {
+			else if (request.startsWith(Constants.ifSpeed) && response.startsWith(Constants.ifSpeed)) {
 				Gauge32 value = (Gauge32)variable;
 				
 				ifData.put("ifSpeed", value.getValue());
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifPhysAddress) && request.startsWith(Constants.ifPhysAddress)) {
+			else if (request.startsWith(Constants.ifPhysAddress) && response.startsWith(Constants.ifPhysAddress)) {
 				OctetString value = (OctetString)variable;
 				
 				ifData.put("ifPhysAddress", new String(value.getValue()));
@@ -229,7 +250,7 @@ public class Node extends CommunityTarget {
 			 * 2: "down",
 			 * 3: "testing"
 			 */
-			else if (response.startsWith(Constants.ifAdminStatus) && request.startsWith(Constants.ifAdminStatus)) {
+			else if (request.startsWith(Constants.ifAdminStatus) && response.startsWith(Constants.ifAdminStatus)) {
 				Integer32 value = (Integer32)variable;
 				int status = value.getValue();
 				
@@ -253,7 +274,7 @@ public class Node extends CommunityTarget {
 			 *	6: "notPresent",
 			 *	7: "lowerLayerDown"
 			 */
-			else if (response.startsWith(Constants.ifOperStatus) && request.startsWith(Constants.ifOperStatus)) {
+			else if (request.startsWith(Constants.ifOperStatus) && response.startsWith(Constants.ifOperStatus)) {
 				Integer32 value = (Integer32)variable;
 				
 				ifData.put("ifOperStatus", value.getValue());
@@ -261,7 +282,7 @@ public class Node extends CommunityTarget {
 				return true;
 			}
 			
-			else if (response.startsWith(Constants.ifInOctets) && request.startsWith(Constants.ifInOctets)) {
+			else if (request.startsWith(Constants.ifInOctets) && response.startsWith(Constants.ifInOctets)) {
 				Counter32 value = (Counter32)variable;
 				long longValue = value.getValue() *8;
 				Counter inCounter = 	this.inCounter.get(index);
@@ -279,7 +300,7 @@ public class Node extends CommunityTarget {
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifOutOctets) && request.startsWith(Constants.ifOutOctets)) {
+			else if (request.startsWith(Constants.ifOutOctets) && response.startsWith(Constants.ifOutOctets)) {
 				Counter32 value = (Counter32)variable;
 				long longValue = value.getValue() *8;
 				Counter outCounter = 	this.outCounter.get(index);
@@ -298,7 +319,7 @@ public class Node extends CommunityTarget {
 				return true;
 			}
 		}
-		else if (response.startsWith(Constants.ifXEntry)) {
+		else if (request.startsWith(Constants.ifXEntry)) {
 			JSONObject ifData;
 			String index = Integer.toString(response.last());
 			
@@ -309,21 +330,21 @@ public class Node extends CommunityTarget {
 				ifData = this.ifEntry.getJSONObject(index);
 			}
 			
-			if (response.startsWith(Constants.ifName) && request.startsWith(Constants.ifName)) {
+			if (request.startsWith(Constants.ifName) && response.startsWith(Constants.ifName)) {
 				OctetString value = (OctetString)variable;
 				
 				ifData.put("ifName", new String(value.getValue()));
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifAlias) && request.startsWith(Constants.ifAlias)) {
+			else if (request.startsWith(Constants.ifAlias) && response.startsWith(Constants.ifAlias)) {
 				OctetString value = (OctetString)variable;
 				
 				ifData.put("ifAlias", new String(value.getValue()));
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifHCInOctets) && request.startsWith(Constants.ifHCInOctets)) {
+			else if (request.startsWith(Constants.ifHCInOctets) && response.startsWith(Constants.ifHCInOctets)) {
 				Counter64 value = (Counter64)variable;
 				long longValue = value.getValue() *8;
 				Counter hcInCounter = 	this.hcInCounter.get(index);
@@ -341,7 +362,7 @@ public class Node extends CommunityTarget {
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ifHCOutOctets) && request.startsWith(Constants.ifHCOutOctets)) {
+			else if (request.startsWith(Constants.ifHCOutOctets) && response.startsWith(Constants.ifHCOutOctets)) {
 				Counter64 value = (Counter64)variable;
 				long longValue = value.getValue() *8;
 				Counter hcOutCounter = 	this.hcOutCounter.get(index);
@@ -360,13 +381,13 @@ public class Node extends CommunityTarget {
 				return true;
 			}
 		}
-		else if (response.startsWith(Constants.ipNetToMediaTable)) {
+		else if (request.startsWith(Constants.ipNetToMediaTable)) {
 			int [] array = response.getValue();
 			int size = array.length;
 			
 			String ip = String.format("%d.%d.%d.%d", array[size -4], array[size -3], array[size -2], array[size -1]);
 			
-			if (response.startsWith(Constants.ipNetToMediaType) && request.startsWith(Constants.ipNetToMediaType)) {
+			if (request.startsWith(Constants.ipNetToMediaType) && response.startsWith(Constants.ipNetToMediaType)) {
 				Integer32 value = (Integer32)variable;
 				
 				if (value.getValue() == 3) {
@@ -375,7 +396,7 @@ public class Node extends CommunityTarget {
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.ipNetToMediaPhysAddress) && request.startsWith(Constants.ipNetToMediaPhysAddress)) {
+			else if (request.startsWith(Constants.ipNetToMediaPhysAddress) && response.startsWith(Constants.ipNetToMediaPhysAddress)) {
 				OctetString value = (OctetString)variable;
 				byte [] mac = value.getValue();
 				if (mac.length == 6) {
@@ -385,13 +406,13 @@ public class Node extends CommunityTarget {
 				return true;
 			}
 		}
-		else if (response.startsWith(Constants.host)) {
-			if (response.startsWith(Constants.hrSystemUptime) && request.startsWith(Constants.hrSystemUptime)) {
+		else if (request.startsWith(Constants.host)) {
+			if (request.startsWith(Constants.hrSystemUptime) && response.startsWith(Constants.hrSystemUptime)) {
 				TimeTicks value = (TimeTicks)variable; 
 				
 				this.node.put("hrSystemUptime", value.toMilliseconds());
 			}
-			else if (response.startsWith(Constants.hrProcessorLoad) && request.startsWith(Constants.hrProcessorLoad)) {
+			else if (request.startsWith(Constants.hrProcessorLoad) && response.startsWith(Constants.hrProcessorLoad)) {
 				Integer32 value = (Integer32)variable;
 				String index = Integer.toString(response.last());
 				int intValue = value.getValue();
@@ -403,7 +424,7 @@ public class Node extends CommunityTarget {
 				
 				return true;
 			}
-			else if (response.startsWith(Constants.hrStorageEntry) && request.startsWith(Constants.hrStorageEntry)) {
+			else if (request.startsWith(Constants.hrStorageEntry) && response.startsWith(Constants.hrStorageEntry)) {
 				JSONObject storageData;
 				String index = Integer.toString(response.last());
 				
@@ -414,7 +435,21 @@ public class Node extends CommunityTarget {
 					storageData = this.hrStorageEntry.getJSONObject(index);
 				}
 				
-				if (response.startsWith(Constants.hrStorageType) && request.startsWith(Constants.hrStorageType)) {
+				if (request.startsWith(Constants.hrStorageIndex)) {
+					if (response.startsWith(Constants.hrStorageIndex)) {
+						Integer32 value = (Integer32)variable;
+						
+						hrStorageIndex.put(index, value.getValue());
+						
+						return true;
+					}
+					else {
+						this.node.put("hrStorageIndex", hrStorageIndex);
+						
+						hrStorageIndex = new JSONObject();
+					}
+				}
+				else if (request.startsWith(Constants.hrStorageType) && response.startsWith(Constants.hrStorageType)) {
 					OID value = (OID)variable;
 					
 					if (value.startsWith(Constants.hrStorageTypes)) {
@@ -423,28 +458,28 @@ public class Node extends CommunityTarget {
 					
 					return true;
 				}
-				else if (response.startsWith(Constants.hrStorageDescr) && request.startsWith(Constants.hrStorageDescr)) {
+				else if (request.startsWith(Constants.hrStorageDescr) && response.startsWith(Constants.hrStorageDescr)) {
 					OctetString value = (OctetString)variable;
 					
 					storageData.put("hrStorageDescr", new String(value.getValue()));
 					
 					return true;
 				}
-				else if (response.startsWith(Constants.hrStorageAllocationUnits) && request.startsWith(Constants.hrStorageAllocationUnits)) {
+				else if (request.startsWith(Constants.hrStorageAllocationUnits) && response.startsWith(Constants.hrStorageAllocationUnits)) {
 					Integer32 value = (Integer32)variable;
 					
 					storageData.put("hrStorageAllocationUnits", value.getValue());
 					
 					return true;
 				}
-				else if (response.startsWith(Constants.hrStorageSize) && request.startsWith(Constants.hrStorageSize)) {
+				else if (request.startsWith(Constants.hrStorageSize) && response.startsWith(Constants.hrStorageSize)) {
 					Integer32 value = (Integer32)variable;
 					
 					storageData.put("hrStorageSize", value.getValue());
 					
 					return true;
 				}
-				else if (response.startsWith(Constants.hrStorageUsed) && request.startsWith(Constants.hrStorageUsed)) {
+				else if (request.startsWith(Constants.hrStorageUsed) && response.startsWith(Constants.hrStorageUsed)) {
 					Integer32 value = (Integer32)variable;
 					
 					if (storageData.has("hrStorageSize")) {
@@ -469,8 +504,13 @@ public class Node extends CommunityTarget {
 			requestVB = (VariableBinding)requestVBs.get(i);
 			responseVB = (VariableBinding)responseVBs.get(i);
 			
-			if (parse(responseVB.getOid(), responseVB.getVariable(), requestVB.getOid()) && !responseVB.equals(Null.endOfMibView)) {
-				nextRequests.add(responseVB);
+			if (parse(responseVB.getOid(), responseVB.getVariable(), requestVB.getOid())) {
+				if (!responseVB.equals(Null.endOfMibView)) {
+					nextRequests.add(responseVB);
+				}
+				else {
+					System.out.println("end of mib view.");
+				}
 			}
 		}
 

@@ -3,75 +3,75 @@
 var MINUTE = 60000,
 	MINUTE5 = 300000,
 	HOUR6 = 21600000,
-	MARGIN_TOP = 15,
+	MARGIN_TOP = 20,
 	MARGIN_RIGHT = 15,
 	MARGIN_BOTTOM = 90,
-	MARGIN_LEFT = 60,
+	MARGIN_LEFT = 15,
 	SCALE_SPACE = 60;
 
-function Chart(id, height, label, onreset) {
-	switch(arguments.length) {
-	case 4:
-		this.init(id, height, label, onreset);
-		
-		break;
-	default:
-		throw "IllegalArgumentException";	
+function Chart(config) {
+	if (typeof config !== "object" || !config.id) {
+		throw "InvalidArgumentException";
 	}
 	
+	this.init(config);
 }
 
 (function (window, undefined) {	
 	
 	function resize() {
 		var rect = this.client.getBoundingClientRect(),
-			width = this.width || 0;
+			width = this.width,
+			height = this.height,
+			timeUnit = getTimeUnit(this.scale);
 		
-		this.width = Math.floor(Math.max(0, rect.width - MARGIN_LEFT - MARGIN_RIGHT));
+		this.width = Math.max(0, rect.width - MARGIN_LEFT - MARGIN_RIGHT);
+		this.height = Math.max(0, rect.height - MARGIN_TOP - MARGIN_BOTTOM);
 		
-		if (this.width == width || this.width == 0) {
+		if (this.width == width && this.height == height || this.width == 0) {
 			return;
 		}
+		
+		if (!this.base) {
+			this.base = Chart.trim(new Date().getTime(), this.scale);
+		}
+		
+		this.origin = this.base - (this.width -1)* timeUnit;
 		
 		this.chart.width = this.width + MARGIN_LEFT + MARGIN_RIGHT;
 		this.chart.height = this.height + MARGIN_TOP + MARGIN_BOTTOM;
 	
-		if (!this.base) {
-			this.base = Math.floor(new Date().getTime() /MINUTE) *MINUTE;
-		}
-		else {
-			this.base += (width - this.width) *MINUTE;
-		}
+		this.graph.width = this.width;
+		this.graph.height = this.height;
 		
-		reset.call(this);
+		this.onchange(this.origin, this.base);
+		
+		invalidate.call(this);
 	}
 	
-	function reset() {
-		var context = this.context,
-			width = this.width,
-			height = this.height;
-		
+	/**
+	 * invalidate 발생하는 경우
+	 * 1. resize
+	 * 2. dragend
+	 * 3. zoom
+	 */
+	function invalidate() {
 		Chart.clear(this.chart);
 		Chart.clear(this.graph);
 		
-		drawBackground(context, width, height, this.label);
+		drawBackground(this.context, this.width, this.height);
 		
-		this.background = context.getImageData(0, 0, this.chart.width, this.chart.height);
+		this.background = this.context.getImageData(0, 0, this.chart.width, this.chart.height);
 		
-		this.onreset(this.base, width, this.scale);
+		drawTimeScale(this.context, this.width, this.height, this.base - (this.width -1) *MINUTE, this.base, this.scale);
+	
+		this.graphContext.setTransform(1, 0, 0, -1, 0, this.height);
+		
+		this.onreset(this.base, this.width, this.scale);
 	}
 	
 	function getTimeUnit(scale) {
-		switch(scale) {
-		case 1:
-			return MINUTE;
-		case 2:
-			return MINUTE5;
-		case 3:
-			return HOUR6;
-		default:
-			throw "IllegalArgumentException";
-		}
+		return scale === 2? MINUTE5: scale === 3? HOUR6: MINUTE;
 	}
 	
 	function onResize() {
@@ -81,31 +81,27 @@ function Chart(id, height, label, onreset) {
 	}
 	
 	function onDrag(x, scroll, e) {
-		var context = this.context,
-			width = this.width,
-			height = this.height,
-			base = this.base,
-			from, timeUnit = getTimeUnit(this.scale);
+		var move;
 		
 		scroll += (e.clientX - x);
 		
-		from = base - (width -1) * timeUnit;
-		
 		Chart.clear(this.chart);
 		
-		context.putImageData(this.background, 0, 0);
-		drawTimeScale(context, width, height, from - scroll * timeUnit, base - scroll * timeUnit, this.scale);
-		
-		//context.drawImage(this.graph, -Math.min(scroll, 0), 0, width - scroll, height, MARGIN_LEFT + Math.max(0, scroll), MARGIN_TOP, width - scroll, height);
-		context.drawImage(this.graph,
-				-Math.min(scroll, 0),
+		this.context.putImageData(this.background, 0, 0);
+
+		this.context.drawImage(this.graph,
+				Math.max(-scroll, 0),
 				0,
-				width - scroll,
-				height,
+				this.width - Math.abs(scroll),
+				this.height,
 				MARGIN_LEFT + Math.max(0, scroll),
 				MARGIN_TOP,
-				width - scroll,
-				height);
+				this.width - Math.abs(scroll),
+				this.height);
+	
+		move = scroll * getTimeUnit(this.scale);
+		
+		this.onchange(this.origin - move, this.base - move);
 		
 		this.scroll = scroll;
 	}
@@ -115,14 +111,31 @@ function Chart(id, height, label, onreset) {
 	}
 	
 	function onMouseUp(e) {
-		if (this.chart.onmousemove && this.scroll != 0) {
-			this.base -= this.scroll * getTimeUnit(this.scale);
-			this.scroll = 0;
-			
-			reset.call(this);
-		}
+		var onDrag = !!this.chart.onmousemove,
+			scroll = this.scroll,
+			move;
 		
 		this.chart.onmousemove = undefined;
+		this.scroll = 0;
+		
+		if (!onDrag || scroll === 0) {
+			return;
+		}
+		
+		move = scroll * getTimeUnit(this.scale);
+		
+		this.base -= move;
+		this.origin -= move;
+			
+		invalidate.call(this);
+		
+		drawTimeScale(this.context, this.width, this.height, this.origin, this.base, this.scale);
+	}
+	
+	function onWheel(e) {
+		e.stopPropagation();
+		
+		zoom.call(this, e.wheelDelta > 0);
 	}
 	
 	function zoom(zoom) {
@@ -138,14 +151,19 @@ function Chart(id, height, label, onreset) {
 			scale = Math.min(3, this.scale +1);
 		}
 		
-		if (scale != this.scale) {
-			this.scale = scale;
-			
-			reset.call(this);
+		if (scale == this.scale) {
+			return;
 		}
+		
+		this.base = Chart.trim(this.base, scale);
+		this.origin = this.base - (this.width -1) *getTimeUnit(scale);
+			
+		this.scale = scale;
+			
+		invalidate.call(this);
 	}
 	
-	function drawBackground(context, width, height, label) {
+	function drawBackground(context, width, height) {
 		context.save();
 		
 		context.strokeStyle = "#eee";
@@ -167,18 +185,9 @@ function Chart(id, height, label, onreset) {
 		}
 		
 		context.restore();
-		
-		context.fillStyle = "#eee";
-		context.textBaseline = "middle";
-		context.textAlign = "right";
-		context.setTransform(1, 0, 0, 1, MARGIN_LEFT -5, MARGIN_TOP);
-		context.fillText(label, -10, 0);
-		context.fillText("0", -10, height);
-		
-		context.restore();
 	}
 	
-	function drawTimeScale(context, width, height, from, base, scale) {
+	function drawTimeScale(context, width, height, origin, base, scale) {
 		var timeUnit = MINUTE;
 		
 		if (scale == 2) {
@@ -221,7 +230,7 @@ function Chart(id, height, label, onreset) {
 		for (; x < width; time -= timeUnit * SCALE_SPACE, x += SCALE_SPACE) {
 			date = new Date(time);
 			
-			month = date.getMonth();
+			month = date.getMonth() +1;
 			day = date.getDate();
 			hour = date.getHours();
 			
@@ -235,74 +244,70 @@ function Chart(id, height, label, onreset) {
 		
 		/**
 		 * @param id chart가 그려질 부모 element의 id
-		 * @param height chart의 graph 높이
-		 * @param label Y축 최대값의 label
-		 * @param onreset chart가 다시 그려져야 하는 경우 callback
+		 * @param optional onreset chart가 다시 그려져야 하는 경우 callback
+		 * @param optional onchange drag에 의해 base가 변경되는 경우 callback
 		 */	
-		init: function (id, height, label, onreset) {
-			this.client = document.getElementById(id);
+		//init: function (id, height, label, onreset) {
+		init: function (config) {
+			/**
+			 * configuration
+			 */
+			var client = document.getElementById(config.id);
 			
+			this.client = client;
+			this.onreset = config.onreset || new Function();
+			this.onchange = config.onchange || new Function();
+			
+			if (config.scroll === "auto") {
+				client.addEventListener("mousewheel", onWheel.bind(this), false);
+			}
+			
+			if (!config.width || !config.height) {
+				window.addEventListener("resize", onResize.bind(this), false);
+			}
+			
+			/**
+			 * initialize
+			 */
 			this.chart = document.createElement("canvas");
 			this.context = this.chart.getContext("2d");
 			this.graph = document.createElement("canvas");
 			this.graphContext = this.graph.getContext("2d");
-			this.label = label;
-			this.height = Math.floor(height);
+			
 			this.scale =1;
 			this.scroll = 0;
-			this.onreset = onreset;
 			
-			while (this.client.firstChild) {
-				this.client.removeChild(this.client.firstChild);
+			// TODO what is this code?
+			while (client.firstChild) {
+				client.removeChild(this.client.firstChild);
 			}
 			
-			this.client.appendChild(this.chart);
+			client.appendChild(this.chart);
 			
 			this.chart.addEventListener("mousedown", onMouseDown.bind(this), false);
 			this.chart.addEventListener("mouseup", onMouseUp.bind(this), false);
 			this.chart.addEventListener("mouseout", onMouseUp.bind(this), false);
 			
-			window.addEventListener("resize", onResize.bind(this), false);
-			
 			resize.call(this);
-			
-			this.begin();
 		},
 		
 		draw: function (data, color) {
+			if (typeof data !== "object") {
+				throw "InvalidArgumentException: data"
+			}
+			
 			var context = this.graphContext,
 				width = this.width,
 				height = this.height,
-				base = new Date(this.base),
-				from, timeUnit;
+				base = this.base,
+				timeUnit = getTimeUnit(this.scale);
 			
 			context.beginPath();
 			context.strokeStyle = color;
 			
-			switch(this.scale) {
-			case 1:
-				timeUnit = MINUTE;
-			
-				break;
-			
-			case 2:
-				timeUnit = MINUTE5;
-				base.setMinutes(Math.floor(base.getMinutes() /5) *5);
-				
-				break;
-				
-			case 3:
-				timeUnit = HOUR6;
-				base.setHours(Math.floor(base.getHours() /6) *6);
-				base.setMinutes(0);
-				break;
-			}
-			
-			base = base.getTime();
-			from = base - (width -1) * timeUnit;
-			for (var x=from, i=0; i<width; i++, x += timeUnit) {
-				if (typeof data[x] == "number") {
-					context.lineTo(i, Math.round(data[x] /100 *this.height));
+			for (var x=this.origin, i=0; i<width; i++, x += timeUnit) {
+				if (typeof data[x] === "number") {
+					context.lineTo(i, Math.round(data[x] /100 * height));
 				}
 				else {
 					context.stroke();
@@ -321,41 +326,6 @@ function Chart(id, height, label, onreset) {
 			context.drawImage(this.graph, MARGIN_LEFT, MARGIN_TOP);
 		},
 		
-		begin: function () {
-			var context = this.context,
-				width = this.width,
-				height = this.height,
-				base = this.base;
-			
-			this.graph.width = width;
-			this.graph.height = height;
-			this.graphContext.setTransform(1, 0, 0, -1, 0, this.height);
-			
-			Chart.clear(this.chart);
-			
-			drawBackground(context, width, height, this.label);
-			
-			this.background = context.getImageData(0, 0, this.chart.width, this.chart.height);
-			
-			drawTimeScale(context, width, height, base - (width -1) *MINUTE, base, this.scale);
-		},
-		
-		end: function () {
-			var context = this.context,
-				width = this.width,
-				height = this.height,
-				base = this.base,
-				from = base - (width -1) *MINUTE;
-			
-			//Chart.clear(this.chart);
-			//context.putImageData(this.background, 0, 0);
-			//context.drawImage(this.graph, MARGIN_LEFT, MARGIN_TOP);
-			
-			//drawTimeScale(context, width, height, from, base);
-			
-			//context.drawImage(this.graph, MARGIN_LEFT, MARGIN_TOP);
-		},
-		
 		zoom: function (zoomIn) {
 			zoom.call(this, zoomIn);
 		}
@@ -371,6 +341,35 @@ function Chart(id, height, label, onreset) {
 		context.clearRect(0, 0, canvas.width, canvas.height);
 		
 		context.restore();
+	};
+	
+	Chart.trim = function (time, scale) {
+		var date = new Date(time);
+		
+		date.setMilliseconds(0);
+		date.setSeconds(0);
+		
+		if (scale == 2) {
+			var minutes = date.getMinutes();
+			
+			date.setMinutes(minutes - minutes %5);
+		}
+		else if (scale == 3) {
+			var hours = date.getHours();
+			
+			date.setMinutes(0);
+			date.setHours(hours - hours %6);
+		}
+		
+		return date.getTime();
 	}
+	
+	Chart.getMarginWidth = function () {
+		return MARGIN_RIGHT + MARGIN_LEFT;
+	};
+	
+	Chart.getMarginHeight = function () {
+		return MARGIN_TOP + MARGIN_BOTTOM;
+	};
 	
 }) (window);

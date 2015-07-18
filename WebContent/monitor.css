@@ -55,60 +55,93 @@ table input, table textarea {
 	font-size: 11px;
 }
 
-.left {
+aside {
 	padding: 10px;
 	box-sizing: border-box;
 	position: fixed; width: 400px; top: 0; bottom: 0; left: 0;
+	overflow: auto;
+}
+
+article {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 400px;
+}
+
+section {
+	position: absolute; right: 0; left: 0;
+	/*background-color: #fff;*/
 }
 
 .tab {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-	position: fixed; top: 0; right: 0; left: 400px; height: 30px;
-	/*background-color: #ddd;*/
-}
-
-.tab li {
 	display: inline-block;
-	box-sizing: border-box;
 	line-height: 30px;
 	text-align: center;
 	width: 60px;
-	margin: 0px 1px;
+	border-radius: 5px 5px 0 0;
+	position: absolute; top: -30px; right: 0; left: 0; height: 30px;
 	background-color: #000;
 	color: #ddd;
-	border-radius: 5px 5px 0 0;
 }
-	
+
+section:nth-child(1) .tab {
+	left: 5px;
+}
+
+section:nth-child(2) .tab {
+	left: 66px;
+}
+
 .content {
-	padding: 10px;
-	box-sizing: border-box;
-	position: fixed; top: 30px; right: 0; bottom: 0; left: 400px;
+	position: absolute; top: 0; right: 0; bottom: 0; left: 0;
 	overflow: hidden;
 	overflow-y: scroll;
-	display: none;
+	padding: 10px;
 }
 
-.content:target {
-	display: block;
+.tab a:link, .tab a:visited, .tab a:active {
+	color: #ddd;
+	text-decoration: none;
 }
 
-.focused {
-	outline: 5px solid #ff0;
+section:target .tab {
+	background-color: #fff;
 }
 
-.notes {
-	color: #fff;
-	background-color: #000;
+section:target .tab a{
+	color: #000;
+}
+
+input[type=checkbox] {
+	vertical-align: middle;
+}
+
+aside ul {
+	list-style: none;
+	padding: 0;
+	max-height: 160px;
+	overflow: auto;
+}
+
+section h3,
+section h4 {
+	margin: 0;
+	padding: 0;
+	line-height: 50px;
 	text-align: center;
-	font-weight: bold;
 }
 
-.output {
-	color: #f80;
+section.title {
+	top: 0; height: 100px;
 }
 
-.input {
-	color: #0f0;
+#chart {
+	top: 100px; bottom: 200px;
+	background-color: #000;
+}
+
+#notes {
+	bottom: 0; height: 200px;
+}
+
+#switch {
+	position: absolute; top: 10px; right: 10px;
 }

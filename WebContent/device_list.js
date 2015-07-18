@@ -3,8 +3,9 @@
 var elements = {};
 
 (function (window, undefined) {
-	var xhr, form, dialog, remove = {},
+	var server, xhr, form, dialog,
 		labels = {},
+		selectedList = [],
 		tmpList = document.createDocumentFragment();
 	
 	window.addEventListener("load", onLoad, false);
@@ -15,12 +16,15 @@ var elements = {};
 		elements["form"] = form;
 		elements["label"] = form.elements["label"];
 		elements["list"] = document.getElementById("list");
+		elements["monitor"] = document.getElementById("monitor");
 		
 		form.addEventListener("submit", onAdd, false);
 		form.addEventListener("reset", onRemove, false);
 		elements["label"].addEventListener("change", onSelectLabel, false);
+		elements["monitor"].addEventListener("click", onMonitor, false);
 		
-		xhr = new JSONRequest(parent.location.search.replace("?", ""), onResponse);
+		server = parent.location.search.replace("?", "");
+		xhr = new JSONRequest(server, onResponse);
 		
 		xhr.request( {
 			database: "device",
@@ -62,18 +66,30 @@ var elements = {};
 	}
 	
 	function onRemove(e) {
-		var array = [],
-			length = 0;
+		var length = selectedList.length;
 		
-		for (var id in remove) {
-			array[length++] = remove[id];
+		if (length === 0) {
+			alert("select device(s) first.");
+			
+			return;
 		}
 		
-		if (confirm("remove "+ length +" device(s)?")) {
-			while (length-- > 0) {
-				array[length]();
-			}
+		if (!confirm("remove "+ length +" device(s)?")) {
+			return;
 		}
+		
+		var data = {},
+			request = {
+				database: "device",
+				command: "delete",
+				data: data
+			};
+		
+		for (var i=0; i<length; i++) {
+			data[selectedList[i]["id"]] = null;
+		}
+			
+		xhr.request(request);
 	}
 	
 	function onEdit(json, e) {
@@ -85,14 +101,19 @@ var elements = {};
 		}, "*");
 	}
 	
-	function onSelect(json, e) {
+	function onSelect(deviceData, e) {
+		var index = selectedList.indexOf(deviceData);
+		
 		if (this.checked) {
-			remove[json.id] = _remove.bind(window, json.id);
+			if (index === -1) {
+				selectedList[selectedList.length] = deviceData;
+			}
 		}
 		else {
-			delete remove[json.id];
-		}
-		
+			if (index !== -1) {
+				selectedList.splice(index, 1);
+			}
+		}	
 	}
 	
 	function onSelectLabel(e) {
@@ -118,15 +139,27 @@ var elements = {};
 		}
 	}
 	
-	function _remove(id) {
-		var request = {
-			database: "device",
-			command: "delete",
-			data: {}
-		};
+	function onMonitor(e) {
+		var length = selectedList.length,
+			device;
 		
-		request.data[id] = null;
+		if (length === 0) {
+			alert("select device(s) first.");
+			
+			return;
+		}
 		
+		for (var i=0; i<length; i++) {
+			device = selectedList[i];
+			
+			if (device.ip !== "" && device.profile !== "") {
+				window.open("monitor.html").arguments = {
+					server: server, 
+					device: device
+				};
+			}
+		}
+			
 		xhr.request(request);
 	}
 	

@@ -26,6 +26,8 @@ var elements = {};
 		elements["zoomin"] = document.getElementById("btn_zoomin");
 		elements["zoomout"] = document.getElementById("btn_zoomout");
 		elements["cpu_notes"] = document.getElementById("cpu_notes");
+		elements["cpu_origin"] = document.getElementById("cpu_origin");
+		elements["cpu_base"] = document.getElementById("cpu_base");
 		
 		form = document.getElementById("form");
 		ifentry = document.getElementById("ifentry");
@@ -36,10 +38,7 @@ var elements = {};
 		elements["memory"].addEventListener("mouseout", onBlur, false);
 		elements["traffic"].addEventListener("click", onFocus, false);
 		elements["traffic"].addEventListener("mouseout", onBlur, false);
-		
-		elements["zoomin"].addEventListener("click", onZoomIn, false);
-		elements["zoomout"].addEventListener("click", onZoomOut, false);
-		
+				
 		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 		
 		sendRequest("snmp");
@@ -98,9 +97,24 @@ var elements = {};
 		
 		getDefaultPort();
 		
-		cpuChart = new Chart("cpu", 100, "100%", onRedrawCPU);
-		memoryChart = new Chart("memory", 100, getMaxMemory(node) + "MB", onRedrawMemory);
-		trafficChart = new Chart("traffic", 100, Bandwidth.toString(selectedPort["ifSpeed"]), onRedrawTraffic);
+		cpuChart = new Chart({
+			id: "cpu",
+			height: 200,
+			onreset: onRedrawCPU,
+			onchange: onChangeBase.bind(cpuChart, elements["cpu_origin"], elements["cpu_base"])
+		});
+		
+		memoryChart = new Chart({
+			id: "memory",
+			height: 100,
+			onreset: onRedrawMemory
+		});
+		
+		trafficChart = new Chart({
+			id: "traffic",
+			height: 100,
+			onreset: onRedrawTraffic
+		});
 		
 		document.getElementById("selectedPort").textContent = selectedPort["ifName"];
 		
@@ -257,6 +271,15 @@ var elements = {};
 		});
 	}
 	
+	function onRedrawChart(resource, base, size, scale) {
+		
+	}
+	
+	function onChangeBase(originElement, baseElement, origin, base) {
+		originElement.textContent = new Date(origin);
+		baseElement.textContent = new Date(base);
+	}
+	
 	function onRedrawCPU(base, size, scale) {
 		colorIndex = 0;
 		
@@ -308,7 +331,7 @@ var elements = {};
 						drawMemory(data);
 						
 						break;
-					case "traffic":
+					case "traffic":console.log(json);
 						drawTraffic(data);
 						
 						break;

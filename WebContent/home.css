@@ -87,3 +87,7 @@ table input, table textarea {
 .input {
 	color: #0f0;
 }
+
+.chart {
+	height: 200px;
+}

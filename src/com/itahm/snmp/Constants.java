@@ -77,6 +77,7 @@ public class Constants {
 	
 	public final static OID hrStorageTypes = new OID(new int [] {1,3,6,1,2,1,25,2,1});
 	public final static OID hrStorageEntry = new OID(new int [] {1,3,6,1,2,1,25,2,3,1});
+	public final static OID hrStorageIndex = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,1});
 	public final static OID hrStorageType = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,2});
 	public final static OID hrStorageDescr = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,3});
 	public final static OID hrStorageAllocationUnits = new OID(new int [] {1,3,6,1,2,1,25,2,3,1,4});
