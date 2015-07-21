@@ -28,8 +28,9 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("profile", "com.itahm.request.Profile");
 		commandMap.put("address", "com.itahm.request.Address");
 		commandMap.put("snmp", "com.itahm.request.Snmp");
-		commandMap.put("cpu", "com.itahm.request.Cpu");
-		commandMap.put("memory", "com.itahm.request.Memory");
+		commandMap.put("realtime", "com.itahm.request.RealTime");
+		commandMap.put("processor", "com.itahm.request.Processor");
+		commandMap.put("storage", "com.itahm.request.Storage");
 	}
 	
 	private final Listener http;

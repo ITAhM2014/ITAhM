@@ -159,7 +159,10 @@ public class Node extends CommunityTarget {
 	}
 	
 	public void setResponseTime() {
-		this.node.put("delay", Calendar.getInstance().getTimeInMillis() - this.requestTime);
+		long responseTime = Calendar.getInstance().getTimeInMillis();
+		
+		this.node.put("lastResponse", responseTime);
+		this.node.put("delay", responseTime - this.requestTime);
 		this.node.put("timeout", -1);
 	}
 	
@@ -481,6 +484,8 @@ public class Node extends CommunityTarget {
 				}
 				else if (request.startsWith(Constants.hrStorageUsed) && response.startsWith(Constants.hrStorageUsed)) {
 					Integer32 value = (Integer32)variable;
+					
+					storageData.put("hrStorageUsed", value.getValue());
 					
 					if (storageData.has("hrStorageSize")) {
 						this.rollingMap.put(Resource.HRSTORAGEUSED, index, (int)Math.round(value.getValue() *(double)100 /storageData.getInt("hrStorageSize")));

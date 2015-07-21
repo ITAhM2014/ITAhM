@@ -1,6 +1,7 @@
 ;"use strict";
 
-var MINUTE = 60000,
+var SECOND = 1000,
+	MINUTE = 60000,
 	MINUTE5 = 300000,
 	HOUR6 = 21600000,
 	MARGIN_TOP = 20,
@@ -54,24 +55,57 @@ function Chart(config) {
 	 * 1. resize
 	 * 2. dragend
 	 * 3. zoom
+	 * 4. user의 clear 요청
 	 */
 	function invalidate() {
+		/**
+		 * chart clear
+		 */
 		Chart.clear(this.chart);
 		Chart.clear(this.graph);
 		
-		drawBackground(this.context, this.width, this.height);
+		/**
+		 * background 다시 그리기
+		 */
+		//context.save();
+		
+		this.context.strokeStyle = this.color;
+		this.context.lineWidth = .5;
+		this.context.strokeRect(MARGIN_LEFT -.5, MARGIN_TOP -5.5, this.width +1, this.height +11);
+		
+		this.context.save();
+		this.context.globalAlpha = .7;
+		
+		var x1 = MARGIN_LEFT -10,
+			x2 = MARGIN_LEFT + this.width +10,
+			y = MARGIN_TOP +.5;
+		
+		for (var i=0; i<3; i++, y += this.height /2) {
+			this.context.beginPath();
+			this.context.moveTo(x1, y);
+			this.context.lineTo(x2, y);
+			this.context.stroke();
+		}
+		
+		this.context.restore();
 		
 		this.background = this.context.getImageData(0, 0, this.chart.width, this.chart.height);
 		
-		drawTimeScale(this.context, this.width, this.height, this.base - (this.width -1) *MINUTE, this.base, this.scale);
+		drawTimeScale.call(this);
 	
 		this.graphContext.setTransform(1, 0, 0, -1, 0, this.height);
 		
 		this.onreset(this.base, this.width, this.scale);
 	}
 	
+	function adjust(scale) {
+		this.base = Chart.trim(scale === 0? new Date().getTime(): this.base, scale);
+		this.origin = this.base - (this.width -1)* getTimeUnit(scale);
+		
+	}
+	
 	function getTimeUnit(scale) {
-		return scale === 2? MINUTE5: scale === 3? HOUR6: MINUTE;
+		return scale === 1? MINUTE: scale === 2? MINUTE5: scale === 3? HOUR6: SECOND;
 	}
 	
 	function onResize() {
@@ -129,87 +163,31 @@ function Chart(config) {
 			
 		invalidate.call(this);
 		
-		drawTimeScale(this.context, this.width, this.height, this.origin, this.base, this.scale);
+		drawTimeScale.call(this);
 	}
 	
 	function onWheel(e) {
 		e.stopPropagation();
 		
-		zoom.call(this, e.wheelDelta > 0);
+		this.zoom(e.wheelDelta > 0);
 	}
 	
-	function zoom(zoom) {
-		var scale;
-		if (zoom) {
-			// 확대
-			
-			scale = Math.max(1, this.scale -1);
-		}
-		else {
-			// 축소
-			
-			scale = Math.min(3, this.scale +1);
-		}
+	function drawTimeScale() {
+		var timeUnit = getTimeUnit(this.scale);
 		
-		if (scale == this.scale) {
-			return;
-		}
+		this.context.save();
 		
-		this.base = Chart.trim(this.base, scale);
-		this.origin = this.base - (this.width -1) *getTimeUnit(scale);
-			
-		this.scale = scale;
-			
-		invalidate.call(this);
-	}
-	
-	function drawBackground(context, width, height) {
-		context.save();
+		this.context.fillStyle = this.color;
+		this.context.font = "10px tahoma, arial, '맑은 고딕'";
 		
-		context.strokeStyle = "#eee";
-		context.lineWidth = .5;
-		context.strokeRect(MARGIN_LEFT -.5, MARGIN_TOP -5.5, width +1, height +11);
-		
-		context.save();
-		context.globalAlpha = .7;
-		
-		var x1 = MARGIN_LEFT -10,
-			x2 = MARGIN_LEFT + width +10,
-			y = MARGIN_TOP +.5;
-		
-		for (var i=0; i<3; i++, y += height /2) {
-			context.beginPath();
-			context.moveTo(x1, y);
-			context.lineTo(x2, y);
-			context.stroke();
-		}
-		
-		context.restore();
-	}
-	
-	function drawTimeScale(context, width, height, origin, base, scale) {
-		var timeUnit = MINUTE;
-		
-		if (scale == 2) {
-			timeUnit = MINUTE5;
-		}
-		else if (scale == 3) {
-			timeUnit = HOUR6;
-		}
-		
-		context.save();
-		
-		context.fillStyle = "#eee";
-		context.font = "10px tahoma, arial, '맑은 고딕'";
-		
-		context.translate(width + MARGIN_LEFT, height + MARGIN_TOP);
-		context.rotate(Math.PI /2);
+		this.context.translate(this.width + MARGIN_LEFT, this.height + MARGIN_TOP);
+		this.context.rotate(Math.PI /2);
 		
 		/**
 		 * @param x graph의 x축, 1눈금이 scale에 따라 1분, 5분, 6시간을 의미한다.
 		 */
 		var date, year, month, day, hour, minute,
-			time = base,
+			time = this.base,
 			x = 0;
 		
 		/**
@@ -225,27 +203,28 @@ function Chart(config) {
 			
 			time -= timeUnit;
 		}
-		while (x++ < width);
+		while (x++ < this.width);
 		
-		for (; x < width; time -= timeUnit * SCALE_SPACE, x += SCALE_SPACE) {
+		for (; x < this.width; time -= timeUnit * SCALE_SPACE, x += SCALE_SPACE) {
 			date = new Date(time);
 			
 			month = date.getMonth() +1;
 			day = date.getDate();
 			hour = date.getHours();
 			
-			context.fillText(date.getFullYear() +"-"+ (month > 9? month: "0"+ month) +"-"+ (day > 9? day: "0"+ day) +" "+ (hour > 9? hour: "0" + hour), 10, x);
+			this.context.fillText(date.getFullYear() +"-"+ (month > 9? month: "0"+ month) +"-"+ (day > 9? day: "0"+ day) +" "+ (hour > 9? hour: "0" + hour), 10, x);
 		}
 		
-		context.restore();
+		this.context.restore();
 	}
 	
 	Chart.prototype = {
 		
 		/**
 		 * @param id chart가 그려질 부모 element의 id
-		 * @param optional onreset chart가 다시 그려져야 하는 경우 callback
-		 * @param optional onchange drag에 의해 base가 변경되는 경우 callback
+		 * @param onreset optional chart가 다시 그려져야 하는 경우 callback
+		 * @param onchange optional drag에 의해 base가 변경되는 경우 callback
+		 * @param zoom optional auto인 경우 wheel event에 반응하여 자동 zoom
 		 */	
 		//init: function (id, height, label, onreset) {
 		init: function (config) {
@@ -255,15 +234,12 @@ function Chart(config) {
 			var client = document.getElementById(config.id);
 			
 			this.client = client;
+			this.color = config.color || "#000";
 			this.onreset = config.onreset || new Function();
 			this.onchange = config.onchange || new Function();
 			
-			if (config.scroll === "auto") {
+			if (config.zoom === "auto") {
 				client.addEventListener("mousewheel", onWheel.bind(this), false);
-			}
-			
-			if (!config.width || !config.height) {
-				window.addEventListener("resize", onResize.bind(this), false);
 			}
 			
 			/**
@@ -274,7 +250,7 @@ function Chart(config) {
 			this.graph = document.createElement("canvas");
 			this.graphContext = this.graph.getContext("2d");
 			
-			this.scale =1;
+			this.scale = 1;
 			this.scroll = 0;
 			
 			// TODO what is this code?
@@ -284,6 +260,7 @@ function Chart(config) {
 			
 			client.appendChild(this.chart);
 			
+			window.addEventListener("resize", onResize.bind(this), false);
 			this.chart.addEventListener("mousedown", onMouseDown.bind(this), false);
 			this.chart.addEventListener("mouseup", onMouseUp.bind(this), false);
 			this.chart.addEventListener("mouseout", onMouseUp.bind(this), false);
@@ -296,18 +273,22 @@ function Chart(config) {
 				throw "InvalidArgumentException: data"
 			}
 			
-			var context = this.graphContext,
+			var result = {},
+				value,
+				context = this.graphContext,
 				width = this.width,
 				height = this.height,
-				base = this.base,
 				timeUnit = getTimeUnit(this.scale);
 			
 			context.beginPath();
-			context.strokeStyle = color;
+			context.strokeStyle = color || "#000";
 			
 			for (var x=this.origin, i=0; i<width; i++, x += timeUnit) {
-				if (typeof data[x] === "number") {
-					context.lineTo(i, Math.round(data[x] /100 * height));
+				value = data[x];
+				
+				if (typeof value === "number") {
+					result[x] = value;
+					context.lineTo(i, Math.round(value /100 * height)); 
 				}
 				else {
 					context.stroke();
@@ -322,13 +303,54 @@ function Chart(config) {
 			
 			Chart.clear(this.chart);
 			context.putImageData(this.background, 0, 0);
-			drawTimeScale(context, width, height, base - (width -1) *MINUTE, base, this.scale);
+			drawTimeScale.call(this);
 			context.drawImage(this.graph, MARGIN_LEFT, MARGIN_TOP);
+			
+			return value;
 		},
 		
-		zoom: function (zoomIn) {
-			zoom.call(this, zoomIn);
-		}
+		clear: function () {
+			if (this.scale === 0) {console.log("adjust");
+				adjust.call(this, 0);
+			}
+			
+			invalidate.call(this);
+		},
+		
+		zoom: function (zoom) {
+			var scale;
+			
+			if (zoom === true) {
+				// 확대
+				
+				scale = Math.max(1, this.scale -1);
+			}
+			else if (zoom === false){
+				// 축소
+				
+				scale = Math.min(3, this.scale +1);
+			}
+			
+			if (scale == this.scale) {
+				return;
+			}
+			
+			this.setScale(scale);
+				
+			invalidate.call(this);
+		},
+		
+		setBase: function (base) {
+			this.base = base;
+			this.origin = this.base - (this.width -1)* getTimeUnit(this.scale);
+		},
+		
+		setScale: function (scale) {
+			adjust.call(this, scale);
+			
+			this.scale = scale;
+		},
+		
 		
 	};
 

@@ -39,16 +39,16 @@
 				</div>
 			</div>
 			
-			<h3><input type="checkbox" id="select_cpu">processor load</h3>
+			<h3><input type="checkbox" id="check_cpu" disabled>processor load</h3>
 			<ul id="cpu_list"></ul>
 		
-			<h3><input type="checkbox" id="select_mem">physical memory</h3>
+			<h3><input type="checkbox" id="check_mem" disabled>physical memory</h3>
 			<ul id="mem_list"></ul>
 			
-			<h3><input type="checkbox" id="select_disk">storage usage</h3>
+			<h3><input type="checkbox" id="check_disk" disabled>storage usage</h3>
 			<ul id="disk_list"></ul>
 			
-			<h3><input type="checkbox" id="select_port">interface throughput</h3>
+			<h3><input type="checkbox" id="check_port" disabled>interface throughput</h3>
 			<ul id="port_list"></ul>
 			
 		</aside>
@@ -56,7 +56,7 @@
 		<article>
 			<section class="title">
 				<h3 id="title">127.0.0.1</h3>
-				<h4 id="range"></h4>
+				<h4 id="range" class="blink"></h4>
 				
 				<select id="switch">
 					<option selected>log</option>
@@ -66,7 +66,9 @@
 			
 			<section id="chart"></section>
 			
-			<section id="notes"></section>
+			<section id="notes">
+				<p id="ppp"></p>
+			</section>
 		</article>
 		
 		<script src="monitor.js"></script>

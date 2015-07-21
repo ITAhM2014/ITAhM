@@ -6,7 +6,10 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -37,6 +40,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	}
 	
 	private final Map<String, Node> nodeList = new HashMap<String, Node>();
+	private final Set<String> realTimeNodeList = new HashSet<String>();
 	
 	private final static PDU pdu = new PDU();
 	{
@@ -71,8 +75,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 	}
 	
-	//public static long DELAY = 60 * 1000; // 1 min.
-	public static long DELAY = 10 * 1000; // test
+	private int lastRequestTime = -1;
 	
 	public SnmpManager(EventListener eventListener) throws IOException {
 		this(new File("."), eventListener);
@@ -109,7 +112,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			addNode(Node.create(itahm, root, snmpData.getJSONObject(ip)));
 		};
 		
-		timer.scheduleAtFixedRate(this, 3000, DELAY);
+		timer.scheduleAtFixedRate(this, 1000, 1000);
 		
 		System.out.println("snmp manager is running");
 	}
@@ -128,7 +131,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		return false;
 	}
 	
-	public Node addNode (String ip, int udp, String community) {
+	public Node addNode(String ip, int udp, String community) {
 		JSONObject snmpTable = snmpFile.getJSONObject();
 		JSONObject jo = new JSONObject()
 			.put("ip", ip)
@@ -150,6 +153,12 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		return null;
 	}
 	
+	public void addRealTimeNode(String ip) {
+		synchronized(this.nodeList) {
+			this.realTimeNodeList.add(ip);
+		}
+	}
+	
 	public JSONFile getFile(FILE name) {
 		switch(name) {
 		case ADDRESS:
@@ -161,10 +170,6 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		return null;
 	}
-	
-	//public JSONObject get(String ip) {
-//		return this.nodeList.get(ip).getJSON();
-	//}
 	
 	public File getRoot() {
 		return this.root;
@@ -219,32 +224,56 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		}
 	}
 	
-	public void run() {
+	public void run() {		
+		Calendar calendar = Calendar.getInstance();
+		int minutes = calendar.get(Calendar.MINUTE);
+		long requestTime = calendar.getTimeInMillis();
+		
+		synchronized(this.nodeList) {
+			synchronized(this.realTimeNodeList) {
+				if (this.lastRequestTime != minutes) {
+					try {
+						this.addrFile.save();
+						this.snmpFile.save();
+					} catch (IOException ioe) {
+						// TODO fatal error
+						
+						ioe.printStackTrace();
+					}
+					
+					loop(this.nodeList.keySet().iterator(), requestTime);
+					
+					this.lastRequestTime = minutes;
+				}
+				else {
+					loop(this.realTimeNodeList.iterator(), requestTime, true);
+				}
+			}
+		}
+	}
+	
+	private void loop (Iterator<String> iterator, long requestTime){
+		loop(iterator, requestTime, false);
+	}
+	
+	private void loop (Iterator<String> iterator, long requestTime, boolean remove){
+		Node node;
+		
 		try {
-			this.addrFile.save();
-			this.snmpFile.save();
+			while (iterator.hasNext()) {
+				node = this.nodeList.get(iterator.next());
+				node.setRequestTime(requestTime);
+				
+				this.snmp.send(pdu, node, node, this);
+				
+				if (remove) {
+					iterator.remove();
+				}
+			}
 		} catch (IOException ioe) {
 			// TODO fatal error
 			
 			ioe.printStackTrace();
-		}
-		
-		Node node;
-		long requestTime = Calendar.getInstance().getTimeInMillis();
-		
-		synchronized(this.nodeList) {
-			try {
-				for (String ip : this.nodeList.keySet()) {
-					node = this.nodeList.get(ip);
-					node.setRequestTime(requestTime);
-					
-					this.snmp.send(pdu, node, node, this);
-				}
-			} catch (IOException ioe) {
-				// TODO fatal error
-				
-				ioe.printStackTrace();
-			}
 		}
 	}
 	
@@ -255,32 +284,26 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 
 				@Override
 				public void onConnect(SocketChannel channel) {
-					// TODO Auto-generated method stub
 					
 				}
 
 				@Override
 				public void onClose(SocketChannel channel) {
-					// TODO Auto-generated method stub
 					
 				}
 
 				@Override
-				public void onRequest(SocketChannel channel, Message request,
-						Message response) {
-					// TODO Auto-generated method stub
+				public void onRequest(SocketChannel channel, Message request, Message response) {
 					
 				}
 
 				@Override
 				public void onError(Exception e) {
-					// TODO Auto-generated method stub
 					
 				}
 
 				@Override
 				public void onEvent() {
-					// TODO Auto-generated method stub
 					
 				}
 				
@@ -303,7 +326,6 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			
 			manager.close();	
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}	
 	}
