@@ -6,7 +6,7 @@
 var elements = {}, dialog;
 
 (function (window, undefined) {
-	var server, xhr,
+	var xhr,
 		iconMap = {},
 		deviceList = {},
 		lineList = {},
@@ -16,7 +16,8 @@ var elements = {}, dialog;
 		lineLayer;
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	/**
 	 * elements 초기화
@@ -30,15 +31,14 @@ var elements = {}, dialog;
 		elements["capture"] = document.getElementById("capture");
 		elements["edit"] = document.getElementById("edit");
 		
-		server = parent.location.search.replace("?", "");
-		xhr = new JSONRequest(server, onResponse);
-		
-		xhr.request({
-			command: "echo"
-		});
+		xhr = new JSONRequest(top.server, onResponse);
 	}
 	
-	function load(map) {
+	function load() {
+		new IconLoader(init);
+	}
+	
+	function init(map) {
 		elements["zoomin"].addEventListener("click", function (e) {
 			canvas.zoom(true);
 		}, false);
@@ -105,10 +105,7 @@ var elements = {}, dialog;
 		var device = e.node;
 		
 		if (device && device["address"] && device["profile"]) {
-			window.open("monitor.html").arguments = {
-				server: server, 
-				device: device
-			};
+			top.openContent("monitor.html", device["address"]);
 		}
 		return false;
 	}
@@ -231,17 +228,12 @@ var elements = {}, dialog;
 		}
 	}
 	
-	function onMessage(e) {
-	}
-	
 	function onResponse(response) {
 		if ("error" in response) {
 			var status = response.error.status;
 			
 			if (status == 401) {
-				parent.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -264,11 +256,6 @@ var elements = {}, dialog;
 		
 			case "put":
 				location.reload();
-				
-				break;
-				
-			case "echo":
-				new IconLoader(load);
 				
 				break;
 			}

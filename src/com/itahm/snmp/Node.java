@@ -27,7 +27,6 @@ import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 
 import com.itahm.EventListener;
-import com.itahm.ITAhMException;
 import com.itahm.json.RollingFile;
 import com.itahm.json.RollingFile.SCALE;
 import com.itahm.json.RollingMap.Resource;
@@ -40,19 +39,18 @@ public class Node extends CommunityTarget {
 	private static final Map<String, Node> nodeList = new HashMap<String, Node>();
 	
 	private final JSONObject node;
+	private final JSONObject hrProcessorEntry;
 	private final JSONObject ifEntry;
 	private JSONObject ifIndex;
 	private final JSONObject hrStorageEntry;
 	private JSONObject hrStorageIndex;
-	private final RollingMap rollingMap;
+	private RollingMap rollingMap;
 	
 	private final Map<String, Counter> inCounter;
 	private final Map<String, Counter> outCounter;
 	private final Map<String, Counter> hcInCounter;
 	private final Map<String, Counter> hcOutCounter;
 	private final Address address;
-	
-	private final File nodeRoot;
 	
 	private long requestTime;
 	
@@ -62,14 +60,41 @@ public class Node extends CommunityTarget {
 	private int ifAdminStatus;
 	
 	private Node(EventListener eventListener, File path, JSONObject nodeData) throws IOException {
-		if (!nodeData.has("ip") || !nodeData.has("profile")) {
-			throw new ITAhMException();
+		String ip;
+		File nodeRoot;
+		
+		if (nodeData.has("ip")) {
+			ip = nodeData.getString("ip");
+			try {
+				InetAddress.getByName(ip);
+				
+				synchronized(nodeList) {
+					nodeList.put(ip, this);
+				}
+				
+				setAddress(new UdpAddress(String.format("%s/%d", ip, nodeData.getInt("udp"))));
+				setCommunity(new OctetString(nodeData.getString("community")));
+				setVersion(SnmpConstants.version2c);
+				setRetries(3);
+				setTimeout(3000);
+				
+				nodeRoot = new File(path, ip);
+				nodeRoot.mkdir();
+				
+				rollingMap = new RollingMap(nodeRoot);
+			}
+			catch (UnknownHostException uhe) {
+				
+			}
 		}
 		
-		String ip = nodeData.getString("ip");
-
-		InetAddress.getByName(ip);
-
+		if (!nodeData.has("hrProcessorEntry")) {
+			nodeData.put("hrProcessorEntry", hrProcessorEntry = new JSONObject());
+		}
+		else {
+			hrProcessorEntry = nodeData.getJSONObject("hrProcessorEntry");
+		}
+		
 		if (!nodeData.has("ifEntry")) {
 			nodeData.put("ifEntry", ifEntry = new JSONObject());
 		}
@@ -100,11 +125,6 @@ public class Node extends CommunityTarget {
 		
 		node = nodeData;
 		
-		nodeRoot = new File(path, ip);
-		nodeRoot.mkdir();
-		
-		rollingMap = new RollingMap(nodeRoot);
-		
 		inCounter = new HashMap<String, Counter>();
 		outCounter = new HashMap<String, Counter>();
 		hcInCounter = new HashMap<String, Counter>();
@@ -112,20 +132,10 @@ public class Node extends CommunityTarget {
 		
 		address = new Address();
 		
-		setAddress(new UdpAddress(String.format("%s/%d", ip, nodeData.getInt("udp"))));
-		setCommunity(new OctetString(nodeData.getString("community")));
-		setVersion(SnmpConstants.version2c);
-		setRetries(3);
-		setTimeout(3000);
-		
 		itahm = eventListener;
 		
 		timeOut = false;
 		ifAdminStatus = 2;
-		
-		synchronized(nodeList) {
-			nodeList.put(ip, this);
-		}
 	}
 	
 	public final static Node create(EventListener eventListener, File path, JSONObject nodeData) throws IOException {
@@ -420,10 +430,9 @@ public class Node extends CommunityTarget {
 				String index = Integer.toString(response.last());
 				int intValue = value.getValue();
 				
-				//this.hrProcessorEntry.put(index, intValue);
+				this.hrProcessorEntry.put(index, intValue);
 				
 				this.rollingMap.put(Resource.HRPROCESSORLOAD, index, intValue);
-				//this.hrProcessorLoad.put(index, intValue);
 				
 				return true;
 			}
@@ -484,11 +493,12 @@ public class Node extends CommunityTarget {
 				}
 				else if (request.startsWith(Constants.hrStorageUsed) && response.startsWith(Constants.hrStorageUsed)) {
 					Integer32 value = (Integer32)variable;
+					int intValue = value.getValue();
 					
-					storageData.put("hrStorageUsed", value.getValue());
+					storageData.put("hrStorageUsed", intValue);
 					
 					if (storageData.has("hrStorageSize")) {
-						this.rollingMap.put(Resource.HRSTORAGEUSED, index, (int)Math.round(value.getValue() *(double)100 /storageData.getInt("hrStorageSize")));
+						this.rollingMap.put(Resource.HRSTORAGEUSED, index, (int)Math.round(intValue *(double)100 /storageData.getInt("hrStorageSize")));
 					}
 					
 					return true;

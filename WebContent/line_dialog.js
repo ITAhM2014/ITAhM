@@ -6,13 +6,14 @@ var elements = {};
 	var xhr, line, id, from, to, loading = true;
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
 	window.addEventListener("keydown", function (e) {
 		if (e.keyCode == 27) {
 			form.reset();
 		}
 	}, false);
 	window.focus();
+	
+	window.load = load;
 	
 	function onLoad(e) {
 		elements["body"] = document.getElementsByTagName("body")[0];
@@ -30,10 +31,14 @@ var elements = {};
 		elements["unit"] = document.getElementById("unit");
 		elements["name"] = document.getElementById("name");
 		
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		xhr = new JSONRequest(top.server, onResponse);
 	}
 	
 	function load(data) {
+		init(data);
+	}
+	
+	function init(data) {
 		var form = elements["form"];
 		
 		line = data.line;
@@ -85,9 +90,7 @@ var elements = {};
 		
 		onSelectLink();
 		
-		top.postMessage({
-			message: "loadend",
-		}, "http://app.itahm.com");
+		top.clearScreen();
 	}
 	
 	function sendRequest(database, command, key, value) {
@@ -101,21 +104,6 @@ var elements = {};
 		request.data[key] = value;
 		
 		xhr.request(request);
-	}
-	
-	function onMessage(e) {
-		var data = e.data,
-			message;
-	
-		if (!data) {
-			return;
-		}
-		
-		message = data.message;
-		
-		if (message === "data") {
-			load(data.data);
-		}
 	}
 	
 	function onApply(e) {
@@ -186,9 +174,7 @@ var elements = {};
 	}
 	
 	function onCancel(e) {
-		top.postMessage({
-			message: "popup"
-		}, "http://app.itahm.com");
+		top.closeDialog();
 	}
 	
 	function onResponse(response) {
@@ -196,7 +182,7 @@ var elements = {};
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.location.reload(true);
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -208,12 +194,8 @@ var elements = {};
 			if (command === "put" || command === "delete") {
 				line = data[id = Object.keys(data)[0]];
 				
-				top.postMessage({
-					message: "reload",
-					html: "map.html"
-				}, "http://app.itahm.com");
-				
-				onCancel();
+				top.openContent("http://app.itahm.com");
+				top.closeDialog();
 			}
 			else if (command == "get") {
 				if (database === "device") {

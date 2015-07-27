@@ -1,6 +1,6 @@
 package com.itahm;
 
-public class ITAhMException extends RuntimeException {
+public class ITAhMException extends Exception {
 
 	/**
 	 * 

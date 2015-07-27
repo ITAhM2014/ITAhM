@@ -134,11 +134,11 @@ section.title {
 }
 
 #chart {
-	top: 100px; bottom: 200px;
+	top: 100px; bottom: 120px;
 }
 
 #notes {
-	bottom: 0; height: 200px;
+	bottom: 0; height: 120px;
 }
 
 #switch {
@@ -147,4 +147,34 @@ section.title {
 
 .blink {
 	text-decoration: blink;
+}
+
+.color {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+}
+
+.green {
+	background-color: #0f0;
+}
+
+.orange {
+	background-color: #fa0;
+}
+
+.gray {
+	background-color: #777;
+}
+
+.blue {
+	background-color: #00f;
+}
+
+.red {
+	background-color: #f00;
+}
+
+.yellow {
+	background-color: #ff0;
 }

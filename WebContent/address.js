@@ -5,6 +5,8 @@
 	
 	window.addEventListener("load", onLoad, false);
 	
+	window.load = load;
+	
 	function onLoad(e) {
 		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 		
@@ -54,21 +56,14 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				location.href = "signin.html";
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
 			var json = response.json;
 			
-			switch (json.command) {
-			case "echo":
-				load();
-				
-				break;
-			case "get":
+			if (json.command === "get") {
 				init (json.data);
-				
-				break;
 			}
 		}
 		else {

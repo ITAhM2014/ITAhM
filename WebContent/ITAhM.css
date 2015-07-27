@@ -6,58 +6,67 @@ body {
 	background-color: #fff;
 }
 
-div.top {
+header {
 	position: fixed; top: 0; right: 0; left: 0; height: 49px;
 	border-bottom: 1px solid #eee;
 }
 
-div.top ul {
-	display: flex;
+header ul {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 	float: left;
 }
 
-div.top li {
-	padding: .5em;
-	display: inline-block;
+header ul:last-child {
+	float: right;
 }
 
-div.content {
+header li {
+	margin: 0 .5em;
+	display: inline-block;
+	cursor: pointer;
+	line-height: 49px;
+}
+
+header li:hover {
+	color: #a0f;
+	text-decoration: underline;
+}
+
+section.content {
 	position: fixed; top: 50px; right: 0; bottom: 0; left: 0;
 }
 
-div.content>iframe {
-	width: 100%; height: 100%;
-	border: none;
-}
-
-div.dialog {
+section.dialog {
 	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
 	background-color: rgba(255,255,255,.8);
 	display: none;
 }
 
-div.dialog iframe {
+section.message {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	background-color: #fff;
+	display: none;
+}
+
+section.screen {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	background: #f00 url("img/waiting.gif") no-repeat center;
+	display: none;
+}
+
+iframe {
 	width: 100%; height: 100%;
 	border: none;
 }
 
-body.dialog div.dialog {
+body.dialog section.dialog,
+body.loading section.loading,
+body.message section.message {
 	display: block;
 }
 
-div.loading {
-	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
-	background: #fff url("img/waiting.gif") no-repeat center;
-	display: none;
-}
-
-body.loading div.loading {
-	display: block;
-}
-
-#form {
-	float: right;
+#close {
+	position: absolute; top: 5px; right: 5px;
 }

@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import com.itahm.EventListener;
+import com.itahm.ITAhMException;
 
 public class Listener implements Runnable, Closeable {
 
@@ -23,10 +24,10 @@ public class Listener implements Runnable, Closeable {
 	private final Thread thread;
 	private boolean shutdown;
 	private final ByteBuffer buffer;
-	private final EventListener server;
+	private final EventListener itahm;
 	
-	public Listener(EventListener server) throws IOException {
-		this(server , 80);
+	public Listener(EventListener itahm) throws IOException {
+		this(itahm , 80);
 	}
 
 	public Listener(EventListener handler, int tcp) throws IOException {
@@ -36,7 +37,7 @@ public class Listener implements Runnable, Closeable {
 		thread = new Thread(this);
 		shutdown = false;
 		buffer = ByteBuffer.allocateDirect(1024);
-		server = handler;
+		itahm = handler;
 		
 		listener.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), tcp));
 		channel.configureBlocking(false);
@@ -78,41 +79,41 @@ public class Listener implements Runnable, Closeable {
 		channel.configureBlocking(false);
 		channel.register(selector, SelectionKey.OP_READ, new Parser());
 		
-		this.server.onConnect(channel);
+		this.itahm.onConnect(channel);
 	}
 	
-	private Message getPreProcessMessage() throws IOException{
-		Message response = new Message()
-			.set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			.set("Access-Control-Allow-Origin", "http://app.itahm.com")
-			.set("Access-Control-Allow-Credentials", "true");
+	private Response getPreProcessMessage() throws IOException{
+		Response response = new Response()
+			.header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			.header("Access-Control-Allow-Origin", "http://app.itahm.com")
+			.header("Access-Control-Allow-Credentials", "true");
 		
 		return response;
 	}
 	
 	private void preProcessRequest(SocketChannel channel) throws IOException{
-		Message response = getPreProcessMessage();
+		Response response = getPreProcessMessage();
 		
-		response.status("HTTP/1.1 400 Bad Request").set("Connection", "Close").send(channel);
+		response.status(400, "Bad Request").header("Connection", "Close").send(channel, "");
 	}
 	
-	private void preProcessRequest(SocketChannel channel, Message request) throws IOException{
-		Message response = getPreProcessMessage();
+	private void preProcessRequest(SocketChannel channel, Request request) throws IOException{
+		Response response = getPreProcessMessage();
 		
 		String method = request.method();
 		
 		if (!"HTTP/1.1".equals(request.version())) {
-			response.status("HTTP/1.1 505 HTTP Version Not Supported").send(channel);
+			response.status(505, "HTTP Version Not Supported").send(channel, "");
 		}
 		else {
 			if ("OPTIONS".equals(method)) {
-				response.status("HTTP/1.1 200 OK").set("Allow", "OPTIONS, POST, GET").send(channel);
+				response.status(200, "OK").header("Allow", "OPTIONS, POST, GET").send(channel, "");
 			}
 			else if ("POST".equals(method) || "GET".equals(method)) {
-				this.server.onRequest(channel, request, response);
+				this.itahm.onRequest(channel, request, response);
 			}
 			else {
-				response.status("HTTP/1.1 405 Method Not Allowed").set("Allow", "OPTIONS, POST").send(channel);
+				response.status(405, "Method Not Allowed").header("Allow", "OPTIONS, POST").send(channel, "");
 			}
 		}
 	}
@@ -135,7 +136,7 @@ public class Listener implements Runnable, Closeable {
 				}
 				// else continue
 			}
-			catch (HttpException pe) {
+			catch (ITAhMException itahme) {
 				preProcessRequest(channel);
 			}
 			
@@ -144,7 +145,7 @@ public class Listener implements Runnable, Closeable {
 	}
 
 	public void onClose(SocketChannel channel) throws IOException {
-		this.server.onClose(channel);
+		this.itahm.onClose(channel);
 		
 		channel.close();
 	}
@@ -176,7 +177,7 @@ public class Listener implements Runnable, Closeable {
 			this.listener.close();
 		}
 		catch(IOException ioe) {
-			this.server.onError(ioe);
+			this.itahm.onError(ioe);
 		}
 	}
 
@@ -203,13 +204,8 @@ public class Listener implements Runnable, Closeable {
 			}
 
 			@Override
-			public void onRequest(SocketChannel channel, Message request, Message response) {
-				try {
-					System.out.println("request from "+ channel.getRemoteAddress() +" : "+ request.body());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			public void onRequest(SocketChannel channel, Request request, Response response) {
+				
 			}
 
 			@Override

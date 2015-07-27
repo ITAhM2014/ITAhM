@@ -30,9 +30,10 @@ public class Database implements Closeable {
 	}
 	/**
 	 * Instantiates a new database.
+	 * @throws ITAhMException 
 	 */
 	
-	public Database(File itahmRoot) throws IOException{
+	public Database(File itahmRoot) throws IOException, ITAhMException{
 		root = itahmRoot;
 		
 		account = new JSONFile();

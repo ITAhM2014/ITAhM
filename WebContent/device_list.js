@@ -3,13 +3,15 @@
 var elements = {};
 
 (function (window, undefined) {
-	var server, xhr, form, dialog,
+	var xhr, form, dialog,
 		labels = {},
 		selectedList = [],
 		tmpList = document.createDocumentFragment();
 	
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	function onLoad(e) {
 		form = document.getElementById("form");
@@ -22,9 +24,10 @@ var elements = {};
 		form.addEventListener("reset", onRemove, false);
 		elements["label"].addEventListener("change", onSelectLabel, false);
 		elements["monitor"].addEventListener("click", onMonitor, false);
-		
-		server = parent.location.search.replace("?", "");
-		xhr = new JSONRequest(server, onResponse);
+	}
+	
+	function load() {
+		xhr = new JSONRequest(top.server, onResponse);
 		
 		xhr.request( {
 			database: "device",
@@ -33,7 +36,7 @@ var elements = {};
 		});
 	}
 	
-	function load(list) {
+	function init(list) {
 		var tmp = document.createDocumentFragment();
 		
 		for (var id in list) {
@@ -59,10 +62,13 @@ var elements = {};
 	}
 	
 	function onAdd(e) {
-		top.postMessage({
+		/*top.postMessage({
 			message: "popup",
 			html: "device_dialog.html"
 		}, "*");
+		*/
+		console.log("debug");
+		top.showDialog("device_dialog.html");
 	}
 	
 	function onRemove(e) {
@@ -92,13 +98,15 @@ var elements = {};
 		xhr.request(request);
 	}
 	
-	function onEdit(json, e) {
+	function onEdit(device, e) {
 		//e.preventDefault();
-		top.postMessage({
-			message: "popup",
-			html: "device_dialog.html",
-			data: json
-		}, "*");
+		//top.postMessage({
+		//	message: "popup",
+		//	html: "device_dialog.html",
+		//	data: device
+		//}, "*");
+		
+		top.showDialog("device_dialog.html", device);
 	}
 	
 	function onSelect(deviceData, e) {
@@ -154,13 +162,11 @@ var elements = {};
 			
 			if (device.ip !== "" && device.profile !== "") {
 				window.open("monitor.html").arguments = {
-					server: server, 
+					server: top.server, 
 					device: device
 				};
 			}
 		}
-			
-		xhr.request(request);
 	}
 	
 	function createRow(deviceData) {
@@ -221,11 +227,7 @@ var elements = {};
 			var status = response.error.status;
 			
 			if (status == 401) {
-				if (parent != window) {
-					parent.postMessage({
-						message: "unauthorized"
-					}, "*");
-				}
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -233,7 +235,7 @@ var elements = {};
 			
 			switch (json.command) {
 			case "get":
-				load(json.data);
+				init(json.data);
 				
 				break;
 			case "delete":

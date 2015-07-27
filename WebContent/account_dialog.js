@@ -4,7 +4,6 @@
 	var xhr, form;
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
 	window.addEventListener("keydown", function (e) {
 		if (e.keyCode == 27) {
 			form.reset();
@@ -12,16 +11,18 @@
 	}, false);
 	window.focus();
 	
-	function onLoad(e) {	
-	}
+	window.load = load;
 	
-	function load(data) {
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+	function onLoad(e) {
 		form = document.getElementById("form");
 		
 		form.addEventListener("submit", onApply, false);
 		form.addEventListener("reset", onCancel, false);
 		
+		xhr = new JSONRequest(top.server, onResponse);
+	}
+	
+	function load(data) {
 		if (data) {
 			form.username.value = data.username;
 			form.password.select();
@@ -30,28 +31,7 @@
 			form.username.select();
 		}
 		
-		loadend();
-	}
-
-	function loadend() {
-		top.postMessage({
-			message: "loadend",
-		}, "http://app.itahm.com");
-	}
-	
-	function onMessage(e) {
-		var data = e.data;
-		
-		if (!data) {
-			return;
-		}
-		
-		switch (data.message) {
-		case "data":
-			load(data.data);
-			
-			break;
-		}
+		top.clearScreen();
 	}
 	
 	function onApply(e) {
@@ -83,9 +63,7 @@
 	}
 	
 	function onCancel(e) {
-		top.postMessage({
-			message: "popup"
-		}, "*");
+		top.closeDialog();
 	}
 	
 	function onResponse(response) {
@@ -93,9 +71,7 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -103,10 +79,8 @@
 			
 			switch (json.command) {
 			case "put":
-				top.postMessage({
-					message: "reload",
-					html: "account.html"
-				}, "*");
+				top.open("account.html");
+				top.closeDialog();
 			}
 		}
 		else {

@@ -16,36 +16,42 @@
 
 	<body class="loading">
 
-		<div class="top">
+		<header>
 			<nav>
 				<ul>
-					<li><a href="home.html" target="content">home</a>
-					<li><a href="map.html" target="content">map</a>
-					<li><a href="device_list.html" target="content">device</a>
-					<li><a href="line_list.html" target="content">line</a>
-					<li><a href="address.html" target="content">address</a>
-					<li><a href="account.html" target="content">account</a>
-					<li><a href="profile.html" target="content">profile</a>
-					<li><a href="icon.html" target="content">icon</a>
-					<li><a href="graph.html" target="content">test</a>
+					<li id="home">home
+					<li id="map">map
+					<li id="device">device
+					<li id="line">line
+					<li id="address">address
+					<li id="account">account
+					<li id="profile">profile
+					<li id="icon">icon
+					<li id="message">message
 				</ul>
-				<form id="form">
-					<ul>
-						<li><input type="button" id="btn_signout" value="SignOut">
-					</ul>
-				</form>
+				<ul>
+					<li><input type="button" id="btn_signout" value="SignOut">
+				</ul>
 			</nav>
-		</div>
+		</header>
 		
-		<div class="content">
-			<iframe name="content" id="content"></iframe>
-		</div>
+		<section class="content">
+			<iframe id="content"></iframe>
+		</section>
 		
-		<div class="dialog">
-			<iframe name="dialog" id="dialog"></iframe>
-		</div>
+		<section class="message">
+			<input id="close" type="image" src="img/close.png" title="close message dialog">
+			<table>
+				<thead></thead>
+				<tbody></tbody>
+			</table>
+		</section>
 		
-		<div class="loading"></div>
+		<section class="dialog">
+			<iframe id="dialog"></iframe>
+		</section>
+		
+		<section class="screen"></section>
 		
 		<script src="ITAhM.js"></script>
 		

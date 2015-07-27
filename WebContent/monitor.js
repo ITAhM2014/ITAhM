@@ -1,20 +1,6 @@
 ;"use strict";
-var arguments = arguments;
 
-if (!arguments || !arguments["server"] || !arguments["device"] ) {
-	//alert("can not open monitor.\n"+"try again.");
-	
-	//window.close();
-}
-
-//var server = arguments["server"],
-//	ip = arguments["device"]["address"],
-
-var server = "127.0.0.1:2014",
-	ip = "127.0.0.1",
-	elements = {};
-
-document.title = "ITAhM["+ ip +"]";
+var elements = {};
 
 (function (window, undefined) {
 	var xhr, form, device, ifentry, chart, selectedPort,
@@ -24,12 +10,14 @@ document.title = "ITAhM["+ ip +"]";
 			ifInOctets: {},
 			ifOutOctets: {}
 		},
+		realTimeQueue = [],
 		savedBase, savedScale,
 		checkboxList = [],
 		colorIndex, colorArray = ["#f00", "#0f0", "#00f", "#ff0", "#f0f", "#0ff", "#800", "#080", "#008", "#880", "#808", "#088"];
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	function onLoad(e) {
 		elements["body"] = document.getElementsByTagName("body")[0];
@@ -64,50 +52,29 @@ document.title = "ITAhM["+ ip +"]";
 		elements["check_disk"].addEventListener("click", onCheckResource.bind(elements["check_disk"], elements["disk_list"]), false);
 		elements["check_port"].addEventListener("click", onCheckResource.bind(elements["check_port"], elements["port_list"]), false);
 		elements["switch"].addEventListener("change", onChangeSwitch, false);
+	}
+	
+	function load(ip) {
+		window.ip = ip;
 		
-		xhr = new JSONRequest(server, onResponse);
+		xhr = new JSONRequest(top.server, onResponse);
 		
 		sendRequest("snmp");
 	}
 	
-	function onMessage(e) {
-		var data = e.data;
-		
-		if (!data) {
-			return;
-		}
-		
-		switch(data.message) {
-		}
-	}
-	
-	function getDefaultPort() {
-		var entry = device.ifEntry,
-			max = -1,
-			port;
-		
-		for (var index in entry) {
-			port = entry[index];
-			
-			if (Math.max(port.ifHCInOctets || port.ifInOctets, port.ifHCOutOctets || port.ifOutOctets) > max) {
-				selectedPort = port;
-			}
-		}
-	}
-	
-	function load(deviceObject) {
+	function init(deviceObject) {
 		var cpuList, memList, diskList, portList, storage, port, obj,
 			li, checkbox;
 		
 		device = deviceObject;
 		
-		elements["ip"].textContent = ip;
+		elements["ip"].textContent = window.ip;
 		elements["status"].textContent = device.timeout > 0? "down ("+ new Date(device.timeout) +")": "up";
 		elements["uptime"].textContent = Uptime.toString(device["hrSystemUptime"]);
 		elements["name"].textContent = device["sysName"];
 		elements["description"].textContent = device["sysDescr"];
 		elements["enterprise"].textContent = sysObjectID(device["sysObjectID"]);
-		elements["title"].textContent = device["sysName"] +"["+ ip +"]";
+		elements["title"].textContent = device["sysName"] +"["+ window.ip +"]";
 		
 		elements["body"].classList.remove("loading");
 		
@@ -115,6 +82,7 @@ document.title = "ITAhM["+ ip +"]";
 			id: "chart",
 			zoom: "auto",
 			color: "#000",
+			space: 1,
 			onreset: onReset,
 			onchange: onChangeBase
 		});
@@ -169,6 +137,8 @@ document.title = "ITAhM["+ ip +"]";
 				li.appendChild(document.createElement("span")).textContent = "index."+ index;
 				
 				memList.appendChild(li);
+			
+				checkbox.dataset["database"] = "memory";
 			}
 			/**
 			 * non-removable storage
@@ -177,6 +147,8 @@ document.title = "ITAhM["+ ip +"]";
 				li.appendChild(document.createElement("span")).textContent = storage["hrStorageDescr"];
 				
 				diskList.appendChild(li);
+				
+				checkbox.dataset["database"] = "storage";
 			}
 			
 			realTimeData["hrStorageUsed"][index] = {};
@@ -206,12 +178,13 @@ document.title = "ITAhM["+ ip +"]";
 			portList.appendChild(li);
 			
 			realTimeData["ifInOctets"][index] = {};
+			realTimeData["ifOutOctets"][index] = {};
 		}
 	}
 	
 	function update(device) {
 		var checkbox,
-			entry, key,
+			entry, key, data,
 			date = new Date(device["lastResponse"]);
 		
 		date.setMilliseconds(0);
@@ -225,35 +198,43 @@ document.title = "ITAhM["+ ip +"]";
 				index = checkbox.dataset["index"];
 				
 				if (entry === "hrProcessorEntry") {
-					realTimeData["hrProcessorLoad"][index][key] = device[entry][index];
+					data = realTimeData["hrProcessorLoad"][index];
+					data[key] = device[entry][index];
 					
-					chart.draw(realTimeData["hrProcessorLoad"][index]);
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, "#00f");
 				}
 				else if (entry === "hrStorageEntry") {
-					realTimeData["hrStorageUsed"][index][key] = device[entry][index]["hrStorageUsed"];
+					data = realTimeData["hrStorageUsed"][index];
+					entry = device["hrStorageEntry"][index];
 					
-					chart.draw(realTimeData["hrStorageUsed"][index]);
+					data[key] = entry["hrStorageUsed"] *100 / entry["hrStorageSize"];
+					
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, checkbox.dataset["database"] === "memory"? "#f00": "#777");
 				}
 				else if (entry === "ifEntry") {
-					realTimeData["ifInOctets"][index][key] = device[entry][index]["ifInOctets"];
+					var bandwidth = device["ifEntry"][index]["ifSpeed"];
 					
-					chart.draw(realTimeData["ifInOctets"][index]);
+					data = realTimeData["ifInOctets"][index];
+					data[key] = device["ifEntry"][index]["ifInOctets"] *100 /bandwidth;
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, "#0f0");
 					
-					realTimeData["ifOutOctets"][index][key] = device[entry][index]["ifOutOctets"];
-					
-					chart.draw(realTimeData["ifOutOctets"][index]);
+					data = realTimeData["ifOutOctets"][index];
+					data[key] = device["ifEntry"][index]["ifOutOctets"] *100 /bandwidth;
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, "#fa0");
 				}
 			}
 		}
 		
-		console.log(realTimeData["hrProcessorLoad"][4]);
-		
-		setTimeout(sendRequest.bind(window, "realtime"), 1000);
+		chart.clear();
+	}
+	
+	function changeBase(origin, base) {
+		elements["range"].textContent = new Date(origin) +" ~ "+ new Date(base);
 	}
 	
 	function onChangeBase(origin, base) {
 		if (elements["switch"].value === "log") {
-			elements["range"].textContent = new Date(origin) +" ~ "+ new Date(base);
+			changeBase(origin, base);
 		}
 	}
 	
@@ -261,24 +242,19 @@ document.title = "ITAhM["+ ip +"]";
 		if (this.value === "log") {
 			chart.setBase(savedBase);
 			chart.setScale(savedScale);
+			
+			chart.clear();
 		}
 		else {
 			chart.setScale(0);
 			
-			/*realTimeData = {
-				hrProcessorLoad: {},
-				hrStorageUsed: {},
-				ifInOctets: {},
-				ifOutOctets: {}
-			};*/
-			
 			elements["range"].textContent = "real time";
+			
+			requestTimer();
 		}
-		
-		chart.clear();
 	}
 	
-	function onReset(base, size, scale) {
+	function onReset(origin, base, size, scale) {
 		if (elements["switch"].value === "log") {
 			var checkbox;
 		
@@ -292,9 +268,17 @@ document.title = "ITAhM["+ ip +"]";
 					sendRequest(checkbox.dataset["database"], scale, Number(checkbox.dataset["index"]), base, size);
 				}
 			}
+			
+			changeBase(origin, base);
 		}
 		else {
-			sendRequest("realtime");
+			var length=realTimeQueue.length;
+			
+			for (var i=0; i<length; i++) {
+				realTimeQueue[i]();
+			}
+			
+			realTimeQueue = [];
 		}
 	}
 	
@@ -311,8 +295,18 @@ document.title = "ITAhM["+ ip +"]";
 		onChangeResource();
 	}
 	
-	function onChangeResource(entry, index) {
+	function onChangeResource() {
 		chart.clear();
+	}
+	
+	function requestTimer() {
+		if (elements["switch"].value === "log") {
+			return;
+		}
+		
+		sendRequest("realtime");
+		
+		setTimeout(requestTimer, 1000);
 	}
 	
 	function sendRequest(database, scale, index, base, size) {
@@ -330,18 +324,24 @@ document.title = "ITAhM["+ ip +"]";
 			index: index || null
 		};
 		
-		request.data[ip] = o;
+		request.data[window.ip] = o;
 		
 		xhr.request(request);
 	}
 	
 	function drawGraph(database, data) {
 		if (database === "traffic") {
-			chart.draw(data["ifInOctets"]);
-			chart.draw(data["ifOutOctets"]);
+			chart.draw(data["ifInOctets"], "#0f0");
+			chart.draw(data["ifOutOctets"], "#fa0");
 		}
-		else {
-			chart.draw(data);
+		else if (database === "processor") {
+			chart.draw(data, "#00f");
+		}
+		else if (database === "memory") {
+			chart.draw(data, "#f00");
+		}
+		else if (database === "storage") {
+			chart.draw(data, "#777");
 		}
 	}
 	
@@ -361,16 +361,16 @@ document.title = "ITAhM["+ ip +"]";
 			if (json.command === "get") {
 				if (json.database == "snmp") {
 					if (!device) {
-						load(json.data[ip]);
+						init(json.data[window.ip]);
 					}
 				}
 				else if (json.database === "realtime") {
 					if (elements["switch"].value !== "log") {
-						update(json.data[ip]);
+						update(json.data[window.ip]);
 					}
 				}
 				else {
-					drawGraph(json.database, json.data[ip]);
+					drawGraph(json.database, json.data[window.ip]);
 				}
 			}
 		}

@@ -4,7 +4,8 @@
 	var form, dialog;
 	
 	window.addEventListener("load", onLoad, false);
-	//window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	function onLoad(e) {
 		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
@@ -12,7 +13,9 @@
 		dialog = document.getElementById("dialog");
 		
 		form.addEventListener("submit", onAdd, false);
-		
+	}
+	
+	function load() {
 		xhr.request( {
 			database: "profile",
 			command: "get",
@@ -23,20 +26,13 @@
 	function onAdd(e) {
 		e.preventDefault();
 
-		top.postMessage({
-			message: "popup",
-			html: "profile_dialog.html",
-		}, "*");
+		top.showDialog("profile_dialog.html");
 	}
 	
 	function onEdit(profile, e) {
 		e.preventDefault();
 		
-		top.postMessage({
-			message: "popup",
-			html: "profile_dialog.html",
-			data: profile
-		}, "*");
+		top.showDialog("profile_dialog.html", profile);
 	}
 	
 	function onRemove(profile, e) {
@@ -77,13 +73,13 @@
 		return form;
 	}
 	
-	function init(json) {
+	function init(profileData) {
 		var list = document.getElementById("list"),
 			control = document.getElementById("control"),
 			data;
 		
-		for (var name in json) {
-			list.appendChild(createProfile(json[name]))
+		for (var name in profileData) {
+			list.appendChild(createProfile(profileData[name]))
 			.addEventListener("mouseenter", function (e) {
 				this.appendChild(control);
 			}, false);
@@ -95,9 +91,7 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 			
 			console.log(status);

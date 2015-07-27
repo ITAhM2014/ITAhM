@@ -13,17 +13,18 @@
 	}, false);
 	window.focus();
 	
+	window.load = load;
 	
-	function onLoad(e) {	
-	}
-	
-	function load(data) {
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+	function onLoad(e) {
 		form = document.getElementById("form");
 		
 		form.addEventListener("submit", onApply, false);
 		form.addEventListener("reset", onCancel, false);
 		
+		xhr = new JSONRequest(top.server, onResponse);
+	}
+	
+	function load(data) {
 		if (data) {
 			form.name.value = data.name;
 			form.version.value = data.version;
@@ -35,13 +36,7 @@
 			form.name.focus();
 		}
 		
-		loadend();
-	}
-	
-	function loadend() {
-		top.postMessage({
-			message: "loadend",
-		}, "http://app.itahm.com");
+		top.clearScreen();
 	}
 	
 	function onMessage(e) {
@@ -78,9 +73,7 @@
 	}
 	
 	function onCancel(e) {
-		top.postMessage({
-			message: "popup"
-		}, "*");
+		top.closeDialog();
 	}
 	
 	function onResponse(response) {
@@ -88,9 +81,7 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -98,10 +89,8 @@
 			
 			switch (json.command) {
 			case "put":
-				top.postMessage({
-					message: "reload",
-					html: "profile.html"
-				}, "*");
+				top.openContent("profile.html");
+				top.closeDialog();
 			}
 		}
 		else {

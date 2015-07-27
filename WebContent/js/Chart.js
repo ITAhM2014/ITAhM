@@ -37,7 +37,7 @@ function Chart(config) {
 			this.base = Chart.trim(new Date().getTime(), this.scale);
 		}
 		
-		this.origin = this.base - (this.width -1)* timeUnit;
+		this.origin = this.base - Math.floor((this.width -1) / this.space)* timeUnit;
 		
 		this.chart.width = this.width + MARGIN_LEFT + MARGIN_RIGHT;
 		this.chart.height = this.height + MARGIN_TOP + MARGIN_BOTTOM;
@@ -95,13 +95,12 @@ function Chart(config) {
 	
 		this.graphContext.setTransform(1, 0, 0, -1, 0, this.height);
 		
-		this.onreset(this.base, this.width, this.scale);
+		this.onreset(this.origin, this.base, this.width, this.scale);
 	}
 	
 	function adjust(scale) {
 		this.base = Chart.trim(scale === 0? new Date().getTime(): this.base, scale);
-		this.origin = this.base - (this.width -1)* getTimeUnit(scale);
-		
+		this.origin = this.base - Math.floor((this.width -1) / this.space) * getTimeUnit(scale);
 	}
 	
 	function getTimeUnit(scale) {
@@ -133,7 +132,7 @@ function Chart(config) {
 				this.width - Math.abs(scroll),
 				this.height);
 	
-		move = scroll * getTimeUnit(this.scale);
+		move = Math.round(scroll / this.space) * getTimeUnit(this.scale);
 		
 		this.onchange(this.origin - move, this.base - move);
 		
@@ -141,7 +140,9 @@ function Chart(config) {
 	}
 	
 	function onMouseDown(e) {
-		this.chart.onmousemove= onDrag.bind(this, e.clientX, this.scroll);
+		if (this.scale !== 0) {
+			this.chart.onmousemove= onDrag.bind(this, e.clientX, this.scroll);
+		}
 	}
 	
 	function onMouseUp(e) {
@@ -156,7 +157,7 @@ function Chart(config) {
 			return;
 		}
 		
-		move = scroll * getTimeUnit(this.scale);
+		move = Math.round(scroll / this.space) * getTimeUnit(this.scale);
 		
 		this.base -= move;
 		this.origin -= move;
@@ -167,11 +168,18 @@ function Chart(config) {
 	}
 	
 	function onWheel(e) {
+		if (this.scale === 0) {
+			return;
+		}
+		
 		e.stopPropagation();
 		
 		this.zoom(e.wheelDelta > 0);
 	}
 	
+	/**
+	 * draw, invalidate, mouseup
+	 */
 	function drawTimeScale() {
 		var timeUnit = getTimeUnit(this.scale);
 		
@@ -186,33 +194,44 @@ function Chart(config) {
 		/**
 		 * @param x graph의 x축, 1눈금이 scale에 따라 1분, 5분, 6시간을 의미한다.
 		 */
-		var date, year, month, day, hour, minute,
+		var date, year, month, day, hour, minute, second,
 			time = this.base,
+			space = this.space,
 			x = 0;
 		
 		/**
-		 * 분(minute) 값이 0일때까지 x를 움직인다. scale3에서는 항상 x === 0 이다. (그렇지 않다면 오류)
+		 * 분(minute) 값이 0일때까지 x를 움직인다.
+		 * scale3에서는 항상 x === 0 이다. (그렇지 않다면 오류)
+		 * scale0 제외
 		 */
-		do {
-			date = new Date(time);
-			
-			minute = date.getMinutes();
-			if (minute === 0) {
-				break;
+		if (this.scale === 1 || this.scale === 2) {
+			do {
+				date = new Date(time);
+				
+				minute = date.getMinutes();
+				if (minute === 0) {
+					break;
+				}
+				
+				time -= timeUnit;
 			}
-			
-			time -= timeUnit;
+			while (x += space < this.width);
 		}
-		while (x++ < this.width);
 		
-		for (; x < this.width; time -= timeUnit * SCALE_SPACE, x += SCALE_SPACE) {
+		for (; x < this.width; time -= timeUnit * SCALE_SPACE * space, x += SCALE_SPACE * space) {
 			date = new Date(time);
 			
 			month = date.getMonth() +1;
 			day = date.getDate();
 			hour = date.getHours();
+			minute = date.getMinutes();
+			second = date.getSeconds();
 			
-			this.context.fillText(date.getFullYear() +"-"+ (month > 9? month: "0"+ month) +"-"+ (day > 9? day: "0"+ day) +" "+ (hour > 9? hour: "0" + hour), 10, x);
+			this.context.fillText(
+				this.scale === 0?
+				(month > 9? month: "0"+ month) +"-"+ (day > 9? day: "0"+ day) +" "+ (hour > 9? hour: "0" + hour) +":"+(minute > 9? minute: "0" + minute) +":"+(second > 9? second: "0" + second):
+				date.getFullYear() +"-"+ (month > 9? month: "0"+ month) +"-"+ (day > 9? day: "0"+ day) +" "+ (hour > 9? hour: "0" + hour) +":00",
+				10, x);
 		}
 		
 		this.context.restore();
@@ -225,6 +244,7 @@ function Chart(config) {
 		 * @param onreset optional chart가 다시 그려져야 하는 경우 callback
 		 * @param onchange optional drag에 의해 base가 변경되는 경우 callback
 		 * @param zoom optional auto인 경우 wheel event에 반응하여 자동 zoom
+		 * @param space x축 눈금 간격 px
 		 */	
 		//init: function (id, height, label, onreset) {
 		init: function (config) {
@@ -237,6 +257,7 @@ function Chart(config) {
 			this.color = config.color || "#000";
 			this.onreset = config.onreset || new Function();
 			this.onchange = config.onchange || new Function();
+			this.space = config.space || 1;
 			
 			if (config.zoom === "auto") {
 				client.addEventListener("mousewheel", onWheel.bind(this), false);
@@ -283,12 +304,12 @@ function Chart(config) {
 			context.beginPath();
 			context.strokeStyle = color || "#000";
 			
-			for (var x=this.origin, i=0; i<width; i++, x += timeUnit) {
-				value = data[x];
+			for (var time=this.origin, x=0, space=this.space; x<width; x+=space, time += timeUnit) {
+				value = data[time];
 				
 				if (typeof value === "number") {
-					result[x] = value;
-					context.lineTo(i, Math.round(value /100 * height)); 
+					result[time] = value;
+					context.lineTo(x, Math.round(value /100 * height)); 
 				}
 				else {
 					context.stroke();
@@ -310,7 +331,7 @@ function Chart(config) {
 		},
 		
 		clear: function () {
-			if (this.scale === 0) {console.log("adjust");
+			if (this.scale === 0) {
 				adjust.call(this, 0);
 			}
 			
@@ -341,8 +362,10 @@ function Chart(config) {
 		},
 		
 		setBase: function (base) {
+			var count = Math.floor(this.width -1 / this.space);
+			
 			this.base = base;
-			this.origin = this.base - (this.width -1)* getTimeUnit(this.scale);
+			this.origin = this.base - count * getTimeUnit(this.scale);
 		},
 		
 		setScale: function (scale) {
@@ -369,8 +392,10 @@ function Chart(config) {
 		var date = new Date(time);
 		
 		date.setMilliseconds(0);
-		date.setSeconds(0);
 		
+		if (scale == 1) {
+			date.setSeconds(0);
+		}
 		if (scale == 2) {
 			var minutes = date.getMinutes();
 			

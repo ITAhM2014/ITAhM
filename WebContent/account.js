@@ -4,15 +4,19 @@
 	var form, dialog;
 	
 	window.addEventListener("load", onLoad, false);
-	//window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	function onLoad(e) {
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
 		form = document.getElementById("form");
 		dialog = document.getElementById("dialog");
 		
 		form.addEventListener("submit", onAdd, false);
 		
+		xhr = new JSONRequest(top.server, onResponse);
+	}
+	
+	function load() {
 		xhr.request( {
 			database: "account",
 			command: "get",
@@ -23,20 +27,14 @@
 	function onAdd(e) {
 		e.preventDefault();
 
-		top.postMessage({
-			message: "popup",
-			html: "account_dialog.html",
-		}, "*");
+		top.openContent("account_dialog.html");
+		top.closeDialog();
 	}
 	
 	function onEdit(json, e) {
 		e.preventDefault();
 		
-		top.postMessage({
-			message: "popup",
-			html: "account_dialog.html",
-			data: json
-		}, "*");
+		top.showDialog("account_dialog.html", json);
 	}
 	
 	function onRemove(json, e) {
@@ -87,9 +85,7 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -101,7 +97,7 @@
 				
 				break;
 			case "delete":
-				window.location.reload();
+				top.openContent("account.html");
 			}
 		}
 		else {

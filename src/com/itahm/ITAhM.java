@@ -13,8 +13,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.request.SignIn;
-import com.itahm.http.Message;
 import com.itahm.http.Listener;
+import com.itahm.http.Request;
+import com.itahm.http.Response;
 import com.itahm.session.Session;
 
 public class ITAhM implements EventListener, Closeable {
@@ -31,14 +32,15 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("realtime", "com.itahm.request.RealTime");
 		commandMap.put("processor", "com.itahm.request.Processor");
 		commandMap.put("storage", "com.itahm.request.Storage");
+		commandMap.put("memory", "com.itahm.request.Storage");
 	}
 	
 	private final Listener http;
 	private final Database database;
 	private final SnmpManager snmp;
-	private final Map<SocketChannel, Message> eventQueue;
+	private final Map<SocketChannel, Response> monitor;
 	
-	public ITAhM(int tcpPort, String path) throws IOException {
+	public ITAhM(int tcpPort, String path) throws IOException, ITAhMException {
 		System.out.println("ITAhM service is started");
 		
 		File root = new File(path, "itahm");
@@ -47,7 +49,7 @@ public class ITAhM implements EventListener, Closeable {
 		database = new Database(root);
 		snmp = new SnmpManager(root, this);	
 		http = new Listener(this, tcpPort);
-		eventQueue = new HashMap<SocketChannel, Message>();
+		monitor = new HashMap<SocketChannel, Response>();
 	}
 
 	private boolean signin(String username, String password) {
@@ -65,6 +67,12 @@ public class ITAhM implements EventListener, Closeable {
 		return !data.isNull(username);
 	}
 	
+	/**
+	 * method에서 바로 queue에 넣지 않고 false를 반환해서 caller가 처리하도록 하는 이유는
+	 * caller가 method에 channel 과 message를 전달하지 않았기 때문
+	 * @param json request json
+	 * @return false 즉시 처리하지 않고 monitor queue에 보관하는 경우 
+	 */
 	private boolean processRequest(JSONObject json, Session session) {
 		try {
 			if (json.has("database")) {
@@ -74,12 +82,16 @@ public class ITAhM implements EventListener, Closeable {
 				if ("signout".equals(json.getString("command"))) {
 					session.close();
 				}
-				else if ("event".equals(json.getString("command"))) {
+				else if ("monitor".equals(json.getString("command"))) {
 					return false;
+				}
+				else {
+					json.put("data", JSONObject.NULL);
 				}
 			}
 		}
 		catch(JSONException jsone) {
+			json.put("data", JSONObject.NULL);
 		}
 		
 		return true;
@@ -109,13 +121,13 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void onClose(SocketChannel channel) {
-		synchronized(this.eventQueue) {
-			this.eventQueue.remove(channel);
+		synchronized(this.monitor) {
+			this.monitor.remove(channel);
 		}
 	}
 
 	@Override
-	public void onRequest(SocketChannel channel, Message request, Message response) {
+	public void onRequest(SocketChannel channel, Request request, Response response) {
 		String cookie = request.cookie();
 		String user = request.user();
 		Session session = null;
@@ -131,7 +143,7 @@ public class ITAhM implements EventListener, Closeable {
 				if (signin(user, request.password())) {
 					session = Session.getInstance();
 					
-					response.cookie(session.getID());
+					response.header("Set-Cookie", String.format(Response.COOKIE, session.getID()));
 				}
 				else {
 				}
@@ -153,22 +165,24 @@ public class ITAhM implements EventListener, Closeable {
 		
 		session.update();
 		*/
+		JSONObject jo = request.getJSONObject();
+		
 		try {
-			try {
-				JSONObject jo = request.body();
-				
+			if (jo == null) {
+				// signin 등과 body가 없고 header만으로 처리하는 경우
+				response.status(200, "OK").send(channel, "");
+			}
+			else {
 				if (processRequest(jo, session)) {
-					response.status("HTTP/1.1 200 OK").send(channel, jo.toString());
+					response.status(200, "OK").send(channel, jo.toString());
 				}
 				else {
-					synchronized(eventQueue) {
-						eventQueue.put(channel, response);
+					// processRequest가 false를 반환하면 모니터 요청인 것
+					synchronized(this.monitor) {
+						this.monitor.put(channel, response);
 					}
-				}	
-			} catch (JSONException jsone) {
-				 // signin 등과 같이내용 없는 요청이 올 경우
-				response.status("HTTP/1.1 200 OK").send(channel);
-			} 
+				}
+			}
 		}catch (IOException ioe) {
 			onError(ioe);
 		}	
@@ -176,15 +190,17 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void onEvent() {
-		synchronized(this.eventQueue) {
+		synchronized(this.monitor) {
 			try {
-				Iterator<SocketChannel> iterator = eventQueue.keySet().iterator();
+				Iterator<SocketChannel> iterator = this.monitor.keySet().iterator();
 				SocketChannel channel;
 				
 				while (iterator.hasNext()) {
 					channel = iterator.next();
 					
-					eventQueue.get(channel).status("HTTP/1.1 200 OK").send(channel, new JSONObject().put("event", "test").toString());
+					this.monitor.get(channel).
+					status(200, "OK").
+					send(channel, new JSONObject().put("event", "test").toString());
 					
 					iterator.remove();
 				}
@@ -220,7 +236,7 @@ public class ITAhM implements EventListener, Closeable {
 		System.out.println("ITAhM service is end");
 	}
 	
-	public static void main(String [] args) throws IOException {
+	public static void main(String [] args) throws IOException, ITAhMException {
 		final ITAhM itahm = new ITAhM(2014, ".");
 		
 		Runtime.getRuntime().addShutdownHook(new Thread()

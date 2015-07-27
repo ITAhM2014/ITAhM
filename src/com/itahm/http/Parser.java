@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.itahm.ITAhMException;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class Parser.
@@ -29,7 +31,7 @@ public class Parser {
 	}
 	
 	/** The message. */
-	private Message message;
+	private Request message;
 	
 	/** The buffer. */
 	private byte [] buffer;
@@ -47,7 +49,7 @@ public class Parser {
 	 * Instantiates a new parser.
 	 */
 	public Parser() {
-		message = new Message();
+		message = new Request();
 		body = new ByteArrayOutputStream();
 		status = Status.init;
 	}
@@ -58,8 +60,9 @@ public class Parser {
 	 * @param src the src
 	 * @return true, if successful
 	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws ITAhMException 
 	 */
-	public boolean update(ByteBuffer src) throws IOException {
+	public boolean update(ByteBuffer src) throws IOException, ITAhMException {
 		try {
 			switch(this.status) {
 			case init:
@@ -75,10 +78,10 @@ public class Parser {
 				return false;
 			}
 		}
-		catch (HttpException pe) {
+		catch (ITAhMException itahme) {
 			this.status = Status.closed;
 			
-			throw pe;
+			throw itahme;
 		}
 	}
 	
@@ -87,7 +90,7 @@ public class Parser {
 	 *
 	 * @return the message
 	 */
-	public Message message() {
+	public Request message() {
 		return this.message;
 	}
 	
@@ -112,7 +115,7 @@ public class Parser {
 	 */
 	public void clear() {
 		this.body.reset();
-		this.message = new Message();
+		this.message = new Request();
 	}
 	
 	/**
@@ -121,8 +124,9 @@ public class Parser {
 	 * @param src the src
 	 * @return true, if successful
 	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws ITAhMException 
 	 */
-	private boolean parseRequest(ByteBuffer src) throws IOException {
+	private boolean parseRequest(ByteBuffer src) throws IOException, ITAhMException {
 		String line = readLine(src);
 		
 		if (line == null) {
@@ -137,15 +141,9 @@ public class Parser {
 		}
 		
 		// request-line 파싱
-		String [] token = line.split(" ");
-		if (token.length != 3) {
-			throw new HttpException("invalid request line");
+		if (!this.message.request(line)) {
+			throw new ITAhMException("invalid request line");
 		}
-		
-		this.message.method(token[0]);
-		this.message.version(token[2]);
-		
-		//this.message.set(line);
 		
 		this.status = Status.header;
 		
@@ -158,8 +156,9 @@ public class Parser {
 	 * @param src the src
 	 * @return true, if successful
 	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws ITAhMException 
 	 */
-	private boolean parseHeader(ByteBuffer src) throws IOException {
+	private boolean parseHeader(ByteBuffer src) throws IOException, ITAhMException {
 		String line = readLine(src);
 		
 		if (line == null) {
@@ -173,26 +172,19 @@ public class Parser {
 			int index = line.indexOf(":");
 			
 			if (index == -1) {
-				throw new HttpException("invalid header field");
+				throw new ITAhMException("invalid header field");
 			}
 			
-			this.message.set(line.substring(0, index).toLowerCase(), line.substring(index + 1).trim());
+			this.message.header(line.substring(0, index), line.substring(index + 1).trim());
 			
 			return parseHeader(src);
 		}
 		
 		// header 파싱 완료
-		String value = this.message.get("content-length");
+		this.contentLength = this.message.length();
 		
-		this.contentLength = 0;
-		
-		if (value != null) {
-			try {
-				this.contentLength = Integer.parseInt(value);
-			}
-			catch(NumberFormatException nfe) {
-				throw new HttpException(String.format("invalid content-length %s", value));
-			}
+		if (this.contentLength < 0) {
+			throw new ITAhMException("invalid content-length");
 		}
 		
 		src.compact().flip();
@@ -208,8 +200,9 @@ public class Parser {
 	 * @param src the src
 	 * @return true, if successful
 	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws ITAhMException 
 	 */
-	private boolean parseBody(ByteBuffer src) throws IOException {
+	private boolean parseBody(ByteBuffer src) throws IOException, ITAhMException {
 		byte [] bytes = new byte[src.limit()];
 		
 		src.get(bytes);
@@ -222,11 +215,11 @@ public class Parser {
 		}
 		
 		if (length > this.contentLength) {
-			throw new HttpException(String.format("out of content length %d/%d", length, this.contentLength));
+			throw new ITAhMException(String.format("out of content length %d/%d", length, this.contentLength));
 		}
 		
 		// body 조합 완료
-		this.message.set(this.body.toByteArray());
+		this.message.body(this.body.toByteArray());
 		this.status = Status.init;
 		
 		return true;

@@ -3,54 +3,35 @@
 var elements = {};
 
 (function (window, undefined) {
-	var server, xhr, body, dialog, form;
+	var xhr;
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
 	
-	function onMessage(e) {
-		var data = e.data;
-		
-		if (!data) {
-			return;
-		}
-		
-		switch(data.message) {
-		case "unauthorized":
-			xhr.request({
-				command: "echo"
-			});
-			
-			break;
-		case "signin":
-			popup();
-			
-			load();
-			
-			break;
-		case "popup":
-			popup(data.html, data.data);
-			
-			break;
-		case "reload":
-			reload(data.html);
-			
-			break;
-		case "loadend":
-			body.classList.remove("loading");
-			
-			break;
-		}
-	}
+	window.showDialog = showDialog;
+	window.closeDialog = closeDialog;
+	window.signOut = signOut;
+	window.clearScreen = clearScreen;
+	window.openContent = openContent;
 
 	function onLoad(e) {
-		server = location.search.replace("?", "");
-		body = document.getElementsByTagName("body")[0];
-		dialog = document.getElementById("dialog");
-		content = document.getElementById("content");
-		form = document.getElementById("form");
+		window.server = location.search.replace("?", "");
 		
-		elements["signout"] = document.getElementById("btn_signout");
+		elements["dialog"] = document.getElementById("dialog");
+		elements["content"] = document.getElementById("content");
+		
+		elements["body"] = document.getElementsByTagName("body")[0];
+		
+		document.getElementById("btn_signout").addEventListener("click", onSignOut, false);
+		document.getElementById("home").onclick = openContent.bind(window, "monitor.html", "127.0.0.1");
+		document.getElementById("map").onclick = openContent.bind(window, "map.html");
+		document.getElementById("device").onclick = openContent.bind(window, "device_list.html");
+		document.getElementById("line").onclick = openContent.bind(window, "line_list.html");
+		document.getElementById("address").onclick = openContent.bind(window, "address.html");
+		document.getElementById("account").onclick = openContent.bind(window, "account.html");
+		document.getElementById("profile").onclick = openContent.bind(window, "profile.html");
+		document.getElementById("icon").onclick = openContent.bind(window, "icon.html");
+		document.getElementById("message").onclick = onShowMessage;
+		document.getElementById("close").onclick = onCloseMessage;
 		
 		if (server == "") {
 			location.href = "ITAhM.html?"+ prompt("server address[:tcp port]");
@@ -65,13 +46,10 @@ var elements = {};
 		});
 	}
 	
-	function load() {
-		elements["signout"].addEventListener("click", onSignOut, false);
+	function load() {		
+		openContent("monitor.html", "127.0.0.1");
 		
-		content.src = "home.html";
-		
-		//body.classList.remove("dialog");
-		body.classList.remove("loading");
+		clearScreen();
 	}
 	
 	function onSignOut(e) {
@@ -79,9 +57,9 @@ var elements = {};
 	}
 	
 	function signOut() {
-		content.src = "about:blank";
+		elements["content"].src = "about:blank";
 		
-		popup("signin.html");
+		showDialog("signin.html");
 	}
 	
 	function onResponse(response) {
@@ -109,31 +87,52 @@ var elements = {};
 		}
 	}
 	
-	function popup(html, data) {
-		if (html) {
-			body.classList.add("loading");
-			
-			dialog.onload = onPopUp.bind(dialog, data);
-			dialog.src = html;
-		}
-		else {
-			body.classList.remove("dialog");
-		}
+	function openContent(html, data) {
+		elements["content"].onload = onOpenContent.bind(undefined, data);
+		elements["content"].src = html;
+	}
+	
+	function onOpenContent(data) {
+		elements["content"].contentWindow.load(data);
+		elements["content"].onload = undefined;
+	}
+	
+	function onShowMessage(e) {
+		elements["body"].classList.add("message");
+	}
+	
+	function onCloseMessage(e) {
+		elements["body"].classList.remove("message");
+	}
+	
+	/**
+	 * dialog가 완전히 load 될때까지 loading중임을 보여줌(class=loading)
+	 */
+	function showDialog(html, data) {
+		elements["body"].classList.add("loading");
+		
+		elements["dialog"].onload = onPopUp.bind(elements["dialog"], data);
+		elements["dialog"].src = html;
+	}
+	
+	function closeDialog() {
+		elements["body"].classList.remove("dialog");
+	}
+
+	function clearScreen() {
+		elements["body"].classList.remove("loading");
 	}
 	
 	function reload(html) {
-		content.src = html || "about:blank";
+		elements["content"].src = html || "about:blank";
 		
-		body.classList.remove("dialog");
+		elements["body"].classList.remove("dialog");
 	}
 
-	function onPopUp(data, e) {
-		dialog.contentWindow.postMessage({
-			message: "data",
-			data: data
-		}, "http://app.itahm.com");
+	function onPopUp(data, e) {		
+		elements["dialog"].contentWindow.load(data);
 		
-		body.classList.add("dialog");
+		elements["body"].classList.add("dialog");
 	}
 	
 })(window);

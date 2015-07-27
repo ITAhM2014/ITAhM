@@ -1,17 +1,18 @@
 ;"use strict";
 
 (function (window, undefined) {
-	var xhr, device, form, profile,
+	var form, profile,
 		func = {};
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
 	window.addEventListener("keydown", function (e) {
 		if (e.keyCode == 27) {
 			form.reset();
 		}
 	}, false);
 	window.focus();
+	
+	window.load = load;
 	
 	function onLoad(e) {
 		form = document.getElementById("form");
@@ -22,11 +23,21 @@
 		
 		func["apply"] = apply.bind(form, null);
 		
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
+		window.xhr = new JSONRequest(top.server, onResponse);
 	}
 	
-
-	function load() {
+	function load(device) {
+		window.device = device;
+		
+		window.xhr.request({
+			database: "profile",
+			command: "get"
+		});
+	}
+	
+	function init() {
+		var device = window.device;
+		
 		if (!device) {
 			func["apply"] = apply.bind(form, null);
 			
@@ -44,32 +55,7 @@
 			form.name.select();
 		}
 		
-		loadend();
-	}
-	
-	function loadend() {
-		top.postMessage({
-			message: "loadend"
-		}, "http://app.itahm.com");
-	}
-	
-	function onMessage(e) {
-		var data = e.data,
-			message;
-		
-		if (!data) {
-			return;
-		}
-		
-		message = data.message;
-		device = data.data;
-		
-		if (message === "data") {
-			xhr.request({
-				database: "profile",
-				command: "get"
-			});	
-		}
+		top.clearScreen();
 	}
 	
 	function onApply(e) {
@@ -106,7 +92,7 @@
 		json["profile"] = profile;
 		json["label"] = label;
 		
-		xhr.request (request);
+		window.xhr.request (request);
 	}
 	
 	function trimLabel(labelString) {
@@ -125,9 +111,7 @@
 	}
 	
 	function onCancel(e) {
-		top.postMessage({
-			message: "popup"
-		}, "http://app.itahm.com");
+		top.closeDialog();
 	}
 	
 	function onResponse(response) {
@@ -135,9 +119,7 @@
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {
@@ -151,14 +133,12 @@
 						profile.appendChild(document.createElement("option")).text = name;
 					}
 					
-					load();
+					init();
 				}
 			}
 			else if (command === "put") {
-				top.postMessage({
-					message: "reload",
-					html: "device_list.html"
-				}, "*");
+				top.openContent("device_list.html");
+				top.closeDialog();
 			}
 		}
 		else {

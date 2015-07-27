@@ -1,20 +1,15 @@
 ;"use strict";
 
+var elements = {};
+
 (function (window, undefined) {
-	var xhr,list,form,dialog,remove = {}, unit;
+	var list,form,dialog,remove = {};
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	function onLoad(e) {
-		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
-		
-		xhr.request({
-			command: "echo"
-		});
-	}
-	
-	function load() {
 		list = document.getElementById("list");
 		form = document.getElementById("form");
 		dialog = document.getElementById("dialog");
@@ -22,25 +17,16 @@
 		form.addEventListener("submit", onAdd, false);
 		form.addEventListener("reset", onRemove, false);
 		
-		
-		unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
-		
+		window.unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
+		window.xhr = new JSONRequest(top.server, onResponse);
+	}
+	
+	function load() {
 		xhr.request( {
 			database: "line",
 			command: "get",
 			data: null
 		});
-	}
-	
-	function onMessage(e) {
-		var data = e.data;
-		
-		if (!data) {
-			return;
-		}
-		
-		switch(data.message) {
-		}
 	}
 	
 	function onAdd(e) {

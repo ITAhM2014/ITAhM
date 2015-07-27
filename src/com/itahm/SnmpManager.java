@@ -21,10 +21,11 @@ import org.snmp4j.event.ResponseListener;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import com.itahm.http.Message;
 import com.itahm.json.JSONFile;
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.Node;
+import com.itahm.http.Request;
+import com.itahm.http.Response;
 
 public class SnmpManager extends TimerTask implements ResponseListener, Closeable  {
 
@@ -77,11 +78,11 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	
 	private int lastRequestTime = -1;
 	
-	public SnmpManager(EventListener eventListener) throws IOException {
+	public SnmpManager(EventListener eventListener) throws IOException, ITAhMException {
 		this(new File("."), eventListener);
 	}
 	
-	public SnmpManager(File path, EventListener eventListener) throws IOException {
+	public SnmpManager(File path, EventListener eventListener) throws IOException, ITAhMException {
 		itahm = eventListener;
 		snmp = new org.snmp4j.Snmp(new DefaultUdpTransportMapping());
 		timer = new Timer(true);
@@ -89,8 +90,15 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		root.mkdir();
 		
-		snmpFile.load(new File(root, "snmp"));
-		addrFile.load(new File(root, "address"));
+		
+		try {
+			snmpFile.load(new File(root, "snmp"));
+			addrFile.load(new File(root, "address"));
+		} catch (ITAhMException e) {
+			e.printStackTrace();
+			
+			throw new ITAhMException("can not open required file", e);
+		}
 		
 		snmp.listen();
 		
@@ -277,7 +285,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		}
 	}
 	
-	public static void main(String [] args) {
+	public static void main(String [] args) throws ITAhMException {
 		SnmpManager manager;
 		try {
 			manager = new SnmpManager(new EventListener () {
@@ -293,7 +301,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 				}
 
 				@Override
-				public void onRequest(SocketChannel channel, Message request, Message response) {
+				public void onRequest(SocketChannel channel, Request request, Response response) {
 					
 				}
 

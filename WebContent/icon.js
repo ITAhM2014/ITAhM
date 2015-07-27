@@ -6,7 +6,8 @@ var elements = {};
 	var xhr, map = {}, dialog, group;
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
+	
+	window.load = load;
 	
 	function onLoad(e) {
 		xhr = new JSONRequest(top.location.search.replace("?", ""), onResponse);
@@ -16,11 +17,9 @@ var elements = {};
 			network: document.getElementById("network"),
 			etc: document.getElementById("etc")
 		};
-		
-		loadIcon();
 	}
 	
-	function loadIcon() {
+	function load() {
 		var icons = document.getElementsByTagName("img"),
 		icon, li;
 		
@@ -37,20 +36,10 @@ var elements = {};
 	}
 	
 	function onSelect(img, e) {
-		top.postMessage({
-			message: "popup",
-			html: "icon_dialog.html",
-			data: {
-				src: img.src,
-				type: img.id
-			}
-		}, "*");
-	}
-	
-	
-	function onMessage(e) {
-		switch (e.data) {
-		}
+		top.showDialog("icon_dialog.html", {
+			src: img.src,
+			type: img.id
+		});
 	}
 	
 	function onLoadIcon(map) {
@@ -77,45 +66,13 @@ var elements = {};
 		
 		return li;
 	}
-	/*
 	
-	function onEdit(json, e) {
-		e.preventDefault();
-		
-		dialog.contentWindow.postMessage(json, "*");
-		
-		dialog.classList.add("show");
-	}
-	
-	function onRemove(json, e) {
-		var request = {
-				database: "account",
-				command: "delete",
-				key: json.username
-		};
-		
-		xhr.request(request);
-	}
-
-	function init(json) {
-		var icon, id;
-
-		for (id in json) {
-			icon = json[id];
-			
-			map[id] = new Image();
-			map[id].src = icon.src;
-		}
-	}
-*/	
 	function onResponse(response) {
 		if ("error" in response) {
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 		}
 		else if ("json" in response) {

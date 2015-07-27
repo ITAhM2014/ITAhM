@@ -47,7 +47,7 @@ public class Processor extends Request {
 		long base;
 		int size;
 		int index;
-		int scale;
+		int scale = 1;
 		
 		try {
 			base = value.getLong("base");
@@ -57,14 +57,8 @@ public class Processor extends Request {
 			if (value.has("scale")) {
 				scale = value.getInt("scale");
 			}
-			else {
-				scale = 1;
-			}
 		}
-		
-		catch (JSONException jsone) {
-			jsone.printStackTrace();
-			
+		catch (JSONException jsone) {	
 			return null;
 		}
 		
