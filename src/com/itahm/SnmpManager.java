@@ -3,9 +3,9 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -21,6 +21,7 @@ import org.snmp4j.event.ResponseListener;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import com.itahm.json.Event;
 import com.itahm.json.JSONFile;
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.Node;
@@ -34,13 +35,14 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	private final Timer timer;
 	private final File root;
 	private final JSONFile snmpFile = new JSONFile();
+	private JSONObject snmpData;
 	private final JSONFile addrFile = new JSONFile();
 	
 	public static enum FILE {
 		SNMP, ADDRESS
 	}
 	
-	private final Map<String, Node> nodeList = new HashMap<String, Node>();
+	private final Map<String, Node> nodeList;
 	private final Set<String> realTimeNodeList = new HashSet<String>();
 	
 	private final static PDU pdu = new PDU();
@@ -87,9 +89,8 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		snmp = new org.snmp4j.Snmp(new DefaultUdpTransportMapping());
 		timer = new Timer(true);
 		root = new File(path, "snmp");
-		
+		nodeList = Node.getMap();
 		root.mkdir();
-		
 		
 		try {
 			snmpFile.load(new File(root, "snmp"));
@@ -100,69 +101,54 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			throw new ITAhMException("can not open required file", e);
 		}
 		
+		snmpData = snmpFile.getJSONObject();
+		
 		snmp.listen();
 		
-		if (snmpFile.get("127.0.0.1") == null) {
-			snmpFile.put("127.0.0.1", new JSONObject()
-				.put("ip","127.0.0.1")
-				.put("udp", 161)
-				.put("community", "public")
-				.put("ifEntry", new JSONObject())
-				.put("hrProcessorLoad", new JSONObject())
-			);
-			
-			snmpFile.save();
-		}
-		
-		JSONObject snmpData = snmpFile.getJSONObject();
-		
-		for (String ip: JSONObject.getNames(snmpData)) {
-			addNode(Node.create(itahm, root, snmpData.getJSONObject(ip)));
-		};
+		snmpData = snmpFile.getJSONObject();
 		
 		timer.scheduleAtFixedRate(this, 1000, 1000);
 		
 		System.out.println("snmp manager is running");
 	}
 	
-	private boolean addNode (Node node) {
-		synchronized(this.nodeList) {
-			String ip = node.getIPAddress();
-			
-			if (!this.nodeList.containsKey(ip)) {
-				this.nodeList.put(ip, node);
-				
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	
 	public Node addNode(String ip, int udp, String community) {
-		JSONObject snmpTable = snmpFile.getJSONObject();
-		JSONObject jo = new JSONObject()
-			.put("ip", ip)
-			.put("udp", udp)
-			.put("community", community)
+		JSONObject nodeData;
+		
+		if (this.snmpData.has(ip)) {
+			nodeData = this.snmpData.getJSONObject(ip);
+		}
+		else {
+			nodeData = new JSONObject()
 			.put("ifEntry", new JSONObject())
 			.put("hrProcessorEntry", new JSONObject())
 			.put("hrStorageEntry", new JSONObject());
+			
+			this.snmpData.put(ip, nodeData);
+			
+			try {
+				this.snmpFile.save();
+			} catch (IOException ioe) {
+				// TODO 당장 문제가 되지는 않지만 일반적으로 발생하면 안되는 예외
+				ioe.printStackTrace();
+			}
+		}
 		
 		try {
-			snmpTable.put(ip, jo);
-			
-			addNode(Node.create(this.itahm, this.root, jo));
+			return new Node(this.itahm, this.root, nodeData, ip, udp, community);
+		} catch (UnknownHostException e) {
+			return null;
 		}
-		catch (JSONException | IOException e) {
-			e.printStackTrace();
+	}
+	
+	public void removeNode(String ip) {
+		synchronized(this.nodeList) {
+			this.nodeList.remove(ip);
 		}
-		
-		return null;
 	}
 	
 	public void addRealTimeNode(String ip) {
-		synchronized(this.nodeList) {
+		synchronized(this.realTimeNodeList) {
 			this.realTimeNodeList.add(ip);
 		}
 	}
@@ -201,13 +187,13 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		if (response == null) {			
 			// TODO response timed out
 			
-			node.timeOut();
+			node.success(false);
 			return;
 		}
 		
 		int status = response.getErrorStatus();
 		
-		node.setResponseTime();
+		node.success(true);
 		
 		if (status == PDU.noError) {
 			try {
@@ -232,56 +218,74 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		}
 	}
 	
-	public void run() {		
+	/**
+	 * TimerTask 의 abstract method
+	 * 1초마다 수행되는 것으로, 실시간 요청이 있는 node에게만 snmp request를 전송하며
+	 * 만일 분이 바뀌면 (1분마다) 모든 node에게 snmp request를 전송한다. 
+	 */
+	public void run() {
+		
 		Calendar calendar = Calendar.getInstance();
 		int minutes = calendar.get(Calendar.MINUTE);
 		long requestTime = calendar.getTimeInMillis();
 		
-		synchronized(this.nodeList) {
-			synchronized(this.realTimeNodeList) {
-				if (this.lastRequestTime != minutes) {
-					try {
-						this.addrFile.save();
-						this.snmpFile.save();
-					} catch (IOException ioe) {
-						// TODO fatal error
-						
-						ioe.printStackTrace();
-					}
-					
-					loop(this.nodeList.keySet().iterator(), requestTime);
-					
-					this.lastRequestTime = minutes;
-				}
-				else {
-					loop(this.realTimeNodeList.iterator(), requestTime, true);
-				}
-			}
-		}
-	}
-	
-	private void loop (Iterator<String> iterator, long requestTime){
-		loop(iterator, requestTime, false);
-	}
-	
-	private void loop (Iterator<String> iterator, long requestTime, boolean remove){
-		Node node;
-		
 		try {
-			while (iterator.hasNext()) {
-				node = this.nodeList.get(iterator.next());
-				node.setRequestTime(requestTime);
+			if (this.lastRequestTime != minutes) {
+				this.addrFile.save();
+				this.snmpFile.save();
 				
-				this.snmp.send(pdu, node, node, this);
+				loop(requestTime);
 				
-				if (remove) {
-					iterator.remove();
-				}
+				this.lastRequestTime = minutes;
+			}
+			else {
+				realTimeLoop(requestTime);
 			}
 		} catch (IOException ioe) {
 			// TODO fatal error
 			
 			ioe.printStackTrace();
+		}
+	}
+	
+	private void loop (long requestTime) throws IOException{
+		Iterator<String> it;
+		Node node;
+		
+		synchronized(this.nodeList) {
+			it = this.nodeList.keySet().iterator();
+			
+			while (it.hasNext()) {
+				node = this.nodeList.get(it.next());
+				node.setRequestTime(requestTime);
+				
+				this.snmp.send(pdu, node, node, this);
+			}
+		}
+	}
+
+	/**
+	 * 요청이 완료되면 queue를 비운다.
+	 * @param requestTime
+	 * @throws IOException
+	 */
+	private void realTimeLoop (long requestTime) throws IOException{
+		Iterator<String> it;
+		Node node;
+		
+		synchronized(this.realTimeNodeList) {
+			it = this.realTimeNodeList.iterator();	
+	
+			while (it.hasNext()) {
+				node = nodeList.get(it.next());
+				
+				if (node != null) {
+					node.setRequestTime(requestTime);
+					this.snmp.send(pdu, node, node, this);
+				}
+				
+				it.remove();
+			}
 		}
 	}
 	
@@ -311,7 +315,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 				}
 
 				@Override
-				public void onEvent() {
+				public void onEvent(Event event) {
 					
 				}
 				

@@ -8,7 +8,7 @@ var elements = {};
 	window.addEventListener("load", onLoad, false);
 	window.addEventListener("keydown", function (e) {
 		if (e.keyCode == 27) {
-			form.reset();
+			elements["form"].reset();
 		}
 	}, false);
 	window.focus();
@@ -31,6 +31,9 @@ var elements = {};
 		elements["unit"] = document.getElementById("unit");
 		elements["name"] = document.getElementById("name");
 		
+		elements["form"].addEventListener("submit", onApply, false);
+		elements["form"].addEventListener("reset", onCancel, false);
+		
 		xhr = new JSONRequest(top.server, onResponse);
 	}
 	
@@ -39,7 +42,7 @@ var elements = {};
 	}
 	
 	function init(data) {
-		var form = elements["form"];
+		
 		
 		line = data.line;
 		id = line.id;
@@ -48,8 +51,7 @@ var elements = {};
 			throw "InvalidArgumentException";
 		}
 		
-		form.addEventListener("submit", onApply, false);
-		form.addEventListener("reset", onCancel, false);
+		
 		
 		elements["index"].addEventListener("change", onSelectLink, false);
 		elements["remove"].addEventListener("click", onRemove, false);
@@ -194,7 +196,7 @@ var elements = {};
 			if (command === "put" || command === "delete") {
 				line = data[id = Object.keys(data)[0]];
 				
-				top.openContent("http://app.itahm.com");
+				top.openContent("map_edit.html");
 				top.closeDialog();
 			}
 			else if (command == "get") {

@@ -12,10 +12,11 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.request.SignIn;
+import com.itahm.request.Account;
 import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
+import com.itahm.json.Event;
 import com.itahm.session.Session;
 
 public class ITAhM implements EventListener, Closeable {
@@ -29,16 +30,14 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("profile", "com.itahm.request.Profile");
 		commandMap.put("address", "com.itahm.request.Address");
 		commandMap.put("snmp", "com.itahm.request.Snmp");
-		commandMap.put("realtime", "com.itahm.request.RealTime");
 		commandMap.put("processor", "com.itahm.request.Processor");
 		commandMap.put("storage", "com.itahm.request.Storage");
 		commandMap.put("memory", "com.itahm.request.Storage");
 	}
 	
 	private final Listener http;
-	private final Database database;
 	private final SnmpManager snmp;
-	private final Map<SocketChannel, Response> monitor;
+	private final Map<SocketChannel, Response> eventQueue;
 	
 	public ITAhM(int tcpPort, String path) throws IOException, ITAhMException {
 		System.out.println("ITAhM service is started");
@@ -46,32 +45,86 @@ public class ITAhM implements EventListener, Closeable {
 		File root = new File(path, "itahm");
 		root.mkdir();
 		
-		database = new Database(root);
-		snmp = new SnmpManager(root, this);	
+		/**
+		 * Data.initialize가 가장 먼저 수행되어야함.
+		 */
+		Data.initialize(root);
+		
+		snmp = new SnmpManager(root, this);
+		
+		try {
+			initSNMP();
+		}
+		catch (JSONException jsone) {
+			onError(jsone);
+		}
+		
 		http = new Listener(this, tcpPort);
-		monitor = new HashMap<SocketChannel, Response>();
+		eventQueue = new HashMap<SocketChannel, Response>();
+		
+		
 	}
-
+/*
+ * if (snmpFile.get("127.0.0.1") == null) {
+			snmpFile.put("127.0.0.1", new JSONObject()
+				.put("ip","127.0.0.1")
+				.put("udp", 161)
+				.put("community", "public")
+				.put("ifEntry", new JSONObject())
+				.put("hrProcessorLoad", new JSONObject())
+			);
+			
+			snmpFile.save();
+		}
+ */
+	
+	private void initSNMP() {
+		JSONObject deviceData = Data.getJSONObject(Data.Table.DEVICE);
+		JSONObject profileData = Data.getJSONObject(Data.Table.PROFILE);
+		
+		String [] names = JSONObject.getNames(deviceData);
+		JSONObject device;
+		String profileName;
+		JSONObject profile;
+		
+		for (int i=0, length=names.length; i<length; i++) {
+			device = deviceData.getJSONObject(names[i]);
+			if (!device.isNull("profile")) {
+				profileName = device.getString("profile");
+				
+				if (profileData.has(profileName)) {
+					profile = profileData.getJSONObject(profileName);
+					
+					this.snmp.addNode(device.getString("address"), profile.getInt("udp"), profile.getString("community"));
+				}
+			}
+		}
+	}
+	
 	private boolean signin(String username, String password) {
-		JSONObject jo = new JSONObject();
+		JSONObject request = new JSONObject();
 		JSONObject data = new JSONObject();
 		
-		jo.put("database", "account")
+		request.put("database", "account")
 			.put("command", "get")
-			.put("data", data
-				.put(username, new JSONObject()
-					.put("password", password)));
+			.put("data", data.put(username, JSONObject.NULL));
 		
-		new SignIn(this.snmp, this.database, jo);
+		new Account(request, true);
 		
-		return !data.isNull(username);
+		if (!data.isNull(username)) {
+			JSONObject result = data.getJSONObject(username);
+			
+			return password.equals(result.getString("password"));
+		}
+
+		return false;
 	}
 	
 	/**
 	 * method에서 바로 queue에 넣지 않고 false를 반환해서 caller가 처리하도록 하는 이유는
 	 * caller가 method에 channel 과 message를 전달하지 않았기 때문
 	 * @param json request json
-	 * @return false 즉시 처리하지 않고 monitor queue에 보관하는 경우 
+	 * @return false 즉시 처리하지 않고 event queue에 보관하는 경우 
 	 */
 	private boolean processRequest(JSONObject json, Session session) {
 		try {
@@ -82,7 +135,7 @@ public class ITAhM implements EventListener, Closeable {
 				if ("signout".equals(json.getString("command"))) {
 					session.close();
 				}
-				else if ("monitor".equals(json.getString("command"))) {
+				else if ("event".equals(json.getString("command"))) {
 					return false;
 				}
 				else {
@@ -102,7 +155,7 @@ public class ITAhM implements EventListener, Closeable {
 		
 		if (className != null) {
 			try {
-				Class.forName(className).getDeclaredConstructor(SnmpManager.class, Database.class, JSONObject.class).newInstance(this.snmp, this.database, jo);
+				Class.forName(className).getDeclaredConstructor(JSONObject.class).newInstance(jo);
 			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | NoSuchMethodException |SecurityException | IllegalArgumentException | InvocationTargetException e) {
 				e.printStackTrace();
 			}
@@ -121,8 +174,8 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void onClose(SocketChannel channel) {
-		synchronized(this.monitor) {
-			this.monitor.remove(channel);
+		synchronized(this.eventQueue) {
+			this.eventQueue.remove(channel);
 		}
 	}
 
@@ -177,9 +230,9 @@ public class ITAhM implements EventListener, Closeable {
 					response.status(200, "OK").send(channel, jo.toString());
 				}
 				else {
-					// processRequest가 false를 반환하면 모니터 요청인 것
-					synchronized(this.monitor) {
-						this.monitor.put(channel, response);
+					// processRequest가 false를 반환하면 event 요청인 것
+					synchronized(this.eventQueue) {
+						this.eventQueue.put(channel, response);
 					}
 				}
 			}
@@ -189,18 +242,24 @@ public class ITAhM implements EventListener, Closeable {
 	}
 
 	@Override
-	public void onEvent() {
-		synchronized(this.monitor) {
+	public void onEvent(Event event) {
+		JSONObject msg = new JSONObject();
+		
+		msg.put("event", event);
+		
+		synchronized(this.eventQueue) {
 			try {
-				Iterator<SocketChannel> iterator = this.monitor.keySet().iterator();
+				Iterator<SocketChannel> iterator = this.eventQueue.keySet().iterator();
 				SocketChannel channel;
 				
 				while (iterator.hasNext()) {
 					channel = iterator.next();
 					
-					this.monitor.get(channel).
+					
+					
+					this.eventQueue.get(channel).
 					status(200, "OK").
-					send(channel, new JSONObject().put("event", "test").toString());
+					send(channel, msg.toString());
 					
 					iterator.remove();
 				}
@@ -219,8 +278,6 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void close() {
-		this.database.close();
-		
 		try {
 			this.snmp.close();
 		} catch (IOException e) {
@@ -232,6 +289,8 @@ public class ITAhM implements EventListener, Closeable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		Data.close();
 		
 		System.out.println("ITAhM service is end");
 	}

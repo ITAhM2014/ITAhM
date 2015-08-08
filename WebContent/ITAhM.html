@@ -19,15 +19,18 @@
 		<header>
 			<nav>
 				<ul>
-					<li id="home">home
 					<li id="map">map
 					<li id="device">device
 					<li id="line">line
-					<li id="address">address
+				</ul>
+				<ul>
+					<li id="home">system
 					<li id="account">account
 					<li id="profile">profile
 					<li id="icon">icon
-					<li id="message">message
+					<li id="address">address
+					<li id="auto">auto discovery
+					<li id="event">event
 				</ul>
 				<ul>
 					<li><input type="button" id="btn_signout" value="SignOut">
@@ -39,12 +42,20 @@
 			<iframe id="content"></iframe>
 		</section>
 		
-		<section class="message">
-			<input id="close" type="image" src="img/close.png" title="close message dialog">
-			<table>
-				<thead></thead>
-				<tbody></tbody>
-			</table>
+		<section class="event">
+			<div class="thead">
+				<div>
+					<span>time stamp</span>
+					<span>device name</span>
+					<span>ip address</span>
+					<span>resource</span>
+					<span>last status</span>
+					<span>current status</span>
+					<span>notes</span>
+				</div>
+			</div>
+			<div class="tbody" id="event_list"></div>
+			<input id="close" type="image" src="img/close.png" title="close event dialog">
 		</section>
 		
 		<section class="dialog">

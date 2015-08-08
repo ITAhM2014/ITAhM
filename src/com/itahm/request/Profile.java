@@ -1,33 +1,31 @@
 package com.itahm.request;
 
-import java.io.IOException;
-
 import org.json.JSONObject;
 
-import com.itahm.Database;
-import com.itahm.SnmpManager;
+import com.itahm.Data;
 
 public class Profile extends Request {
 
-	public Profile(SnmpManager snmp, Database database, JSONObject request) throws IOException {
-		super(snmp, database, request, Database.FILE.PROFILE);
+	private final JSONObject data;
+	
+	public Profile(JSONObject request) {
+		data = Data.getJSONObject(Data.Table.PROFILE);
 		
-		if (this.file.isEmpty()) {
-			this.file.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
-			
-			this.file.save();
-		}
+		request(request);
 	}
 	
 	@Override
-	protected JSONObject customEach(String command, String key, JSONObject value) {
-		if ("delete".equals(command) && "public".equals(key)) {
+	protected JSONObject execute(String command) {
+		if (!"get".equals(command)) {
 			return null;
 		}
 		
-		JSONObject result = each(command, key, value);
-		
-		return result;
+		return data;
+	}
+	
+	@Override
+	protected JSONObject execute(String command, String key, JSONObject value) {
+		return execute(data, command, key, value);
 	}
 	
 }

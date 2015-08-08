@@ -2,18 +2,30 @@ package com.itahm.request;
 
 import org.json.JSONObject;
 
-import com.itahm.Database;
-import com.itahm.SnmpManager;
+import com.itahm.Data;
 
 public class Snmp extends Request {
 
-	public Snmp(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database, request, SnmpManager.FILE.SNMP);
+	private final JSONObject data;
+	
+	public Snmp(JSONObject request) {
+		data = Data.getJSONObject(Data.Table.SNMP);
+		
+		request(request);
 	}
 
 	@Override
-	protected JSONObject customEach(String command, String key, JSONObject value) {
-		return "get".equals(command)? this.file.get(key): null;
+	protected JSONObject execute(String command) {
+		if (!"get".equals(command)) {
+			return null;
+		}
+		
+		return this.data;
+	}
+	
+	@Override
+	protected JSONObject execute(String command, String key, JSONObject value) {
+		return execute(this.data, command, key, value);
 	}
 	
 }

@@ -1,6 +1,12 @@
 ;"use strict";
 
-var elements = {};
+var elements = {},
+	COLOR_GRAY = "#777777",
+	COLOR_RED = "#ff0000",
+	COLOR_BLUE = "#0000ff",
+	COLOR_ORANGE = "#ffaa00",
+	COLOR_GREEN = "#00ff00",
+	COLOR_YELLOW = "#ffff00";
 
 (function (window, undefined) {
 	var xhr, form, device, ifentry, chart, selectedPort,
@@ -12,8 +18,7 @@ var elements = {};
 		},
 		realTimeQueue = [],
 		savedBase, savedScale,
-		checkboxList = [],
-		colorIndex, colorArray = ["#f00", "#0f0", "#00f", "#ff0", "#f0f", "#0ff", "#800", "#080", "#008", "#880", "#808", "#088"];
+		checkboxList = [];
 	
 	window.addEventListener("load", onLoad, false);
 	
@@ -43,6 +48,7 @@ var elements = {};
 		elements["switch"] = document.getElementById("switch");
 		elements["range"] = document.getElementById("range");
 		elements["title"] = document.getElementById("title");
+		elements["detail"] = document.getElementById("detail");
 		
 		form = document.getElementById("form");
 		ifentry = document.getElementById("ifentry");
@@ -95,6 +101,7 @@ var elements = {};
 			checkbox = document.createElement("input");
 			checkbox.type = "checkbox";
 			checkbox.dataset["database"] = "processor";
+			checkbox.dataset["color"] = COLOR_BLUE;
 			checkbox.dataset["index"] = index;
 			checkbox.dataset["entry"] = "hrProcessorEntry";
 			checkbox.onchange = onChangeResource;
@@ -121,7 +128,6 @@ var elements = {};
 			
 			checkbox = document.createElement("input");
 			checkbox.type = "checkbox";
-			checkbox.dataset["database"] = "storage";
 			checkbox.dataset["index"] = index;
 			checkbox.dataset["entry"] = "hrStorageEntry";
 			checkbox.onchange = onChangeResource;
@@ -139,6 +145,7 @@ var elements = {};
 				memList.appendChild(li);
 			
 				checkbox.dataset["database"] = "memory";
+				checkbox.dataset["color"] = COLOR_RED;
 			}
 			/**
 			 * non-removable storage
@@ -149,6 +156,7 @@ var elements = {};
 				diskList.appendChild(li);
 				
 				checkbox.dataset["database"] = "storage";
+				checkbox.dataset["color"] = COLOR_YELLOW;
 			}
 			
 			realTimeData["hrStorageUsed"][index] = {};
@@ -201,7 +209,7 @@ var elements = {};
 					data = realTimeData["hrProcessorLoad"][index];
 					data[key] = device[entry][index];
 					
-					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, "#00f");
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, COLOR_BLUE);
 				}
 				else if (entry === "hrStorageEntry") {
 					data = realTimeData["hrStorageUsed"][index];
@@ -209,18 +217,18 @@ var elements = {};
 					
 					data[key] = entry["hrStorageUsed"] *100 / entry["hrStorageSize"];
 					
-					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, checkbox.dataset["database"] === "memory"? "#f00": "#777");
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, checkbox.dataset["database"] === "memory"? COLOR_RED: COLOR_YELLOW);
 				}
 				else if (entry === "ifEntry") {
 					var bandwidth = device["ifEntry"][index]["ifSpeed"];
 					
 					data = realTimeData["ifInOctets"][index];
 					data[key] = device["ifEntry"][index]["ifInOctets"] *100 /bandwidth;
-					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, "#0f0");
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, COLOR_GREEN);
 					
 					data = realTimeData["ifOutOctets"][index];
 					data[key] = device["ifEntry"][index]["ifOutOctets"] *100 /bandwidth;
-					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, "#fa0");
+					realTimeQueue[realTimeQueue.length] = chart.draw.bind(chart, data, COLOR_ORANGE);
 				}
 			}
 		}
@@ -229,7 +237,7 @@ var elements = {};
 	}
 	
 	function changeBase(origin, base) {
-		elements["range"].textContent = new Date(origin) +" ~ "+ new Date(base);
+		elements["range"].textContent = new Date(origin).toLocaleString() +" ~ "+ new Date(base).toLocaleString();
 	}
 	
 	function onChangeBase(origin, base) {
@@ -295,7 +303,66 @@ var elements = {};
 		onChangeResource();
 	}
 	
+	/*
+	 * monitor 하고자 하는 resource 선택이 추가되거나 제거되는 경우 발생하는 event
+	 */
 	function onChangeResource() {
+		var detail = elements["detail"],
+			doc = document.createDocumentFragment(),
+			row, col, color;
+		
+		for (var firstChild; firstChild = detail.firstChild; ) {
+			detail.removeChild(firstChild);
+		}
+		
+		for (var i=0, length=checkboxList.length; i<length; i++) {
+			checkbox = checkboxList[i];
+			
+			if (checkbox.checked === true) {
+				row = document.createElement("div");
+				
+				col = document.createElement("span");
+				col.textContent = checkbox.dataset["database"];
+				row.appendChild(col);
+				
+				col = document.createElement("span");
+				col.textContent = checkbox.dataset["index"];
+				row.appendChild(col);
+				
+				col = document.createElement("span");
+				col.textContent = "test";
+				row.appendChild(col);
+				
+				col = document.createElement("span");
+				col.textContent = "test";
+				row.appendChild(col);
+				
+				col = document.createElement("span");
+				col.textContent = "test";
+				row.appendChild(col);
+				
+				col = document.createElement("span");
+				col.textContent = "test";
+				row.appendChild(col);
+				
+				col = document.createElement("span");
+				color = document.createElement("input");
+				try {
+					color.type = "color";
+				}
+				catch (e) {
+					
+				}
+				color.value = checkbox.dataset["color"];
+				col.appendChild(color)
+				row.appendChild(col);
+				
+				doc.appendChild(row);
+			}
+		}
+		
+		detail.appendChild(doc);
+		
 		chart.clear();
 	}
 	
@@ -330,18 +397,22 @@ var elements = {};
 	}
 	
 	function drawGraph(database, data) {
+		if (!data) {
+			throw "null data.";
+		}
+		
 		if (database === "traffic") {
-			chart.draw(data["ifInOctets"], "#0f0");
-			chart.draw(data["ifOutOctets"], "#fa0");
+			chart.draw(data["ifInOctets"], COLOR_GREEN);
+			chart.draw(data["ifOutOctets"], COLOR_ORANGE);
 		}
 		else if (database === "processor") {
-			chart.draw(data, "#00f");
+			chart.draw(data, COLOR_BLUE);
 		}
 		else if (database === "memory") {
-			chart.draw(data, "#f00");
+			chart.draw(data, COLOR_RED);
 		}
 		else if (database === "storage") {
-			chart.draw(data, "#777");
+			chart.draw(data, COLOR_YELLOW);
 		}
 	}
 	

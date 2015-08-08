@@ -36,7 +36,8 @@ canvas {
 	vertical-align: bottom;
 }
 
-table input, table textarea {
+table input,
+table textarea {
 	width: 100%;
 	box-sizing: border-box;
 }
@@ -62,52 +63,16 @@ aside {
 	overflow: auto;
 }
 
-article {
-	position: fixed; top: 0; right: 0; bottom: 0; left: 400px;
+header {
+	position: fixed; top: 0; right: 0; left: 400px; height: 100px;
 }
 
 section {
-	position: absolute; right: 0; left: 0;
-	/*background-color: #fff;*/
+	position: fixed; top: 100px; right: 0; bottom: 120px; left: 400px; 
 }
 
-.tab {
-	display: inline-block;
-	line-height: 30px;
-	text-align: center;
-	width: 60px;
-	border-radius: 5px 5px 0 0;
-	position: absolute; top: -30px; right: 0; left: 0; height: 30px;
-	background-color: #000;
-	color: #ddd;
-}
-
-section:nth-child(1) .tab {
-	left: 5px;
-}
-
-section:nth-child(2) .tab {
-	left: 66px;
-}
-
-.content {
-	position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-	overflow: hidden;
-	overflow-y: scroll;
-	padding: 10px;
-}
-
-.tab a:link, .tab a:visited, .tab a:active {
-	color: #ddd;
-	text-decoration: none;
-}
-
-section:target .tab {
-	background-color: #fff;
-}
-
-section:target .tab a{
-	color: #000;
+footer {
+	position: fixed; right: 0; bottom: 0; left: 400px; height: 120px;
 }
 
 input[type=checkbox] {
@@ -121,32 +86,41 @@ aside ul {
 	overflow: auto;
 }
 
-section h3,
-section h4 {
+header h3,
+header h4 {
 	margin: 0;
 	padding: 0;
 	line-height: 50px;
 	text-align: center;
 }
 
-section.title {
-	top: 0; height: 100px;
+footer>div>span{
+	text-align: center;
+	font-weight: bold;
 }
 
-#chart {
-	top: 100px; bottom: 120px;
+footer>div,
+#detail>div {
+	white-space: nowrap;
+} 
+
+footer span {
+	display: inline-block;
+	width: 10%;
+	min-width: 100px;
 }
 
-#notes {
-	bottom: 0; height: 120px;
+footer span:nth-child(3) {
+	width: 40%;
+}
+
+#detail {
+	position: absolute; top: 1.5em; right: 0; bottom: 0; left: 0;
+	overflow: auto;
 }
 
 #switch {
 	position: absolute; top: 10px; right: 10px;
-}
-
-.blink {
-	text-decoration: blink;
 }
 
 .color {
@@ -165,6 +139,10 @@ section.title {
 
 .gray {
 	background-color: #777;
+}
+
+.yellow {
+	background-color: #ff0;
 }
 
 .blue {

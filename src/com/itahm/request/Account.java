@@ -1,29 +1,49 @@
 package com.itahm.request;
 
-import java.io.IOException;
-
 import org.json.JSONObject;
 
-import com.itahm.Database;
-import com.itahm.SnmpManager;
+import com.itahm.Data;
 
 public class Account extends Request {
 
-	public Account(SnmpManager snmp, Database database, JSONObject request) throws IOException {
-		super(snmp, database, request, Database.FILE.ACCOUNT);
+	private final JSONObject data;
+	private boolean isRoot = false;
+	
+	public Account(JSONObject request) {
+		data = Data.getJSONObject(Data.Table.ACCOUNT);
 		
-		if (this.file.isEmpty()) {
-			this.file.put("root", new JSONObject().put("username", "root").put("password", "root"));
-			
-			this.file.save();
-		}
+		request(request);
 	}
-
+	
+	public Account(JSONObject request, boolean root) {
+		this(request);
+		
+		isRoot = root;
+	}
+	
 	@Override
-	protected JSONObject customEach(String command, String key, JSONObject value) {
-		JSONObject result = each(command, key, value);
-			
+	protected JSONObject execute(String command) {
+		if (!"get".equals(command)) {
+			return null;
+		}
+		
+		if (this.isRoot) {
+			return this.data;
+		}
+		
+		JSONObject result = new JSONObject();
+		String [] keys = JSONObject.getNames(this.data);
+		
+		for (int i=0, length=keys.length; i<length; i++) {
+			result.put(keys[i], JSONObject.NULL);
+		}
+		
 		return result;
+	}
+	
+	@Override
+	protected JSONObject execute(String command, String key, JSONObject value) {
+		return null;
 	}
 	
 }

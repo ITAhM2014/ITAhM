@@ -22,7 +22,8 @@ function JSONRequest() {
 			}
 			
 			if (this.wait) {
-				this.queue.push(send.bind(this, data));
+				//this.queue.push(send.bind(this, data));
+				this.queue[this.queue.length] = send.bind(this, data);
 			}
 			else {
 				send.call(this, data);
@@ -40,11 +41,10 @@ function JSONRequest() {
 	};
 
 	function init(url, callback) {
-		var
-			xhr = this.xhr = new XMLHttpRequest();
+		this.xhr = new XMLHttpRequest();
 		
 		this.header = {};
-		this.open = xhr.open.bind(xhr, "POST", "http://"+ url, true);
+		this.open = this.xhr.open.bind(this.xhr, "POST", "http://"+ url, true);
 		this.onload = onLoad.bind(this, callback);
 		this.onerror = onError.bind(this, callback);
 		this.wait = false;
@@ -52,6 +52,11 @@ function JSONRequest() {
 	}
 	
 	function send(data) {
+		// abort 등 network error에 의해 xhr이 닫힌 경우
+		if (this.xhr === undefined) {
+			this.xhr = new XMLHttpRequest();
+		}
+		
 		this.open();
 		
 		this.xhr.withCredentials = true;

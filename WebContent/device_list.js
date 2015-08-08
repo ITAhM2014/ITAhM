@@ -14,16 +14,12 @@ var elements = {};
 	window.load = load;
 	
 	function onLoad(e) {
-		form = document.getElementById("form");
-		elements["form"] = form;
-		elements["label"] = form.elements["label"];
+		elements["label"] = document.getElementById("label");
 		elements["list"] = document.getElementById("list");
-		elements["monitor"] = document.getElementById("monitor");
 		
-		form.addEventListener("submit", onAdd, false);
-		form.addEventListener("reset", onRemove, false);
 		elements["label"].addEventListener("change", onSelectLabel, false);
-		elements["monitor"].addEventListener("click", onMonitor, false);
+		document.getElementById("add").addEventListener("click", onAdd, false);
+		document.getElementById("remove").addEventListener("click", onRemove, false);
 	}
 	
 	function load() {
@@ -62,12 +58,6 @@ var elements = {};
 	}
 	
 	function onAdd(e) {
-		/*top.postMessage({
-			message: "popup",
-			html: "device_dialog.html"
-		}, "*");
-		*/
-		console.log("debug");
 		top.showDialog("device_dialog.html");
 	}
 	
@@ -147,28 +137,6 @@ var elements = {};
 		}
 	}
 	
-	function onMonitor(e) {
-		var length = selectedList.length,
-			device;
-		
-		if (length === 0) {
-			alert("select device(s) first.");
-			
-			return;
-		}
-		
-		for (var i=0; i<length; i++) {
-			device = selectedList[i];
-			
-			if (device.ip !== "" && device.profile !== "") {
-				window.open("monitor.html").arguments = {
-					server: top.server, 
-					device: device
-				};
-			}
-		}
-	}
-	
 	function createRow(deviceData) {
 		var row = document.createElement("tr"),
 			checkbox = document.createElement("input"),
@@ -239,7 +207,7 @@ var elements = {};
 				
 				break;
 			case "delete":
-				window.location.reload();
+				top.openContent("device_list.html");
 				
 				break;
 			}

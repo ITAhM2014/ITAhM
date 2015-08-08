@@ -27,6 +27,7 @@ import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 
 import com.itahm.EventListener;
+import com.itahm.json.Event;
 import com.itahm.json.RollingFile;
 import com.itahm.json.RollingFile.SCALE;
 import com.itahm.json.RollingMap.Resource;
@@ -38,7 +39,8 @@ public class Node extends CommunityTarget {
 	
 	private static final Map<String, Node> nodeList = new HashMap<String, Node>();
 	
-	private final JSONObject node;
+	private final String ipAddress;
+	private final JSONObject nodeData;
 	private final JSONObject hrProcessorEntry;
 	private final JSONObject ifEntry;
 	private JSONObject ifIndex;
@@ -56,37 +58,30 @@ public class Node extends CommunityTarget {
 	
 	private final EventListener itahm;
 	
-	private boolean timeOut;
-	private int ifAdminStatus;
+	private boolean success = true;
 	
-	private Node(EventListener eventListener, File path, JSONObject nodeData) throws IOException {
-		String ip;
-		File nodeRoot;
+	public Node(EventListener eventListener, File path, JSONObject node, String ip, int udp, String community) throws UnknownHostException {
+		InetAddress.getByName(ip);
 		
-		if (nodeData.has("ip")) {
-			ip = nodeData.getString("ip");
-			try {
-				InetAddress.getByName(ip);
-				
-				synchronized(nodeList) {
-					nodeList.put(ip, this);
-				}
-				
-				setAddress(new UdpAddress(String.format("%s/%d", ip, nodeData.getInt("udp"))));
-				setCommunity(new OctetString(nodeData.getString("community")));
-				setVersion(SnmpConstants.version2c);
-				setRetries(3);
-				setTimeout(3000);
-				
-				nodeRoot = new File(path, ip);
-				nodeRoot.mkdir();
-				
-				rollingMap = new RollingMap(nodeRoot);
-			}
-			catch (UnknownHostException uhe) {
-				
-			}
-		}
+		ipAddress = ip;
+		
+		set(udp, community);
+		
+		setVersion(SnmpConstants.version2c);
+		setRetries(3);
+		setTimeout(3000);
+	
+		nodeList.put(ip, this);
+		
+		System.out.println("node "+ ip +" addedd successfuly. current number of nodes is "+ nodeList.size());
+		
+		File nodeRoot = new File(path, ip);
+		nodeRoot.mkdir();
+			
+		rollingMap = new RollingMap(nodeRoot);
+		
+		itahm = eventListener;
+		nodeData = node;
 		
 		if (!nodeData.has("hrProcessorEntry")) {
 			nodeData.put("hrProcessorEntry", hrProcessorEntry = new JSONObject());
@@ -123,57 +118,47 @@ public class Node extends CommunityTarget {
 			hrStorageIndex = nodeData.getJSONObject("hrStorageIndex");
 		}
 		
-		node = nodeData;
-		
 		inCounter = new HashMap<String, Counter>();
 		outCounter = new HashMap<String, Counter>();
 		hcInCounter = new HashMap<String, Counter>();
 		hcOutCounter = new HashMap<String, Counter>();
 		
 		address = new Address();
-		
-		itahm = eventListener;
-		
-		timeOut = false;
-		ifAdminStatus = 2;
 	}
 	
-	public final static Node create(EventListener eventListener, File path, JSONObject nodeData) throws IOException {
+	public void set(int udp, String community) {
+		setAddress(new UdpAddress(String.format("%s/%d", this.ipAddress, udp)));
+		setCommunity(new OctetString(community));
+	}
+	
+	public String get(String key) {
 		try {
-			return new Node(eventListener, path, nodeData);
+			return this.nodeData.getString(key);
 		}
-		catch (JSONException | UnknownHostException e) {
-			e.printStackTrace();
+		catch (JSONException jsone) {
+			return null;
+		}
+	}
+	
+	public void success(boolean success) {
+		long responseTime = Calendar.getInstance().getTimeInMillis();
+		
+		if (success) {
+			this.nodeData.put("lastResponse", responseTime);
+			this.nodeData.put("delay", responseTime - this.requestTime);
+			this.nodeData.put("timeout", -1);
+		}
+		else {
+			this.nodeData.put("timeout", responseTime);
 		}
 		
-		return null;
-	}
-	
-	public String getIPAddress() {
-		return this.node.getString("ip");
-	}
-	
-	public void timeOut() {
-		if (!this.timeOut) {
-			this.node.put("timeout", Calendar.getInstance().getTimeInMillis());
-			
-			/**
-			 * onEvent 구현할것.
-			 */
-			this.itahm.onEvent();
+		if (this.success != success) {
+			this.itahm.onEvent(new Event(this.nodeData.getString("sysName"), this.nodeData.getString("ip"), "snmp", success? 0: 1, success? 1: 0, ""));
 		}
 	}
 	
 	public void setRequestTime(long requestTime) {
 		this.requestTime = requestTime;
-	}
-	
-	public void setResponseTime() {
-		long responseTime = Calendar.getInstance().getTimeInMillis();
-		
-		this.node.put("lastResponse", responseTime);
-		this.node.put("delay", responseTime - this.requestTime);
-		this.node.put("timeout", -1);
 	}
 	
 	/**
@@ -190,17 +175,17 @@ public class Node extends CommunityTarget {
 			if (request.startsWith(Constants.sysDescr) && response.startsWith(Constants.sysDescr)) {
 				OctetString value = (OctetString)variable;
 				
-				this.node.put("sysDescr", new String(value.getValue()));
+				this.nodeData.put("sysDescr", new String(value.getValue()));
 			}
 			else if (request.startsWith(Constants.sysObjectID) && response.startsWith(Constants.sysObjectID)) {
 				OID value = (OID)variable;
 				
-				this.node.put("sysObjectID", value.toDottedString());
+				this.nodeData.put("sysObjectID", value.toDottedString());
 			}
 			else if (request.startsWith(Constants.sysName) && response.startsWith(Constants.sysName)) {
 				OctetString value = (OctetString)variable;
 				
-				this.node.put("sysName", new String(value.getValue()));
+				this.nodeData.put("sysName", new String(value.getValue()));
 			}
 		}
 		else if (request.startsWith(Constants.ifEntry)) {
@@ -223,7 +208,7 @@ public class Node extends CommunityTarget {
 					return true;
 				 }
 				 else {
-					this.node.put("ifIndex", ifIndex);
+					this.nodeData.put("ifIndex", ifIndex);
 						
 					ifIndex = new JSONObject();
 				 }
@@ -266,10 +251,14 @@ public class Node extends CommunityTarget {
 			else if (request.startsWith(Constants.ifAdminStatus) && response.startsWith(Constants.ifAdminStatus)) {
 				Integer32 value = (Integer32)variable;
 				int status = value.getValue();
+				int last;
 				
-				if (status != this.ifAdminStatus) {
-					// TODO onEvent 완성할것
-					this.itahm.onEvent();
+				if (ifData.has("ifAdminStatus")) {
+					last = ifData.getInt("ifAdminStatus");
+					
+					if (status != last) {
+						this.itahm.onEvent(new Event(this.nodeData.getString("sysName"), this.nodeData.getString("ip"), "ifAdminStatus", last, status, ""));
+					}
 				}
 				
 				ifData.put("ifAdminStatus", status);
@@ -304,11 +293,32 @@ public class Node extends CommunityTarget {
 					this.inCounter.put(index, new Counter(longValue));
 				}
 				else {
-					ifData.put("ifInOctets", longValue = inCounter.count(longValue));
-				}
-				
-				if (ifData.has("ifSpeed")) {
-					this.rollingMap.put(Resource.IFINOCTETS, index, Math.round(longValue *(double)100 / ifData.getLong("ifSpeed")));
+					longValue = inCounter.count(longValue);
+					
+					if (ifData.has("ifSpeed")) {
+						long speed = ifData.getLong("ifSpeed");
+						long current = speed > 0? longValue *100 / speed: 0;
+						long last;
+						
+						this.rollingMap.put(Resource.IFINOCTETS, index, current);
+						
+						if (ifData.has("ifInOctets")) {
+							last = speed > 0? ifData.getLong("ifInOctets") *100 / speed: 0;
+							
+							if (current /10 != last /10 && last > 69) {
+								this.itahm.onEvent(new Event(
+										this.nodeData.getString("sysName"),
+										this.nodeData.getString("ip"),
+										"ifInOctets",
+										index,
+										last,
+										current,
+										""));
+							}
+						}
+					}
+					
+					ifData.put("ifInOctets", longValue);
 				}
 				
 				return true;
@@ -322,11 +332,32 @@ public class Node extends CommunityTarget {
 					this.outCounter.put(index, new Counter(longValue));
 				}
 				else {
-					ifData.put("ifOutOctets", longValue = outCounter.count(longValue));
-				}
-				
-				if (ifData.has("ifSpeed")) {
-					this.rollingMap.put(Resource.IFOUTOCTETS, index, Math.round(longValue *(double)100 / ifData.getLong("ifSpeed")));
+					longValue = outCounter.count(longValue);
+					
+					if (ifData.has("ifSpeed")) {
+						long speed = ifData.getLong("ifSpeed");
+						long current = speed > 0? longValue *100 / speed: 0;
+						long last;
+						
+						this.rollingMap.put(Resource.IFOUTOCTETS, index, current);
+						
+						if (ifData.has("ifOutOctets")) {
+							last = speed > 0? ifData.getLong("ifOutOctets") *100 / speed: 0;
+							
+							if (current /10 != last /10 && last > 69) {
+								this.itahm.onEvent(new Event(
+										this.nodeData.getString("sysName"),
+										this.nodeData.getString("ip"),
+										"ifOutOctets",
+										index,
+										last,
+										current,
+										""));
+							}
+						}
+					}
+					
+					ifData.put("ifOutOctets", longValue);
 				}
 				
 				return true;
@@ -366,11 +397,32 @@ public class Node extends CommunityTarget {
 					this.hcInCounter.put(index, new Counter(longValue));
 				}
 				else {
-					ifData.put("ifHCInOctets", longValue = hcInCounter.count(longValue));
-				}
-				
-				if (ifData.has("ifSpeed")) {
-					this.rollingMap.put(Resource.IFINOCTETS, index, Math.round(longValue *(double)100 / ifData.getLong("ifSpeed")));
+					longValue = hcInCounter.count(longValue);
+					
+					if (ifData.has("ifSpeed")) {
+						long speed = ifData.getLong("ifSpeed");
+						long current = speed > 0? longValue *100 / speed: 0;
+						long last;
+						
+						this.rollingMap.put(Resource.IFINOCTETS, index, current);
+						
+						if (ifData.has("ifHCInOctets")) {
+							last = speed > 0? ifData.getLong("ifHCInOctets") *100 / speed: 0;
+							
+							if (current /10 != last /10 && last > 69) {
+								this.itahm.onEvent(new Event(
+										this.nodeData.getString("sysName"),
+										this.nodeData.getString("ip"),
+										"ifInOctets",
+										index,
+										last,
+										current,
+										""));
+							}
+						}
+					}
+					
+					ifData.put("ifHCInOctets", longValue);
 				}
 				
 				return true;
@@ -384,11 +436,32 @@ public class Node extends CommunityTarget {
 					this.hcOutCounter.put(index, new Counter(longValue));
 				}
 				else {
-					ifData.put("ifHCOutOctets", longValue = hcOutCounter.count(longValue));
-				}
-				
-				if (ifData.has("ifSpeed")) {
-					this.rollingMap.put(Resource.IFOUTOCTETS, index, Math.round(longValue *(double)100 / ifData.getLong("ifSpeed")));
+					longValue = hcOutCounter.count(longValue);
+					
+					if (ifData.has("ifSpeed")) {
+						long speed = ifData.getLong("ifSpeed");
+						long current = speed > 0? longValue *100 / speed: 0;
+						long last;
+						
+						this.rollingMap.put(Resource.IFOUTOCTETS, index, current);
+						
+						if (ifData.has("ifHCOutOctets")) {
+							last = speed > 0? ifData.getLong("ifHCOutOctets") *100 / speed: 0;
+							
+							if (current /10 != last /10 && last > 69) {
+								this.itahm.onEvent(new Event(
+										this.nodeData.getString("sysName"),
+										this.nodeData.getString("ip"),
+										"ifOutOctets",
+										index,
+										last,
+										current,
+										""));
+							}
+						}
+					}
+					
+					ifData.put("ifHCOutOctets", longValue);
 				}
 				
 				return true;
@@ -423,7 +496,7 @@ public class Node extends CommunityTarget {
 			if (request.startsWith(Constants.hrSystemUptime) && response.startsWith(Constants.hrSystemUptime)) {
 				TimeTicks value = (TimeTicks)variable; 
 				
-				this.node.put("hrSystemUptime", value.toMilliseconds());
+				this.nodeData.put("hrSystemUptime", value.toMilliseconds());
 			}
 			else if (request.startsWith(Constants.hrProcessorLoad) && response.startsWith(Constants.hrProcessorLoad)) {
 				Integer32 value = (Integer32)variable;
@@ -456,7 +529,7 @@ public class Node extends CommunityTarget {
 						return true;
 					}
 					else {
-						this.node.put("hrStorageIndex", hrStorageIndex);
+						this.nodeData.put("hrStorageIndex", hrStorageIndex);
 						
 						hrStorageIndex = new JSONObject();
 					}
@@ -498,7 +571,9 @@ public class Node extends CommunityTarget {
 					storageData.put("hrStorageUsed", intValue);
 					
 					if (storageData.has("hrStorageSize")) {
-						this.rollingMap.put(Resource.HRSTORAGEUSED, index, (int)Math.round(intValue *(double)100 /storageData.getInt("hrStorageSize")));
+						int size = storageData.getInt("hrStorageSize");
+						
+						this.rollingMap.put(Resource.HRSTORAGEUSED, index, size > 0? intValue *100L /storageData.getInt("hrStorageSize"): 0);
 					}
 					
 					return true;
@@ -508,7 +583,7 @@ public class Node extends CommunityTarget {
 		
 		return false;
 	}
-	
+
 	public final PDU parse(PDU request, PDU response) throws IOException {
 		Vector<? extends VariableBinding> requestVBs = request.getVariableBindings();
 		Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
@@ -518,7 +593,7 @@ public class Node extends CommunityTarget {
 		for (int i=0, length = responseVBs.size(); i<length; i++) {
 			requestVB = (VariableBinding)requestVBs.get(i);
 			responseVB = (VariableBinding)responseVBs.get(i);
-			
+			try {
 			if (parse(responseVB.getOid(), responseVB.getVariable(), requestVB.getOid())) {
 				if (!responseVB.equals(Null.endOfMibView)) {
 					nextRequests.add(responseVB);
@@ -527,8 +602,12 @@ public class Node extends CommunityTarget {
 					System.out.println("end of mib view.");
 				}
 			}
+			}
+			catch(Exception jsone) {
+				jsone.printStackTrace();
+			}
 		}
-
+		
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
 	}
 	
@@ -566,5 +645,15 @@ public class Node extends CommunityTarget {
 	
 	public static Node node(String ip) {
 		return nodeList.get(ip);
+	}
+	
+	public static void remove(String ip) {
+		synchronized (nodeList) {
+			nodeList.remove(ip);
+		}
+	}
+	
+	public static  Map<String, Node> getMap() {
+		return nodeList;
 	}
 }

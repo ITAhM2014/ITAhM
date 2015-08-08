@@ -119,12 +119,15 @@ function getPos(canvas, e) {
 		
 		this.scale = scale;
 		
-		for (var i=1, _i=this.layers.length; i<_i; i++) {
+		for (var i=0, _i=this.layers.length; i<_i; i++) {
 			layer = this.layers[i];
+			
+			layer.scale = scale;
 			
 			clear(layer.canvas);
 			clear(layer.shadow);
 			
+			layer.context().font = (10 / this.scale) +"px tahoma, arial, '맑은 고딕'";
 			layer.context().setTransform(scale, 0, 0, scale, Math.round(layer.canvas.width *.5), Math.round(layer.canvas.height *.5));
 			layer.shadow.getContext("2d").setTransform(scale, 0, 0, scale, Math.round(layer.shadow.width *.5), Math.round(layer.shadow.height *.5));
 			
@@ -159,21 +162,24 @@ function getPos(canvas, e) {
 		}
 	}
 	
+	/**
+	 * binding.node : 선택된 node or undefined
+	 * binding.layer : node가 선택되었다면 node를 가진 layer
+	 */
 	function dragStart(binding, x, y) {
 		var node = binding.node;
 		
-		for (var i=1, _i=this.layers.length; i<_i; i++) {
+		for (var i=0, _i=this.layers.length; i<_i; i++) {
 			this.fragment.appendChild(this.layers[i].canvas);
 		}
-
+		
 		if (node && this.selected == node) {
-			
 			var canvas = document.createElement("canvas"),
 				context = canvas.getContext("2d");
 		
 			canvas.width = this.width *3;
 			canvas.height = this.height *3;
-		
+	
 			context.globalAlpha = .5;
 			
 			clear(binding.layer.canvas);
@@ -184,7 +190,7 @@ function getPos(canvas, e) {
 			});
 			
 			context.drawImage(binding.layer.canvas, 0, 0);
-			
+		
 			binding.layer.invalidate();
 			
 			binding["capture"] = canvas;
@@ -209,18 +215,17 @@ function getPos(canvas, e) {
 	}
 	
 	function dragMove (binding, x, y) {
-		var canvas = this.mask.canvas,
-			context = this.mask.context();
+		var context = this.mask.getContext("2d");
 		
-		clear(canvas);
+		clear(this.mask);
 		
-		x -= (binding.x + canvas.width);
-		y -= (binding.y + canvas.height);
+		x -= (binding.x + this.mask.width);
+		y -= (binding.y + this.mask.height);
 		
-		for (var i=1, _i=this.layers.length; i<_i; i++) {
+		for (var i=0, _i=this.layers.length; i<_i; i++) {
 			context.drawImage(this.layers[i].canvas,
-				binding.capture? - canvas.width: x,
-				binding.capture? - canvas.height: y);
+				binding.capture? - this.mask.width: x,
+				binding.capture? - this.mask.height: y);
 		}
 		
 		if (binding.capture) {
@@ -230,10 +235,9 @@ function getPos(canvas, e) {
 	
 	function dragEnd(binding, x, y) {
 		var x = Math.floor(((x - binding.x) / this.scale) /5 +.5) *5,
-			y = Math.floor(((y - binding.y) / this.scale) /5 +.5) *5,
-			array;
+			y = Math.floor(((y - binding.y) / this.scale) /5 +.5) *5;
 		
-		clear(this.mask.canvas);
+		clear(this.mask);
 		
 		if (binding.capture) {
 			binding.node.x += x;
@@ -241,11 +245,9 @@ function getPos(canvas, e) {
 			binding.layer.invalidate();
 		}
 		else {
-			array = this.layers;
-			
 			var layer, node;
-			for (var i=1, _i=array.length; i<_i; i++) {
-				layer = array[i]; 
+			for (var i=1, _i=this.layers.length; i<_i; i++) {
+				layer = this.layers[i]; 
 				
 				for (var j=0, _j=layer.zIndex.length; j<_j; j++) {
 					node = layer.zIndex[j];
@@ -257,7 +259,7 @@ function getPos(canvas, e) {
 		
 		this.invalidate();
 		
-		this.canvas.insertBefore(this.fragment, this.mask.canvas);
+		this.canvas.insertBefore(this.fragment, this.mask);
 	}
 	
 	function move(node, x, y) {
@@ -298,19 +300,19 @@ function getPos(canvas, e) {
 			
 			this.resize();
 			
-			this.mask = new Layer();
-			this.mask.canvas.width = this.width;
-			this.mask.canvas.height = this.height;
-			
-			this.layers[0] = this.mask;
-			
-			this.canvas.appendChild(this.mask.canvas);
+			this.mask = document.createElement("canvas");
+			this.mask.width = this.width;
+			this.mask.height = this.height;
+			this.mask.style.position = "absolute";
+			this.mask.style.top = 0;
+			this.mask.style.left = 0;
+			this.canvas.appendChild(this.mask);
 			
 			this.canvas.addEventListener("mousemove", onMouseMove.bind(this), false);
 			this.canvas.addEventListener("mousedown", onMouseDown.bind(this), false);
 			this.canvas.addEventListener("mouseup", onMouseUp.bind(this), false);
+			//this.canvas.addEventListener("mouseout", onMouseUp.bind(this), false);
 			this.canvas.addEventListener("mousewheel", onMouseWheel.bind(this), false);
-			//map.addEventListener("mouseout", onMouseUp.bind(this), false);
 			
 			window.addEventListener("resize", this.resize.bind(this), false);
 		},
@@ -322,7 +324,7 @@ function getPos(canvas, e) {
 			
 			this.layers[this.layers.length] = layer;
 			
-			this.canvas.insertBefore(layer.canvas, this.mask.canvas);
+			this.canvas.insertBefore(layer.canvas, this.mask);
 			
 			return layer;
 		},
@@ -340,13 +342,13 @@ function getPos(canvas, e) {
 				var rect = this.canvas.getBoundingClientRect(),
 					width = rect.width,
 					height = rect.height,
-					layer, x, y;
+					layer;
 				
 				this.width = width;
 				this.height = height;
 				
-				x = Math.round(width /2);
-				y = Math.round(height /2);
+				this.mask.width = width;
+				this.mask.height = height;
 				
 				for (var i=0, _i=this.layers.length; i<_i; i++) {
 					layer = this.layers[i];
@@ -366,7 +368,7 @@ function getPos(canvas, e) {
 		hitTest: function (x, y) {
 			var result = {};
 			
-			for (var i=1, _i=this.layers.length; i<_i; i++) {
+			for (var i=0, _i=this.layers.length; i<_i; i++) {
 				if (result["node"] = this.layers[i].hitTest(x, y)) {
 					result["layer"] = this.layers[i];
 					
@@ -378,7 +380,7 @@ function getPos(canvas, e) {
 		},
 		
 		invalidate: function () {	
-			for (var i=1, _i=this.layers.length; i<_i; i++) {
+			for (var i=0, _i=this.layers.length; i<_i; i++) {
 				this.layers[i].invalidate();
 			}
 		},
@@ -394,7 +396,7 @@ function getPos(canvas, e) {
 			
 			context.translate(-width, -height);
 			
-			for (var i=1, _i=this.layers.length; i<_i; i++) {
+			for (var i=0, _i=this.layers.length; i<_i; i++) {
 				context.drawImage(this.layers[i].canvas, 0, 0);
 			}
 			
@@ -506,17 +508,6 @@ function getPos(canvas, e) {
 			this.zArray = [];
 			this.map = {};
 		},
-		/*
-		find: function (node) {
-			return this.index[node.id()]? true: false;
-		},
-		*/
-		zoom: function (scale) {
-			this.scale = scale;
-			
-			scale(this.canvas, scale);
-			scale(this.shadow, scale);
-		},
 		
 		size: function (width, height) {
 			this.canvas.width = width *3;
@@ -528,7 +519,9 @@ function getPos(canvas, e) {
 			this.canvas.style.top = (height *-1) +"px";
 			this.canvas.style.left = (width *-1) +"px";
 			
+			this.canvas.getContext("2d").font = (10 / this.scale) +"px tahoma, arial, '맑은 고딕'";
 			this.canvas.getContext("2d").setTransform(this.scale, 0, 0, this.scale, Math.round(width *1.5), Math.round(height *1.5));
+			
 			this.shadow.getContext("2d").setTransform(this.scale, 0, 0, this.scale, Math.round(width *.5), Math.round(height *.5));
 		},
 		

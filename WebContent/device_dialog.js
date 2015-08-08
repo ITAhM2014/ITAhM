@@ -1,7 +1,9 @@
 ;"use strict";
 
+var elements = {};
+
 (function (window, undefined) {
-	var form, profile,
+	var form, profile, device,
 		func = {};
 	
 	window.addEventListener("load", onLoad, false);
@@ -20,14 +22,15 @@
 		
 		form.addEventListener("submit", onApply, false);
 		form.addEventListener("reset", onCancel, false);
+		elements["monitor"] = document.getElementById("monitor");
 		
 		func["apply"] = apply.bind(form, null);
 		
 		window.xhr = new JSONRequest(top.server, onResponse);
 	}
 	
-	function load(device) {
-		window.device = device;
+	function load() {
+		device = arguments[0];
 		
 		window.xhr.request({
 			database: "profile",
@@ -36,8 +39,6 @@
 	}
 	
 	function init() {
-		var device = window.device;
-		
 		if (!device) {
 			func["apply"] = apply.bind(form, null);
 			
@@ -51,6 +52,11 @@
 			form.label.value = device.label || "";
 			
 			func["apply"] = apply.bind(form, device);
+			
+			if (device.address !== "" && device.profile !== "") {
+				elements["monitor"].disabled = false;
+				elements["monitor"].addEventListener("click", onMonitor, false);
+			}
 			
 			form.name.select();
 		}
@@ -79,8 +85,8 @@
 		if (json == null) {
 			request.data["-1"] = (json = {});
 			
-			json["x"] = 0;
-			json["y"] = 0;
+			//json["x"] = 0;
+			//json["y"] = 0;
 		}
 		else {
 			request.data[json.id] = json;
@@ -108,6 +114,11 @@
 		}
 		
 		return labelArray.join(",");
+	}
+	
+	function onMonitor(e) {
+		top.openContent("monitor.html", device["address"]);
+		top.closeDialog();
 	}
 	
 	function onCancel(e) {

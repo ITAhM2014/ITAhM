@@ -21,7 +21,6 @@ var elements = {}, dialog;
 		};
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
 	
 	/**
 	 * elements 초기화
@@ -108,8 +107,8 @@ var elements = {}, dialog;
 	}
 	
 	function onClose() {
-		if (confirm("do you want to quit edit mode\nwithout saving?")) {
-			location.href = "map.html";
+		if (confirm("are you sure quit edit mode?")) {
+			top.openContent("map.html");
 		}
 	}
 	
@@ -137,7 +136,9 @@ var elements = {}, dialog;
 		func["selectNode"] = selectNode;
 		
 		if (node) {
-			showLineDialog(selected, node);
+			top.showDialog("line_dialog.html", {
+				line : getLine(selected, node) || Line.create(selected.id, node.id)
+			});
 		}
 		
 		return false;
@@ -176,18 +177,8 @@ var elements = {}, dialog;
 		}
 	}
 	
-	function onLink() {
-		func["selectNode"] = connectNode;
-	}
-
 	function showLineDialog(from, to) {
-		top.postMessage({
-			message: "popup",
-			html: "line_dialog.html",
-			data: {
-				line : getLine(from, to) || Line.create(from.id, to.id)
-			}
-		}, "http://app.itahm.com");
+		
 	}
 	
 	function getLine(from, to) {
@@ -256,11 +247,21 @@ var elements = {}, dialog;
 			icon = iconMap[device.type],
 			width = icon.width,
 			height = icon.height,
-			x = device.x - Math.round(width/2),
-			y = device.y - Math.round(height/2),
+			x = device.x,
+			y = device.y,
 			context = draw.context,
 			radius = Math.round(Math.max(width, height) *.5 *1.5),
 			shadow;
+		
+		if (x === undefined || y === undefined) {
+			x = 0;
+			y = 0;
+			device["x"] = 0;
+			device["y"] = 0;
+		}
+		
+		x -= Math.round(width/2);
+		y -= Math.round(height/2);
 		
 		if (device == selected) {
 			context.save();
@@ -321,9 +322,6 @@ var elements = {}, dialog;
 			context.fillText(link[index].from, (cpX + x1) /2, (cpY + y1) /2);
 			context.fillText(link[index].to, (x2 + cpX) /2, (y2 + cpY) /2);
 		}
-	}
-	
-	function onMessage(e) {
 	}
 	
 	function onResponse(response) {

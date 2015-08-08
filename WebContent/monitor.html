@@ -50,7 +50,7 @@
 			<ul id="mem_list"></ul>
 			
 			<h3><input type="checkbox" id="check_disk" disabled>
-				<span class="color gray"></span>
+				<span class="color yellow"></span>
 				storage usage</h3>
 			<ul id="disk_list"></ul>
 			
@@ -62,23 +62,30 @@
 			
 		</aside>
 		
-		<article>
-			<section class="title">
-				<h3 id="title">127.0.0.1</h3>
-				<h4 id="range" class="blink"></h4>
-				
-				<select id="switch">
-					<option selected>log</option>
-					<option>real time</option>
-				</select>
-			</section>
+		<header class="title">
+			<h3 id="title">127.0.0.1</h3>
+			<h4 id="range" class="blink"></h4>
 			
-			<section id="chart"></section>
+			<select id="switch">
+				<option selected>log</option>
+				<option>real time</option>
+			</select>
+		</header>
 			
-			<section id="notes">
-				<p id="ppp"></p>
-			</section>
-		</article>
+		<section id="chart"></section>
+			
+		<footer>
+			<div>
+				<span>database</span>
+				<span>index</span>
+				<span>description</span>
+				<span>capacity</span>
+				<span>current</span>
+				<span>percentage</span>
+				<span>color</span>
+			</div>
+			<div id="detail"></div>
+		</footer>
 		
 		<script src="monitor.js"></script>
 		

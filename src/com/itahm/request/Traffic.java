@@ -6,33 +6,22 @@ package com.itahm.request;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.Database;
-import com.itahm.SnmpManager;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.snmp.Node;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class Traffic.
- */
 public class Traffic extends Request {
 
-	/**
-	 * Instantiates a new traffic.
-	 *
-	 * @param snmp the snmp
-	 * @param database the database
-	 * @param request the request
-	 */
-	public Traffic(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database, request);
+	public Traffic(JSONObject request) {
+		request(request);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.itahm.request.Request#each(java.lang.String, java.lang.String, org.json.JSONObject)
-	 */
 	@Override
-	protected JSONObject customEach(String command, String key, JSONObject value) {
+	protected JSONObject execute(String command) {
+		return null;
+	}
+	
+	@Override
+	protected JSONObject execute(String command, String key, JSONObject value) {
 		if (!"get".equals(command)) {
 			return null;
 		}

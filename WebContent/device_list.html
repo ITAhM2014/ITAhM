@@ -16,15 +16,13 @@
 
 	<body>
 
-		<div class="top">
-			<form id="form" class="control" autocomplete="off">
-				<input type="submit" name="add" value="add">
-				<input type="reset" name="remove" value="remove">
-				<input type="button" id="monitor" name="monitor" value="monitor">
-				<select name="label">
-					<option value="all" selected>all labels
-				</select>
-			</form>
+		<header>
+			<input type="submit" id="add" value="add">
+			<input type="reset" id="remove" value="remove">
+			<select id="label">
+				<option value="all" selected>all labels
+			</select>
+			
 			<table>
 				<colgroup span="5">
 					<col>
@@ -40,7 +38,8 @@
 					</tr>
 				</thead>
 			</table>
-		</div>
+		</header>
+		
 		<div class="list">
 			<table>
 				<colgroup span="5">

@@ -44,7 +44,7 @@ section.dialog {
 	display: none;
 }
 
-section.message {
+section.event {
 	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
 	background-color: #fff;
 	display: none;
@@ -61,9 +61,55 @@ iframe {
 	border: none;
 }
 
+.thead {
+	position: absolute; top: 0; right: 0; left: 0; height: 30px;
+	box-sizing: border-box;
+}
+
+.tbody {
+	position: absolute; top: 30px; right: 0; bottom: 0; left: 0;
+	box-sizing: border-box;
+	overflow: auto;
+}
+
+.thead span,
+.tbody span {
+	display: inline-block;
+	box-sizing: border-box;
+	width: 10%;
+	min-width: 100px;
+}
+
+.thead div {
+	line-height: 30px;
+}
+
+.thead div,
+.tbody div {
+	white-space: nowrap; 
+}
+
+section.event span:first-child {
+	width: 20%;
+	min-width: 160px;
+}
+
+section.event span:last-child {
+	width: 20%;
+}
+
+.thead span {
+	text-align: center;
+	font-weight: bold;
+}
+
+.tbody div:nth-child(odd) {
+	background-color: #eee;
+}
+
 body.dialog section.dialog,
 body.loading section.loading,
-body.message section.message {
+body.event section.event {
 	display: block;
 }
 

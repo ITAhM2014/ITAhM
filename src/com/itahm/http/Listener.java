@@ -15,6 +15,7 @@ import java.util.Set;
 
 import com.itahm.EventListener;
 import com.itahm.ITAhMException;
+import com.itahm.json.Event;
 
 public class Listener implements Runnable, Closeable {
 
@@ -214,7 +215,7 @@ public class Listener implements Runnable, Closeable {
 			}
 
 			@Override
-			public void onEvent() {
+			public void onEvent(Event event) {
 				// TODO Auto-generated method stub
 				
 			}

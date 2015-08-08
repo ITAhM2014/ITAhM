@@ -49,7 +49,7 @@ public class Database implements Closeable {
 			
 			throw itahme;
 		}
-			
+		
 		profile = new JSONFile();
 		try {
 			profile.load(new File(root, "profile"));

@@ -118,8 +118,8 @@ var elements = {}, dialog;
 	
 	function loadDevice() {
 		var device;
-		var i=0;
-		for (var id in deviceList) {i++;
+		
+		for (var id in deviceList) {
 			device = deviceList[id];
 			
 			deviceLayer.add(device);
@@ -170,11 +170,18 @@ var elements = {}, dialog;
 			icon = iconMap[device.type],
 			width = icon.width,
 			height = icon.height,
-			x = device.x - Math.round(width/2),
-			y = device.y - Math.round(height/2),
+			x = device.x,
+			y = device.y,
 			context = draw.context,
 			radius = Math.round(Math.max(width, height) *.5 *1.5),
 			shadow;
+		
+		if (x === undefined || y === undefined) {
+			return;
+		}
+		
+		x -= Math.round(width/2);
+		y -= Math.round(height/2);
 		
 		context.drawImage(icon, x, y, width, height);
 		context.fillText(device.name, x, y)

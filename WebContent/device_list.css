@@ -1,7 +1,7 @@
 @CHARSET "UTF-8";
 @import "css/common.css";
 
-.top {
+header {
 	position: fixed; top: 0; right: 0; left: 0; height: 60px;
 }
 

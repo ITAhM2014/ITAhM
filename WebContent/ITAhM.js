@@ -3,7 +3,7 @@
 var elements = {};
 
 (function (window, undefined) {
-	var xhr;
+	var xhr, eventListener;
 	
 	window.addEventListener("load", onLoad, false);
 	
@@ -18,6 +18,7 @@ var elements = {};
 		
 		elements["dialog"] = document.getElementById("dialog");
 		elements["content"] = document.getElementById("content");
+		elements["event"] = document.getElementById("event_list");
 		
 		elements["body"] = document.getElementsByTagName("body")[0];
 		
@@ -30,8 +31,8 @@ var elements = {};
 		document.getElementById("account").onclick = openContent.bind(window, "account.html");
 		document.getElementById("profile").onclick = openContent.bind(window, "profile.html");
 		document.getElementById("icon").onclick = openContent.bind(window, "icon.html");
-		document.getElementById("message").onclick = onShowMessage;
-		document.getElementById("close").onclick = onCloseMessage;
+		document.getElementById("event").onclick = onShowEvent;
+		document.getElementById("close").onclick = onCloseEvent;
 		
 		if (server == "") {
 			location.href = "ITAhM.html?"+ prompt("server address[:tcp port]");
@@ -40,6 +41,13 @@ var elements = {};
 		}
 		
 		xhr = new JSONRequest(server, onResponse);
+		
+		eventListener = new JSONRequest(server, onMonitor);
+		
+		eventListener.request({
+			command: "event",
+			last: -1
+		});
 		
 		xhr.request({
 			command: "echo"
@@ -50,6 +58,39 @@ var elements = {};
 		openContent("monitor.html", "127.0.0.1");
 		
 		clearScreen();
+	}
+	
+	function writeEvent(data) {
+		var event,
+			line,
+			index,
+			list = elements["event"];
+		
+		for (index in data) {
+			event = data[index];
+			
+			line = document.createElement("div");
+			line.appendChild(document.createElement("span")).textContent = new Date(event["timeStamp"]);
+			line.appendChild(document.createElement("span")).textContent = event["sysName"];
+			line.appendChild(document.createElement("span")).textContent = event["ipAddr"];
+			line.appendChild(document.createElement("span")).textContent = makeEventResource(event["resource"], event["index"]);
+			line.appendChild(document.createElement("span")).textContent = event["lastStatus"];
+			line.appendChild(document.createElement("span")).textContent = event["currentStatus"];
+			line.appendChild(document.createElement("span")).textContent = event["text"];
+			
+			list.appendChild(line);
+		}
+		
+		list.scrollTop = list.scrollHeight;
+		
+		eventListener.request({
+			command: "event",
+			last: index
+		});
+	}
+	
+	function makeEventResource(resource, index) {
+		
 	}
 	
 	function onSignOut(e) {
@@ -71,19 +112,50 @@ var elements = {};
 			}
 		}
 		else if ("json" in response) {
-			var json = response.json;
-			if (json != null) {
-				switch(json.command) {
-				case "echo":
-					load();
-					
-					break;
-				case "signout":
-					signOut();
-					
-					break;
-				}
+			var json = response.json,
+				command = json.command;
+			
+			if (json === null) {
+				return;
 			}
+			
+			if (command === "echo") {
+				load();
+			}
+			else if (command === "signout") {
+				signOut();
+			}
+		}
+	}
+	
+	function onMonitor(response) {
+		if ("error" in response) {
+			var status = response.error.status;
+			
+			if (status == 401) {
+				signOut();
+			}
+			else {
+				console.log(response.error);
+			}
+			
+			setTimeout(eventListener.request.bind(undefined, {
+				command: "event",
+				last: -1
+			}), 3000);
+			
+			return;
+		}
+		else if ("json" in response) {
+			var json = response.json;
+			if (json === null) {
+				return;
+			}
+			
+			writeEvent(json.data);
+		}
+		else {
+			throw "what is this?";
 		}
 	}
 	
@@ -97,12 +169,12 @@ var elements = {};
 		elements["content"].onload = undefined;
 	}
 	
-	function onShowMessage(e) {
-		elements["body"].classList.add("message");
+	function onShowEvent(e) {
+		elements["body"].classList.add("event");
 	}
 	
-	function onCloseMessage(e) {
-		elements["body"].classList.remove("message");
+	function onCloseEvent(e) {
+		elements["body"].classList.remove("event");
 	}
 	
 	/**

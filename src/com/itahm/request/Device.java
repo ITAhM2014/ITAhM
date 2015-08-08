@@ -2,19 +2,31 @@ package com.itahm.request;
 
 import org.json.JSONObject;
 
-import com.itahm.SnmpManager;
-import com.itahm.Database;
+import com.itahm.Data;
 
 public class Device extends Request {
 	
-	public Device(SnmpManager snmp, Database database, JSONObject request) {
-		super(snmp, database, request, Database.FILE.DEVICE);
+	private final JSONObject data;
+	
+	public Device(JSONObject request) {
+		data = Data.getJSONObject(Data.Table.DEVICE);
+		
+		request(request);
 	}
 	
 	@Override
-	public JSONObject customEach(String command, String key, JSONObject value) {
+	protected JSONObject execute(String command) {
+		if (!"get".equals(command)) {
+			return null;
+		}
+		
+		return this.data;
+	}
+	
+	@Override
+	protected JSONObject execute(String command, String key, JSONObject value) {
 		if ("put".equals(command) && Integer.parseInt(key) < 0) {
-			int id = database.newID();
+			int id = Data.newID();
 				
 			if (id < 0) {
 				return null;
@@ -23,6 +35,7 @@ public class Device extends Request {
 			value.put("id", key = Integer.toString(id));
 		}
 		
-		return each(command, key, value);
+		return execute(this.data, command, key, value);
 	}
+	
 }

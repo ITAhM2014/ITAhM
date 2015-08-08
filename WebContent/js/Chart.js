@@ -291,11 +291,11 @@ function Chart(config) {
 		
 		draw: function (data, color) {
 			if (typeof data !== "object") {
-				throw "InvalidArgumentException: data"
+				throw "InvalidArgumentException: "+ typeof data;
 			}
 			
 			var result = {},
-				value,
+				value, maxX = -1, maxValue = -1,
 				context = this.graphContext,
 				width = this.width,
 				height = this.height,
@@ -303,13 +303,21 @@ function Chart(config) {
 			
 			context.beginPath();
 			context.strokeStyle = color || "#000";
+			//context.fillStyle = color || "#000";
 			
 			for (var time=this.origin, x=0, space=this.space; x<width; x+=space, time += timeUnit) {
 				value = data[time];
 				
 				if (typeof value === "number") {
 					result[time] = value;
-					context.lineTo(x, Math.round(value /100 * height)); 
+					
+					value = Math.round(value /100 * height);
+					context.lineTo(x, value +.5);
+					
+					if (maxValue <= value) {
+						maxValue = value;
+						maxX = x;
+					}
 				}
 				else {
 					context.stroke();
@@ -319,6 +327,22 @@ function Chart(config) {
 			}
 			
 			context.stroke();
+			
+			if (maxX > -1) {
+				context.save();
+				
+				context.globalAlpha = .5;
+				context.beginPath();
+				context.moveTo(maxX, 0);
+				context.lineTo(maxX, height);
+				context.stroke();
+				
+				context.restore();
+				
+				context.beginPath();
+				context.arc(maxX, maxValue, 5, 0, Math.PI *2);
+				context.stroke();
+			}
 			
 			context = this.context;
 			
