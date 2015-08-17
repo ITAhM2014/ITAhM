@@ -33,6 +33,8 @@ public class ITAhM implements EventListener, Closeable {
 		commandMap.put("processor", "com.itahm.request.Processor");
 		commandMap.put("storage", "com.itahm.request.Storage");
 		commandMap.put("memory", "com.itahm.request.Storage");
+		commandMap.put("delay", "com.itahm.request.Delay");
+		commandMap.put("realtime", "com.itahm.request.RealTime");
 	}
 	
 	private final Listener http;
@@ -83,6 +85,11 @@ public class ITAhM implements EventListener, Closeable {
 		JSONObject profileData = Data.getJSONObject(Data.Table.PROFILE);
 		
 		String [] names = JSONObject.getNames(deviceData);
+		
+		if (names == null) {
+			return;
+		}
+		
 		JSONObject device;
 		String profileName;
 		JSONObject profile;

@@ -32,10 +32,7 @@ var elements = {};
 	function onAdd(e) {
 		e.preventDefault();
 		
-		top.postMessage({
-			message: "popup",
-			html: "line_dialog.html"
-		}, "*");
+		top.showDialog("line_dialog.html");
 	}
 	
 	function onRemove(e) {
@@ -53,14 +50,8 @@ var elements = {};
 		}
 	}
 	
-	function onEdit(json, e) {
-		//e.preventDefault();
-		
-		top.postMessage({
-			message: "popup",
-			html: "line_dialog.html",
-			line: json
-		}, "*");
+	function onEdit(data, e) {
+		top.showDialog("line_dialog.html", data);
 	}
 	
 	function closeLineDialog() {

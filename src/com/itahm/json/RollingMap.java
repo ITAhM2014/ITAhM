@@ -11,7 +11,8 @@ public class RollingMap {
 		HRPROCESSORLOAD("hrProcessorLoad"),
 		IFINOCTETS("ifInOctets"),
 		IFOUTOCTETS("ifOutOctets"),
-		HRSTORAGEUSED("hrStorageUsed");
+		HRSTORAGEUSED("hrStorageUsed"),
+		DELAY("delay");
 		
 		private String string;
 		

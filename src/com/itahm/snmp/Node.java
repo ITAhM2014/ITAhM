@@ -36,7 +36,7 @@ import com.itahm.json.RollingMap;
 public class Node extends CommunityTarget {
 
 	private static final long serialVersionUID = 7479923177197300424L;
-	
+	private static final long TIMEOUT = 5000;
 	private static final Map<String, Node> nodeList = new HashMap<String, Node>();
 	
 	private final String ipAddress;
@@ -61,6 +61,7 @@ public class Node extends CommunityTarget {
 	private boolean success = true;
 	
 	public Node(EventListener eventListener, File path, JSONObject node, String ip, int udp, String community) throws UnknownHostException {
+		
 		InetAddress.getByName(ip);
 		
 		ipAddress = ip;
@@ -68,8 +69,8 @@ public class Node extends CommunityTarget {
 		set(udp, community);
 		
 		setVersion(SnmpConstants.version2c);
-		setRetries(3);
-		setTimeout(3000);
+		//setRetries();
+		setTimeout(TIMEOUT);
 	
 		nodeList.put(ip, this);
 		
@@ -140,13 +141,16 @@ public class Node extends CommunityTarget {
 		}
 	}
 	
-	public void success(boolean success) {
+	public void success(boolean success) throws IOException {
 		long responseTime = Calendar.getInstance().getTimeInMillis();
+		long delay = responseTime - this.requestTime;
 		
 		if (success) {
 			this.nodeData.put("lastResponse", responseTime);
-			this.nodeData.put("delay", responseTime - this.requestTime);
+			this.nodeData.put("delay", delay);
 			this.nodeData.put("timeout", -1);
+			
+			this.rollingMap.put(Resource.DELAY, "0", delay *100 /TIMEOUT);
 		}
 		else {
 			this.nodeData.put("timeout", responseTime);

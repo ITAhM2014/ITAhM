@@ -89,13 +89,6 @@ var elements = {};
 	}
 	
 	function onEdit(device, e) {
-		//e.preventDefault();
-		//top.postMessage({
-		//	message: "popup",
-		//	html: "device_dialog.html",
-		//	data: device
-		//}, "*");
-		
 		top.showDialog("device_dialog.html", device);
 	}
 	

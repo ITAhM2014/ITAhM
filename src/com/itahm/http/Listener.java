@@ -120,9 +120,19 @@ public class Listener implements Runnable, Closeable {
 	}
 	
 	private void onRead(SocketChannel channel, Parser 	parser) throws IOException {
+		int bytes = -1;
+		
 		this.buffer.clear();
 		
-		if (channel.read(this.buffer) == -1) {
+		// read 중에 client가 소켓을 close 하면 예외 발생
+		try {
+			bytes = channel.read(this.buffer);
+		}
+		catch (IOException ioe) {
+			// bytes = -1
+		}
+		
+		if (bytes == -1) {
 			onClose(channel);
 		}
 		else {

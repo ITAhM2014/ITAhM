@@ -249,9 +249,7 @@ function Chart(id, height, max, onresize) {
 			var status = response.error.status;
 			
 			if (status == 401) {
-				top.postMessage({
-					message: "unauthorized"
-				}, "*");
+				top.signOut();
 			}
 			
 			console.log(status);

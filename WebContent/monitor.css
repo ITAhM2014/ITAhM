@@ -82,8 +82,6 @@ input[type=checkbox] {
 aside ul {
 	list-style: none;
 	padding: 0;
-	max-height: 160px;
-	overflow: auto;
 }
 
 header h3,
@@ -94,29 +92,62 @@ header h4 {
 	text-align: center;
 }
 
-footer>div>span{
+footer ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+footer>ul {
+	background-color: #222;
+	color: #eee;
+}
+
+footer>ul li {
 	text-align: center;
 	font-weight: bold;
 }
 
-footer>div,
-#detail>div {
+footer ul {
 	white-space: nowrap;
 } 
 
-footer span {
+footer li {
 	display: inline-block;
+	box-sizing: border-box;
 	width: 10%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+	vertical-align: top;
+	line-height: 1em;
+}
+
+footer li:not(:nth-child(7)) {
 	min-width: 100px;
 }
 
-footer span:nth-child(3) {
+footer li:nth-child(3) {
 	width: 40%;
+}
+
+footer li:nth-child(7) {
+	max-width: 4em;
+}
+
+footer p {
+	margin: 0;
+	height: 1em;
 }
 
 #detail {
 	position: absolute; top: 1.5em; right: 0; bottom: 0; left: 0;
-	overflow: auto;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+#detail ul:nth-child(even) {
+	background-color: #eee;
 }
 
 #switch {
@@ -155,4 +186,8 @@ footer span:nth-child(3) {
 
 .yellow {
 	background-color: #ff0;
+}
+
+.purple {
+	background-color: #800080;
 }

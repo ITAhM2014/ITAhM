@@ -35,8 +35,8 @@
 		
 		row.cells[0].textContent = ip;
 		row.cells[1].textContent = data.mac;
-		row.cells[2].textContent = new Date(data.from);
-		row.cells[3].textContent = new Date(data.last);
+		row.cells[2].textContent = new Date(data.from).toLocaleString();
+		row.cells[3].textContent = new Date(data.last).toLocaleString();
 		
 		return row;
 	}

@@ -25,6 +25,12 @@
 						</td>
 					</tr>
 					<tr>
+						<td>udp port: </td>
+						<td>
+							<input type="number" min="1" step="1" value="161"name="udp" class="table text" placeholder="snmp udp port" pattern="\d*" required>
+						</td>
+					</tr>
+					<tr>
 						<td>snmp version: </td>
 						<td>
 							<label><input type="radio" value="v1" name="version" disabled>v1</label>
@@ -35,7 +41,7 @@
 					<tr>
 						<td>community: </td>
 						<td>
-							<input type="text" name="community" class="table text" placeholder="snmp community string" required>
+							<input type="text" name="community" value="public" class="table text" placeholder="snmp community string" required>
 						</td>
 					</tr>
 				</tbody>

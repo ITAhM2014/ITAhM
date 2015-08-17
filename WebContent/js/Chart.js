@@ -237,6 +237,22 @@ function Chart(config) {
 		this.context.restore();
 	}
 	
+	function drawMax(context, x, y, max) {
+		context.save();
+		
+		context.globalAlpha = .5;
+		context.beginPath();
+		context.moveTo(x, 0);
+		context.lineTo(x, y);
+		context.stroke();
+		
+		context.restore();
+		
+		context.beginPath();
+		context.arc(x, max, 5, 0, Math.PI *2);
+		context.stroke();
+	}
+	
 	Chart.prototype = {
 		
 		/**
@@ -257,6 +273,9 @@ function Chart(config) {
 			this.color = config.color || "#000";
 			this.onreset = config.onreset || new Function();
 			this.onchange = config.onchange || new Function();
+			this.onempty = config.onempty || function () {
+				return false;
+			}
 			this.space = config.space || 1;
 			
 			if (config.zoom === "auto") {
@@ -289,13 +308,14 @@ function Chart(config) {
 			resize.call(this);
 		},
 		
-		draw: function (data, color) {
+		draw: function (data, color, fill) {
 			if (typeof data !== "object") {
 				throw "InvalidArgumentException: "+ typeof data;
 			}
 			
 			var result = {},
-				value, maxX = -1, maxValue = -1,
+				value, 
+				maxX = -1, maxValue = -1,
 				context = this.graphContext,
 				width = this.width,
 				height = this.height,
@@ -308,7 +328,7 @@ function Chart(config) {
 			for (var time=this.origin, x=0, space=this.space; x<width; x+=space, time += timeUnit) {
 				value = data[time];
 				
-				if (typeof value === "number") {
+				if (typeof value === "number") {					
 					result[time] = value;
 					
 					value = Math.round(value /100 * height);
@@ -319,9 +339,9 @@ function Chart(config) {
 						maxX = x;
 					}
 				}
-				else {
+				else if (!fill) {
 					context.stroke();
-					
+				
 					context.beginPath();
 				}
 			}
@@ -331,16 +351,8 @@ function Chart(config) {
 			if (maxX > -1) {
 				context.save();
 				
-				context.globalAlpha = .5;
-				context.beginPath();
-				context.moveTo(maxX, 0);
-				context.lineTo(maxX, height);
-				context.stroke();
+				drawMax(context, maxX, height, maxValue);
 				
-				context.restore();
-				
-				context.beginPath();
-				context.arc(maxX, maxValue, 5, 0, Math.PI *2);
 				context.stroke();
 			}
 			

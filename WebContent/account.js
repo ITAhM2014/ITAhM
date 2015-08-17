@@ -27,7 +27,7 @@
 	function onAdd(e) {
 		e.preventDefault();
 
-		top.openContent("account_dialog.html");
+		top.showDialog("account_dialog.html");
 		top.closeDialog();
 	}
 	

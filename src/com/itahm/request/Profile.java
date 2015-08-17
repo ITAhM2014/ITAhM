@@ -20,7 +20,7 @@ public class Profile extends Request {
 			return null;
 		}
 		
-		return data;
+		return this.data;
 	}
 	
 	@Override

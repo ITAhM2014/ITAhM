@@ -280,6 +280,25 @@ function sysObjectID(oid) {
 	}
 }
 
+function Storage() {
+	
+}
+
+Storage.toString = function (bytes) {
+	var unit = ["Bytes", "KBytes", "MBytes", "GBytes", "TBytes"];
+	
+	for(var i=0, _i=unit.length; i<_i; i++) {
+		if (bytes > 999) {
+			bytes /= 1024;
+		}
+		else {
+			break;
+		}
+	}
+	
+	return (Math.round(bytes *100) /100) + unit[i];
+}
+
 function Bandwidth(bps) {
 	var unit = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
 	
@@ -319,7 +338,7 @@ Bandwidth.toString = function (bandwidth) {
 		}
 	}
 	
-	return (Math.round(bandwidth * 100) /100) + unit[i];
+	return (Math.round(bandwidth *100) /100) + unit[i];
 }
 
 function Uptime(date) {

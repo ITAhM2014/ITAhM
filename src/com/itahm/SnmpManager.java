@@ -22,7 +22,6 @@ import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.json.Event;
-import com.itahm.json.JSONFile;
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.Node;
 import com.itahm.http.Request;
@@ -34,16 +33,14 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 	private final EventListener itahm;
 	private final Timer timer;
 	private final File root;
-	private final JSONFile snmpFile = new JSONFile();
 	private JSONObject snmpData;
-	private final JSONFile addrFile = new JSONFile();
 	
 	public static enum FILE {
 		SNMP, ADDRESS
 	}
 	
 	private final Map<String, Node> nodeList;
-	private final Set<String> realTimeNodeList = new HashSet<String>();
+	private final static Set<String> realTimeNodeList = new HashSet<String>();
 	
 	private final static PDU pdu = new PDU();
 	{
@@ -92,20 +89,9 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		nodeList = Node.getMap();
 		root.mkdir();
 		
-		try {
-			snmpFile.load(new File(root, "snmp"));
-			addrFile.load(new File(root, "address"));
-		} catch (ITAhMException e) {
-			e.printStackTrace();
-			
-			throw new ITAhMException("can not open required file", e);
-		}
-		
-		snmpData = snmpFile.getJSONObject();
+		snmpData = Data.getJSONObject(Data.Table.SNMP);
 		
 		snmp.listen();
-		
-		snmpData = snmpFile.getJSONObject();
 		
 		timer.scheduleAtFixedRate(this, 1000, 1000);
 		
@@ -127,7 +113,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 			this.snmpData.put(ip, nodeData);
 			
 			try {
-				this.snmpFile.save();
+				Data.save(Data.Table.SNMP);
 			} catch (IOException ioe) {
 				// TODO 당장 문제가 되지는 않지만 일반적으로 발생하면 안되는 예외
 				ioe.printStackTrace();
@@ -147,22 +133,10 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		}
 	}
 	
-	public void addRealTimeNode(String ip) {
-		synchronized(this.realTimeNodeList) {
-			this.realTimeNodeList.add(ip);
+	public static void addRealTimeNode(String ip) {
+		synchronized(realTimeNodeList) {
+			realTimeNodeList.add(ip);
 		}
-	}
-	
-	public JSONFile getFile(FILE name) {
-		switch(name) {
-		case ADDRESS:
-			return this.addrFile;
-			
-		case SNMP:
-			return this.snmpFile;
-		}
-		
-		return null;
 	}
 	
 	public File getRoot() {
@@ -184,23 +158,27 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		((org.snmp4j.Snmp)event.getSource()).cancel(request, this);
 		
-		if (response == null) {			
-			// TODO response timed out
-			
-			node.success(false);
-			return;
+		try {
+			if (response == null) {			
+				// TODO response timed out
+				
+				node.success(false);
+				return;
+			}
+		}
+		catch (IOException ioe) {
+			// TODO rolling file에 쓰기 실패하는 경우
 		}
 		
 		int status = response.getErrorStatus();
-		
-		node.success(true);
 		
 		if (status == PDU.noError) {
 			try {
 				PDU nextRequest = node.parse(request, response);
 				
 				if (nextRequest == null) {
-					// TODO end of get-next request
+					// end of get-next request
+					node.success(true);
 				}
 				else {
 					snmp.send(nextRequest, node, node, this);
@@ -231,9 +209,8 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		
 		try {
 			if (this.lastRequestTime != minutes) {
-				this.addrFile.save();
-				this.snmpFile.save();
-				
+				Data.save(Data.Table.SNMP);
+				Data.save(Data.Table.ADDRESS);
 				loop(requestTime);
 				
 				this.lastRequestTime = minutes;
@@ -273,11 +250,11 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 		Iterator<String> it;
 		Node node;
 		
-		synchronized(this.realTimeNodeList) {
-			it = this.realTimeNodeList.iterator();	
+		synchronized(realTimeNodeList) {
+			it = realTimeNodeList.iterator();	
 	
 			while (it.hasNext()) {
-				node = nodeList.get(it.next());
+				node = this.nodeList.get(it.next());
 				
 				if (node != null) {
 					node.setRequestTime(requestTime);

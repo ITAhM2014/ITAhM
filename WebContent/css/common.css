@@ -33,11 +33,16 @@ nav a:hover {
 	cursor: pointer;
 }
 
-input[type=submit], input[type=reset], input[type=button], select {
+input[type=submit],
+input[type=reset],
+input[type=button],
+select {
 	padding: .5em 1em;
 }
 
-input[type=text], input[type=password] {
+input[type=text],
+input[type=password],
+input[type=number] {
 	padding: .5em;
 }
 
@@ -47,4 +52,10 @@ input:read-only, textarea:read-only {
 
 .hidden {
 	display: none;
+}
+
+.ellipsis {
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
 }

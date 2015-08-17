@@ -12,6 +12,8 @@ import org.json.JSONObject;
  abstract public class Request {
 	
 	 protected void request(JSONObject request) {
+		JSONObject value = null;
+		
 		try {
 			String command = request.getString("command");
 			JSONObject data;
@@ -20,7 +22,9 @@ import org.json.JSONObject;
 				
 			}
 			if (request.isNull("data")) {
-				execute(command);
+				value = execute(command);
+				
+				request.put("data", value == null? JSONObject.NULL: value);
 			}
 			else {
 				data = request.getJSONObject("data");
@@ -28,7 +32,6 @@ import org.json.JSONObject;
 				@SuppressWarnings("rawtypes")
 				Iterator it = data.keys();
 				String key;
-				JSONObject value;
 				
 				while (it.hasNext()) {
 					key = (String)it.next();

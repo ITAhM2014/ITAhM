@@ -3,14 +3,12 @@ package com.itahm.request;
 import org.json.JSONObject;
 
 import com.itahm.Data;
-import com.itahm.Database;
-import com.itahm.SnmpManager;
 
 public class Address extends Request {
 
 	private final JSONObject data;
 	
-	public Address(SnmpManager snmp, Database database, JSONObject request) {
+	public Address(JSONObject request) {
 		data = Data.getJSONObject(Data.Table.ADDRESS);
 		
 		request(request);

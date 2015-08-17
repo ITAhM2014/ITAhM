@@ -32,10 +32,14 @@ public class Account extends Request {
 		}
 		
 		JSONObject result = new JSONObject();
-		String [] keys = JSONObject.getNames(this.data);
+		String [] names = JSONObject.getNames(this.data);
+		String user;
 		
-		for (int i=0, length=keys.length; i<length; i++) {
-			result.put(keys[i], JSONObject.NULL);
+		if (names != null) {
+			for (int i=0, length=names.length; i<length; i++) {
+				user = names[i];
+				result.put(user, new JSONObject().put("username", user));
+			}
 		}
 		
 		return result;
@@ -43,7 +47,7 @@ public class Account extends Request {
 	
 	@Override
 	protected JSONObject execute(String command, String key, JSONObject value) {
-		return null;
+		return execute(this.data, command, key, value);
 	}
 	
 }

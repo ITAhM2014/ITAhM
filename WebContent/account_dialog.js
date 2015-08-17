@@ -79,7 +79,7 @@
 			
 			switch (json.command) {
 			case "put":
-				top.open("account.html");
+				top.openContent("account.html");
 				top.closeDialog();
 			}
 		}

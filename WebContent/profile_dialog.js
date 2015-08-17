@@ -27,6 +27,7 @@
 	function load(data) {
 		if (data) {
 			form.name.value = data.name;
+			form.udp.value = data.udp;
 			form.version.value = data.version;
 			form.community.value = data.community;
 			
@@ -64,6 +65,7 @@
 		};
 		
 		request.data[this.name.value] = {
+			udp: this.udp.value,
 			name: this.name.value,
 			version: this.version.value,
 			community: this.community.value

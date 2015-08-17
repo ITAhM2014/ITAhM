@@ -6,7 +6,6 @@
 		//xhr = new JSONRequest("local.itahm.com:2014", onResponse);
 	
 	window.addEventListener("load", onLoad, false);
-	window.addEventListener("message", onMessage, false);
 	
 	function onLoad() {
 		var search = parent.location.search;
@@ -16,15 +15,6 @@
 		form.server.value = search? search.replace("?", ""): "";
 		
 		form.addEventListener("submit", onSignIn, false);
-		
-		top.postMessage({
-			message: "loadend"
-		}, "*");
-		//}, "http://app.itahm.com");
-	}
-	
-	function onMessage(e) {
-		//console.log(e);
 	}
 	
 	function onSignIn(e) {
@@ -45,9 +35,7 @@
 			}
 		}
 		else if ("json" in response) {
-			top.postMessage({
-				message: "signin"
-			}, "*");
+			alert("what are u doing?");
 		}
 		else {
 			

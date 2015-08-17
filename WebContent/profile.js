@@ -55,15 +55,18 @@
 		var form = document.createElement("form"),
 			h3 = document.createElement("h3"),
 			ul = document.createElement("ul"),
+			udp = document.createElement("li"),
 			version = document.createElement("li"),
 			community = document.createElement("li");
 		
 		form.appendChild(h3);
 		form.appendChild(ul);
+		ul.appendChild(udp);
 		ul.appendChild(version);
 		ul.appendChild(community);
 		
 		h3.textContent = json.name;
+		udp.textContent = "udp port : "+ json.udp;
 		version.textContent = "version : "+ json.version;
 		community.textContent = "community : "+ json.community;
 		
