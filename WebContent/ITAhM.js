@@ -3,7 +3,7 @@
 var elements = {};
 
 (function (window, undefined) {
-	var xhr, eventListener;
+	var xhr, eventListener, eventMode = false;
 	
 	window.addEventListener("load", onLoad, false);
 	
@@ -19,11 +19,12 @@ var elements = {};
 		elements["dialog"] = document.getElementById("dialog");
 		elements["content"] = document.getElementById("content");
 		elements["event"] = document.getElementById("event_list");
-		
+		elements["alarm"] = document.getElementById("alarm");
 		elements["body"] = document.getElementsByTagName("body")[0];
 		
 		document.getElementById("btn_signout").addEventListener("click", onSignOut, false);
 		document.getElementById("home").onclick = openContent.bind(window, "monitor.html", "127.0.0.1");
+		document.getElementById("test").onclick = openContent.bind(window, "monitor2.html", "127.0.0.1");
 		document.getElementById("map").onclick = openContent.bind(window, "map.html");
 		document.getElementById("device").onclick = openContent.bind(window, "device_list.html");
 		document.getElementById("line").onclick = openContent.bind(window, "line_list.html");
@@ -46,7 +47,7 @@ var elements = {};
 		
 		eventListener.request({
 			command: "event",
-			last: -1
+			index: -1
 		});
 		
 		xhr.request({
@@ -70,10 +71,10 @@ var elements = {};
 			event = data[index];
 			
 			line = document.createElement("div");
-			line.appendChild(document.createElement("span")).textContent = new Date(event["timeStamp"]);
+			line.appendChild(document.createElement("span")).textContent = new Date(event["timeStamp"]).toLocaleString();
 			line.appendChild(document.createElement("span")).textContent = event["sysName"];
 			line.appendChild(document.createElement("span")).textContent = event["ipAddr"];
-			line.appendChild(document.createElement("span")).textContent = makeEventResource(event["resource"], event["index"]);
+			line.appendChild(document.createElement("span")).textContent = getEventResource(event["resource"], event["index"]);
 			line.appendChild(document.createElement("span")).textContent = event["lastStatus"];
 			line.appendChild(document.createElement("span")).textContent = event["currentStatus"];
 			line.appendChild(document.createElement("span")).textContent = event["text"];
@@ -85,12 +86,21 @@ var elements = {};
 		
 		eventListener.request({
 			command: "event",
-			last: index
+			index: index
 		});
+		
+		if (!eventMode) {
+			elements["alarm"].classList.add("active");
+		}
 	}
 	
-	function makeEventResource(resource, index) {
-		
+	function getEventResource(resource, index) {
+		if (index) {
+			
+		}
+		else {
+			return resource;
+		}
 	}
 	
 	function onSignOut(e) {
@@ -141,7 +151,7 @@ var elements = {};
 			
 			setTimeout(eventListener.request.bind(undefined, {
 				command: "event",
-				last: -1
+				index: -1
 			}), 3000);
 			
 			return;
@@ -170,10 +180,16 @@ var elements = {};
 	}
 	
 	function onShowEvent(e) {
+		eventMode = true;
+		
+		elements["alarm"].classList.remove("active");
+		
 		elements["body"].classList.add("event");
 	}
 	
 	function onCloseEvent(e) {
+		eventMode = false;
+		
 		elements["body"].classList.remove("event");
 	}
 	

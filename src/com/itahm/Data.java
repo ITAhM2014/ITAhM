@@ -50,112 +50,113 @@ public class Data {
 		}
 		
 		accountFile = new JSONFile();
-		try {
-			accountFile.load(new File(root, "account"));
-			accountObj = accountFile.getJSONObject();
-			
-			if (accountObj.length() == 0) {
-				accountObj.put("root", new JSONObject().put("username", "root").put("password", "root"));
-				accountFile.save();
-			}
-		}
-		catch(ITAhMException itahme) {
+		
+		accountFile.load(new File(root, "account"));
+		accountObj = accountFile.getJSONObject();
+		
+		if (accountObj == null) {
 			accountFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read account json data.");
+		}
+		
+		if (accountObj.length() == 0) {
+			accountObj.put("root", new JSONObject().put("username", "root").put("password", "root"));
+			accountFile.save();
 		}
 		
 		profileFile = new JSONFile();
-		try {
-			profileFile.load(new File(root, "profile"));
-			profileObj = profileFile.getJSONObject();
-			
-			if (profileObj.length() == 0) {
-				profileObj.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
-				profileFile.save();
-			}
-		}
-		catch(ITAhMException itahme) {
+		
+		profileFile.load(new File(root, "profile"));
+		profileObj = profileFile.getJSONObject();
+		
+		if (profileObj == null) {
 			profileFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read profile json data.");
+		}
+		
+		if (profileObj.length() == 0) {
+			profileObj.put("public", new JSONObject().put("name", "public").put("version", "v2c").put("community", "public"));
+			profileFile.save();
 		}
 		
 		deviceFile = new JSONFile();
-		try {
-			deviceFile.load(new File(root, "device"));
-			deviceObj = deviceFile.getJSONObject();
-			
-			if (deviceObj.length() == 0) {
-				deviceObj.put("0", new JSONObject()
-					.put("id", "0")
-					.put("address", "127.0.0.1")
-					.put("x", 0).put("y", 0)
-					.put("name", "localhost")
-					.put("profile", "public")
-					.put("type", "server")
-					);
-				
-				deviceFile.save();
-			}
-		}
-		catch(ITAhMException itahme) {
+		
+		deviceFile.load(new File(root, "device"));
+		deviceObj = deviceFile.getJSONObject();
+		
+		if (deviceObj == null) {
 			deviceFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read device json data.");
+		}
+		
+		if (deviceObj.length() == 0) {
+			deviceObj.put("0", new JSONObject()
+				.put("id", "0")
+				.put("address", "127.0.0.1")
+				.put("x", 0).put("y", 0)
+				.put("name", "localhost")
+				.put("profile", "public")
+				.put("type", "server")
+				);
+			
+			deviceFile.save();
 		}
 		
 		lineFile = new JSONFile();
-		try {
-			lineFile.load(new File(root, "line"));
-			lineObj = lineFile.getJSONObject();
-		}
-		catch(ITAhMException itahme) {
+		
+		lineFile.load(new File(root, "line"));
+		lineObj = lineFile.getJSONObject();
+		
+		if (lineObj == null) {
 			lineFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read line json data.");
 		}
 		
 		indexFile = new JSONFile();
-		try {
-			indexFile.load(new File(root, "index"));
-			indexObj = indexFile.getJSONObject();
-			
-			if (indexObj.length() == 0) {
-				indexObj.put("index", 1);
-				indexFile.save();
-			}
-		}
-		catch(ITAhMException itahme) {
+		
+		indexFile.load(new File(root, "index"));
+		indexObj = indexFile.getJSONObject();
+		
+		if (indexObj == null) {
 			indexFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read index json data.");
+		}
+		
+		if (indexObj.length() == 0) {
+			indexObj.put("index", 1);
+			indexFile.save();
 		}
 		
 		File snmpRoot = new File(root, "snmp");
 		snmpRoot.mkdir();
 		
 		snmpFile = new JSONFile();
-		try {
-			snmpFile.load(new File(snmpRoot, "snmp"));
-			snmpObj = snmpFile.getJSONObject();
-		}
-		catch(ITAhMException itahme) {
+		
+		snmpFile.load(new File(snmpRoot, "snmp"));
+		snmpObj = snmpFile.getJSONObject();
+		
+		if (snmpObj == null) {
 			snmpFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read index json data.");
 		}
 		
 		addressFile = new JSONFile();
-		try {
-			addressFile.load(new File(snmpRoot, "address"));
-			addressObj = addressFile.getJSONObject();
-		}
-		catch(ITAhMException itahme) {
+		
+		addressFile.load(new File(snmpRoot, "address"));
+		addressObj = addressFile.getJSONObject();
+		
+		if (addressObj == null) {
 			addressFile.close();
 			
-			throw itahme;
+			new ITAhMException("can not read address json data.");
 		}
+		
 		
 		return initialized = true;
 	}

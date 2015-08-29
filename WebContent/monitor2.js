@@ -83,7 +83,7 @@ function ResourceList() {
 }) (window);
 
 (function (window, undefined) {
-	var xhr, form, device, chart,
+	var xhr, device, chart,
 		resourceList = new ResourceList(onChangeResource),
 		savedBase, savedScale,
 		checkboxList = [];
@@ -94,6 +94,7 @@ function ResourceList() {
 	
 	function onLoad(e) {
 		elements["body"] = document.getElementsByTagName("body")[0];
+		elements.chart = document.getElementById("chart");
 		elements["status"] = document.getElementById("txt_status");
 		elements["ip"] = document.getElementById("ip");
 		elements["name"] = document.getElementById("txt_name");
@@ -107,14 +108,8 @@ function ResourceList() {
 		elements["port_list"] = document.getElementById("port_list");
 		elements["memory"] = document.getElementById("memory");
 		elements["traffic"] = document.getElementById("traffic");
-		elements["zoomin"] = document.getElementById("btn_zoomin");
-		elements["zoomout"] = document.getElementById("btn_zoomout");
 		elements["switch"] = document.getElementById("switch");
-		elements["range"] = document.getElementById("range");
-		elements["title"] = document.getElementById("title");
-		elements["detail"] = document.getElementById("detail");
-		
-		form = document.getElementById("form");
+		elements.navigation = document.getElementById("navigation");
 		
 		elements["switch"].addEventListener("change", onChangeSwitch, false);
 	}
@@ -128,18 +123,11 @@ function ResourceList() {
 	}
 	
 	function init() {
-		elements["body"].classList.remove("loading");
-		
-		chart = new Chart({
-			id: "chart",
-			zoom: "auto",
-			color: "#000",
-			space: 1,
-			onreset: onReset,
-			onchange: onChangeBase
-		});
+		document.createDocumentFragment().appendChild(elements.navigation);
 		
 		setUp();
+		
+		elements["body"].classList.remove("loading");
 	}
 	
 	function setUp() {
@@ -152,7 +140,6 @@ function ResourceList() {
 		elements["name"].textContent = device["sysName"];
 		elements["description"].textContent = device["sysDescr"];
 		elements["enterprise"].textContent = sysObjectID(device["sysObjectID"]);
-		elements["title"].textContent = device["sysName"] +"["+ ip +"]";
 		
 		// delay
 		checkbox = document.getElementById("check_delay");
@@ -319,16 +306,6 @@ function ResourceList() {
 		data["realTimeData"] = chart.draw(drawData, data["color"], true);
 	}
 	
-	function changeBase(origin, base) {
-		elements["range"].textContent = new Date(origin).toLocaleString() +" ~ "+ new Date(base).toLocaleString();
-	}
-	
-	function onChangeBase(origin, base) {
-		if (elements["switch"].value === "log") {
-			changeBase(origin, base);
-		}
-	}
-	
 	function onChangeSwitch(e) {
 		if (this.value === "log") {
 			chart.setBase(savedBase);
@@ -338,8 +315,6 @@ function ResourceList() {
 		}
 		else {
 			chart.setScale(0);
-			
-			elements["range"].textContent = "real time";
 			
 			requestTimer();
 		}
@@ -353,8 +328,6 @@ function ResourceList() {
 			savedScale = scale;
 			
 			resourceList.each(sendLogRequest.bind(undefined, scale, base, size));
-			
-			changeBase(origin, base);
 		}
 		else {
 			if (resourceList.checked.length > 0) {
@@ -368,10 +341,9 @@ function ResourceList() {
 	 * realtime인 경우에는 반복해서 발생
 	 */
 	function onChangeResource() {
+		resourceList.each(sendLogRequest.bind(undefined, scale, base, size));
 		
-		chart.clear();
-		
-		resetResource();
+		clearElement(elements.chart);
 	}
 	
 	function resetResource() {
@@ -380,57 +352,7 @@ function ResourceList() {
 	
 		clearElement(detail);
 		
-		resourceList.each(changeResource.bind(undefined, doc));
-		
 		detail.appendChild(doc);
-	}
-	
-	function changeResource(doc, checkbox) {
-		var 
-			row = document.createElement("ul"),
-			col,
-			data = resourceList.getData(checkbox);
-			database = data["database"];
-			entry = device[data["entry"] || "delay"];
-			index = data["index"];
-			resource = entry[index] || entry;
-		
-		// database (col1)
-		col = document.createElement("li");
-		col.textContent = database;
-		row.appendChild(col);
-		
-		// index (col2)
-		col = document.createElement("li");			
-		col.textContent = index || "N/A";
-		row.appendChild(col);
-		
-		// description (col3)
-		col = document.createElement("li");
-		col.textContent = data.getDescription(resource);
-		row.appendChild(col);
-		
-		// capacity (col4);
-		col = document.createElement("li");
-		col.textContent =data.getCapacity(resource);
-		row.appendChild(col);
-		
-		// current (col5);
-		col = document.createElement("li");
-		col.textContent =data.getCurrent(resource);
-		row.appendChild(col);
-		
-		// current (col6);
-		col = document.createElement("li");
-		col.textContent =data.getPercentage(resource) +" %";
-		row.appendChild(col);
-		
-		// color (col6);
-		col = document.createElement("li");
-		col.appendChild(document.createElement("p")).style.backgroundColor =data["color"];
-		row.appendChild(col);
-		
-		doc.appendChild(row);
 	}
 	
 	function requestTimer() {
@@ -467,6 +389,8 @@ function ResourceList() {
 		var data = resourceList.getData(checkbox);
 		
 		sendRequest(data["database"], scale, data["index"], base, size);
+		
+		elements.chart.appendChild(new Chart({}).chart);
 	}
 	
 	function drawGraph(database, data) {

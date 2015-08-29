@@ -4,7 +4,8 @@ import java.nio.channels.SocketChannel;
 
 import com.itahm.http.Request;
 import com.itahm.http.Response;
-import com.itahm.json.Event;
+
+import event.Event;
 
 public interface EventListener {
 	public void onConnect(SocketChannel channel);

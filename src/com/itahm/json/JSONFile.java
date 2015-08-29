@@ -3,7 +3,6 @@ package com.itahm.json;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -36,13 +35,8 @@ public class JSONFile implements Closeable{
 	public JSONFile() {
 	}
 	
-	public JSONFile(File file) throws ITAhMException {
-		try {
-			load(file);
-		} catch (IOException ioe) {
-			throw new ITAhMException(ioe);
-		}
-		
+	public JSONFile(File file) throws IOException {
+		load(file);
 	}
 	
 	/**
@@ -54,10 +48,11 @@ public class JSONFile implements Closeable{
 	 * @throws ITAhMException the IT ah m exception
 	 * @throws FileNotFoundException 
 	 */
-	public JSONFile load(File file) throws ITAhMException, IOException {
+	public JSONFile load(File file) throws IOException {
 		if (this.file != null) {
 			close();
-			clear();
+			
+			this.json.clear();
 		}
 		
 		this.file = new RandomAccessFile(file, "rws");
@@ -66,7 +61,7 @@ public class JSONFile implements Closeable{
 		try {
 			long size = this.channel.size();
 			if (size != (int)size) {
-				throw new ITAhMException("too long file size.");
+				System.out.println("fatal error: too long file size.");
 			}
 			else if (size > 0) {
 				ByteBuffer buffer = ByteBuffer.allocate((int)size);
@@ -77,7 +72,7 @@ public class JSONFile implements Closeable{
 					this.json = new JSONObject(Charset.defaultCharset().decode(buffer).toString());
 				}
 				catch (JSONException jsone) {
-					throw new ITAhMException("invalid json file. "+ file.getName(), jsone);
+					System.out.println("fatal error: invalid json file "+ file.getName() +".");
 				}
 			}
 			else {
@@ -99,8 +94,9 @@ public class JSONFile implements Closeable{
 	 *
 	 * @param file the file
 	 * @return the JSON object. return null if file size is more than Integer.MAX_VALUE, or invalid json format, or empty file.
+	 * @throws IOException 
 	 */
-	public static JSONObject getJSONObject(File file) {
+	public static JSONObject getJSONObject(File file) throws IOException {
 		if (!file.isFile()) {
 			return null;
 		}
@@ -110,9 +106,7 @@ public class JSONFile implements Closeable{
 			FileChannel fc = raf.getChannel();
 		) {
 			long size = fc.size();
-			if (size != (int)size) {
-				System.out.println("can not open file. size "+ size);
-				
+			if (size != (int)size) {				
 				return null;
 			}
 			else if (size > 0) {
@@ -125,18 +119,10 @@ public class JSONFile implements Closeable{
 					return new JSONObject(Charset.defaultCharset().decode(bb).toString());
 				}
 				catch (JSONException jsone) {
-					System.out.println("invalid json file. "+ file.getName());
-					
-					return null;
 				}
 			}
-			
-			System.out.println("empty file.");
 		}
 		catch (FileNotFoundException fnfe) {
-		}
-		catch (IOException e) {
-			System.out.println("fatal error. "+ e);
 		}
 		
 		return null;
@@ -145,89 +131,10 @@ public class JSONFile implements Closeable{
 	/**
 	 * Gets the JSON object.
 	 *
-	 * @return the JSON object
+	 * @return the JSON object. null json 형식이 아니라던가 어떤 문제가 생겼을때
 	 */
 	public JSONObject getJSONObject() {
 		return this.json;
-	}
-	
-	/**
-	 * Sets the JSON object.
-	 *
-	 * @throws IOException 
-	 */
-	public void setJSONObject(JSONObject jo) throws IOException {
-		this.json = jo;
-		
-		save();
-	}
-	
-	/**
-	 * Put.
-	 *
-	 * @param key the key
-	 * @param value the value
-	 * @return the JSON object
-	 */
-	public JSONObject put(String key, Object value) {
-		this.json.put(key, value);
-		
-		return this.json;
-	}
-	
-	/**
-	 * Put.
-	 *
-	 * @param key the key
-	 * @param value the value
-	 * @return true if 기존 값이 없거나 새로운 값이 더 큰 경우
-	 */
-	public boolean tryPut(String key, long value) {
-		if (!this.json.has(key) || this.json.getLong(key) < value) {
-			this.json.put(key, value);
-			
-			return true;
-		}
-		
-		return false;
-	}
-	
-	/**
-	 * Gets the.
-	 *
-	 * @param key the key
-	 * @return the JSON object
-	 */
-	public JSONObject get(String key) {
-		return this.json.has(key)? this.json.getJSONObject(key): null;
-	}
-	
-	/**
-	 * Checks if is empty.
-	 *
-	 * @return true, if is empty
-	 */
-	public boolean isEmpty() {
-		return this.json.length() == 0;
-	}
-	
-	/**
-	 * Removes the.
-	 *
-	 * @param key the key
-	 * @return the JSON object
-	 */
-	public JSONObject remove(String key) {
-		return (JSONObject)this.json.remove(key);
-	}
-	
-	/**
-	 * Clear.
-	 *
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 */
-	public void clear() throws IOException {
-		this.json.clear();
 	}
 	
 	/**
@@ -240,20 +147,6 @@ public class JSONFile implements Closeable{
 		
 		this.file.setLength(0);
 		this.channel.write(buffer);
-	}
-	
-	/**
-	 * Save as.
-	 *
-	 * @param file the file
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 */
-	public void saveAs(File file) throws IOException {
-		try (
-			FileOutputStream fos = new FileOutputStream(file, true);				
-		) {
-			fos.write(this.json.toString().getBytes());
-		}		
 	}
 	
 	/* (non-Javadoc)

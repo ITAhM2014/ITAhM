@@ -1,6 +1,7 @@
 package com.itahm.json;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Calendar;
 
 import org.json.JSONObject;
@@ -32,12 +33,15 @@ public class JSONData {
 			if (date >= this.nextDay) {
 				nextDay();
 			}
-			else {
-				nextHour();
+			else if (!nextHour()){
+				return null;
 			}
 		}
 		
-		if (this.data != null && this.data.has(key)) {
+		if (this.data == null) {
+			
+		}
+		else if (this.data.has(key)) {
 			return this.data.getLong(key);
 		}
 		
@@ -61,20 +65,26 @@ public class JSONData {
 		nextDay();
 	}
 
-	private void nextHour() {
+	private boolean nextHour() {
 		this.curHour = this.nextHour;
 		this.nextHour += RollingFile.HOUR;
 		
 		String curDay = Long.toString(this.curDay);
 		String curHour = Long.toString(this.curHour);
 		
-		this.data = JSONFile.getJSONObject(new File(new File(this.root, curDay), curHour));
+		try {
+			this.data = JSONFile.getJSONObject(new File(new File(this.root, curDay), curHour));
+		} catch (IOException e) {
+			return false;
+		}
+		
+		return true;
 	}
 	
-	private void nextDay() {
+	private boolean nextDay() {
 		this.curDay = this.nextDay;
 		this.nextDay += RollingFile.DAY;
 		
-		nextHour();
+		return nextHour();
 	}
 }

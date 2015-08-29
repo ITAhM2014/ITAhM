@@ -10,7 +10,8 @@
 		<link rel="stylesheet" href="monitor.css">
 		
 		<script src="js/JSONRequest.js"></script>
-		<script src="js/Chart.js"></script>
+		<script src="js/Draggable.js"></script>
+		<script src="js/Chart.2.js"></script>
 		<script src="js/snmp.js"></script>
 	</head>
 
@@ -40,60 +41,55 @@
 			</div>
 			
 			<h3>
-				<span class="color purple"></span>
 				<input type="checkbox" id="check_delay">
 				response time
 			</h3>
 			
 			<h3>
-				<span class="color blue"></span>
-				processor load</h3>
+				processor load
+			</h3>
 			<ul id="cpu_list"></ul>
 		
 			<h3>
-				<span class="color red"></span>
-				physical memory</h3>
+				physical memory
+			</h3>
 			<ul id="mem_list"></ul>
 			
 			<h3>
-				<span class="color yellow"></span>
-				storage usage</h3>
+				storage usage
+			</h3>
 			<ul id="disk_list"></ul>
 			
 			<h3>
-				<span class="color green"></span>
-				<span class="color orange"></span>
-				interface throughput</h3>
+				interface throughput
+			</h3>
 			<ul id="port_list"></ul>
 			
 		</aside>
+			
+		<section id="chart">
+			<div id="navigation">
+				<div class="left">
+					<select id="switch">
+						<option selected>log</option>
+						<option>real time</option>
+					</select>
+					<label>
+						<input type="checkbox">
+						detail
+					</label>
+					<input type="button" value="refresh">
+					<input type="checkbox" id="fix_start" checked title="start date should be active if checked">
+					<input type="date" id="start_date">
+				</div>
+				<div class="right">
+					<input type="date" id="end_date">
+					<input type="checkbox" id="fix_end" checked title="end date should be active if checked">
+				</div>
+			</div>
+		</section>
 		
-		<header class="title">
-			<h3 id="title">127.0.0.1</h3>
-			<h4 id="range" class="blink"></h4>
-			
-			<select id="switch">
-				<option selected>log</option>
-				<option>real time</option>
-			</select>
-		</header>
-			
-		<section id="chart"></section>
-			
-		<footer>
-			<ul>
-				<li>resource
-				<li>index
-				<li>description
-				<li>capacity
-				<li>current
-				<li>percentage
-				<li>color
-			</ul>
-			<div id="detail"></div>
-		</footer>
-		
-		<script src="monitor.js"></script>
+		<script src="monitor2.js"></script>
 		
 	</body>
 	

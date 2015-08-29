@@ -98,11 +98,11 @@ public class RollingFile {
 		createFile(fileName);
 	}
 	
-	private void createFile(String fileName) {
+	private void createFile(String fileName) throws IOException {
 		this.data = (this.file = new JSONFile(new File(this.dir, fileName))).getJSONObject();
 	}
 	
-	private void createDailyRolling(long date) {
+	private void createDailyRolling(long date) throws IOException {
 		File dir = new File(this.root, Long.toString(date));
 		dir.mkdir();
 		
@@ -167,7 +167,9 @@ public class RollingFile {
 			}
 		}
 		
-		if (this.file.tryPut(key, value)) {
+		if (!this.data.has(key) || this.data.getLong(key) < value) {
+			this.data.put(key, value);
+			
 			// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
 			this.file.save();
 		}
@@ -213,13 +215,13 @@ public class RollingFile {
 		if (b) {
 			key = Long.toString(now);
 			
-			this.maxDailySummary.put(key, max);
+			this.maxDailyData.put(key, max);
 			this.maxDailySummary.save();
 			
-			this.minDailySummary.put(key, min);
+			this.minDailyData.put(key, min);
 			this.minDailySummary.save();
 			
-			this.avgDailySummary.put(key, (long)(sum / cnt));
+			this.avgDailyData.put(key, (long)(sum / cnt));
 			this.avgDailySummary.save();
 		}
 	}
@@ -280,19 +282,19 @@ public class RollingFile {
 		key = Long.toString(now);
 		
 		if (bMax) {
-			this.maxSummary.put(key, max);
+			this.maxData.put(key, max);
 			
 			this.maxSummary.save();
 		}
 		
 		if (bMin) {
-			this.minSummary.put(key, min);
+			this.minData.put(key, min);
 			
 			this.minSummary.save();
 		}
 		
 		if (bAvg) {
-			this.avgSummary.put(key, (long)(sum / cnt));
+			this.avgData.put(key, (long)(sum / cnt));
 			
 			this.avgSummary.save();
 		}
@@ -342,7 +344,7 @@ public class RollingFile {
 	
 	private JSONObject getMinuteData(long begin, long end) {
 		JSONObject result = new JSONObject();
-		JSONData data = new JSONData(root);
+		JSONData data = new JSONData(this.root);
 		Long value;
 		
 		for (long date = begin; date < end; date += MINUTE) {
@@ -351,6 +353,8 @@ public class RollingFile {
 			if (value != null) {
 				result.put(Long.toString(date), value);
 			}
+			else {
+			}
 		}
 		
 		return result;
@@ -358,7 +362,7 @@ public class RollingFile {
 	
 	private JSONObject getMinute5Data(long begin, long end, String method) {
 		JSONObject result = new JSONObject();
-		JSONSummaryData data = new JSONSummaryData(root, method);
+		JSONSummaryData data = new JSONSummaryData(this.root, method);
 		Long value;
 		
 		for (long date = begin; date < end; date += MINUTE5) {

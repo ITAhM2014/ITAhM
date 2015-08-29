@@ -1,10 +1,12 @@
-package com.itahm.json;
+package event;
 
 import java.util.Calendar;
 
 import org.json.JSONObject;
 
 public class Event extends JSONObject {
+	
+	private String index;
 	
 	public Event(String sysName, String ipAddr, String resource, long lastStatus, long currentStatus, String text) {
 		put("timeStamp", Calendar.getInstance().getTimeInMillis());
@@ -19,9 +21,20 @@ public class Event extends JSONObject {
 	public Event(String sysName, String ipAddr, String resource, String index, long lastStatus, long currentStatus, String text) {
 		this(sysName, ipAddr, resource, lastStatus, currentStatus, text);
 		
-		put("index", index);
+		put("index", Integer.parseInt(index));
 	}
 	
-	public static void main(String [] args) {
+	public void index(int index) {
+		this.index = Integer.toString(index);
 	}
+	
+	public String toString() {
+		JSONObject result = new JSONObject();
+		
+		result.put("command", "event");
+		result.put("data", this.index == null? JSONObject.NULL: new JSONObject().put(index, this));
+		
+		return result.toString();
+	}
+
 }

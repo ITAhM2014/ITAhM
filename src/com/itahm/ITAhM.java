@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.json.JSONException;
@@ -16,10 +15,15 @@ import com.itahm.request.Account;
 import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
-import com.itahm.json.Event;
 import com.itahm.session.Session;
 
-public class ITAhM implements EventListener, Closeable {
+import event.Event;
+import event.EventQueue;
+import event.EventResponder;
+import event.Waiter;
+import event.WaitingQueue;
+
+public class ITAhM implements EventListener, EventResponder, Closeable {
 
 	private final static Map<String, String> commandMap = new HashMap<String, String>();
 	{
@@ -39,8 +43,8 @@ public class ITAhM implements EventListener, Closeable {
 	
 	private final Listener http;
 	private final SnmpManager snmp;
-	private final Map<SocketChannel, Response> eventQueue;
-	
+	private final EventQueue eventQueue;
+	private final WaitingQueue waitingQueue;
 	public ITAhM(int tcpPort, String path) throws IOException, ITAhMException {
 		System.out.println("ITAhM service is started");
 		
@@ -62,23 +66,9 @@ public class ITAhM implements EventListener, Closeable {
 		}
 		
 		http = new Listener(this, tcpPort);
-		eventQueue = new HashMap<SocketChannel, Response>();
-		
-		
+		eventQueue = new EventQueue();
+		waitingQueue = new WaitingQueue();
 	}
-/*
- * if (snmpFile.get("127.0.0.1") == null) {
-			snmpFile.put("127.0.0.1", new JSONObject()
-				.put("ip","127.0.0.1")
-				.put("udp", 161)
-				.put("community", "public")
-				.put("ifEntry", new JSONObject())
-				.put("hrProcessorLoad", new JSONObject())
-			);
-			
-			snmpFile.save();
-		}
- */
 	
 	private void initSNMP() {
 		JSONObject deviceData = Data.getJSONObject(Data.Table.DEVICE);
@@ -128,12 +118,12 @@ public class ITAhM implements EventListener, Closeable {
 	}
 	
 	/**
-	 * method에서 바로 queue에 넣지 않고 false를 반환해서 caller가 처리하도록 하는 이유는
+	 * method에서 바로 queue에 넣지 않고 Waiter를 반환해서 caller가 처리하도록 하는 이유는
 	 * caller가 method에 channel 과 message를 전달하지 않았기 때문
 	 * @param json request json
-	 * @return false 즉시 처리하지 않고 event queue에 보관하는 경우 
+	 * @return Waiter 즉시 처리하지 않고 waiting queue에 보관하는 경우 
 	 */
-	private boolean processRequest(JSONObject json, Session session) {
+	private Waiter processRequest(JSONObject json, Session session) {
 		try {
 			if (json.has("database")) {
 				processRequest(json, json.getString("database"));
@@ -143,7 +133,7 @@ public class ITAhM implements EventListener, Closeable {
 					session.close();
 				}
 				else if ("event".equals(json.getString("command"))) {
-					return false;
+					return new Waiter(json.getInt("index"));
 				}
 				else {
 					json.put("data", JSONObject.NULL);
@@ -154,7 +144,7 @@ public class ITAhM implements EventListener, Closeable {
 			json.put("data", JSONObject.NULL);
 		}
 		
-		return true;
+		return null;
 	}
 	
 	private void processRequest(JSONObject jo, String database) {
@@ -181,9 +171,7 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void onClose(SocketChannel channel) {
-		synchronized(this.eventQueue) {
-			this.eventQueue.remove(channel);
-		}
+		this.waitingQueue.cancel(channel);
 	}
 
 	@Override
@@ -233,13 +221,22 @@ public class ITAhM implements EventListener, Closeable {
 				response.status(200, "OK").send(channel, "");
 			}
 			else {
-				if (processRequest(jo, session)) {
+				Waiter waiter = processRequest(jo, session);
+				
+				if (waiter == null) {
 					response.status(200, "OK").send(channel, jo.toString());
 				}
 				else {
-					// processRequest가 false를 반환하면 event 요청인 것
-					synchronized(this.eventQueue) {
-						this.eventQueue.put(channel, response);
+					int index = waiter.index();
+					Event event = this.eventQueue.getNext(index);
+					
+					waiter.set(channel, response);
+					
+					if (index == -1 || event == null) {
+						this.waitingQueue.push(waiter);
+					}
+					else {
+						waiter.checkout(event);
 					}
 				}
 			}
@@ -250,30 +247,9 @@ public class ITAhM implements EventListener, Closeable {
 
 	@Override
 	public void onEvent(Event event) {
-		JSONObject msg = new JSONObject();
+		this.eventQueue.push(event);
 		
-		msg.put("event", event);
-		
-		synchronized(this.eventQueue) {
-			try {
-				Iterator<SocketChannel> iterator = this.eventQueue.keySet().iterator();
-				SocketChannel channel;
-				
-				while (iterator.hasNext()) {
-					channel = iterator.next();
-					
-					
-					
-					this.eventQueue.get(channel).
-					status(200, "OK").
-					send(channel, msg.toString());
-					
-					iterator.remove();
-				}
-			} catch (IOException ioe) {
-				onError(ioe);
-			}
-		}
+		this.waitingQueue.each(this);
 	}
 	
 	@Override
@@ -313,6 +289,19 @@ public class ITAhM implements EventListener, Closeable {
             	itahm.close();
             }
         });
+	}
+
+	@Override
+	public void response(Waiter waiter) {
+		Event event = this.eventQueue.getNext(waiter.index());
+		
+		if (event != null) {
+			try {
+				waiter.checkout(event);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 }

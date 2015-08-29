@@ -240,7 +240,7 @@ function Chart(config) {
 	function drawMax(context, x, y, max) {
 		context.save();
 		
-		context.globalAlpha = .5;
+		context.globalAlpha = .2;
 		context.beginPath();
 		context.moveTo(x, 0);
 		context.lineTo(x, y);
@@ -323,16 +323,14 @@ function Chart(config) {
 			
 			context.beginPath();
 			context.strokeStyle = color || "#000";
-			//context.fillStyle = color || "#000";
 			
 			for (var time=this.origin, x=0, space=this.space; x<width; x+=space, time += timeUnit) {
 				value = data[time];
 				
-				if (typeof value === "number") {					
+				if (typeof value === "number") {
 					result[time] = value;
 					
-					value = Math.round(value /100 * height);
-					context.lineTo(x, value +.5);
+					context.lineTo(x -.5, value = Math.round(value /100 * height) -.5);
 					
 					if (maxValue <= value) {
 						maxValue = value;
@@ -349,9 +347,7 @@ function Chart(config) {
 			context.stroke();
 			
 			if (maxX > -1) {
-				context.save();
-				
-				drawMax(context, maxX, height, maxValue);
+				drawMax(context, maxX -.5, height, maxValue);
 				
 				context.stroke();
 			}
@@ -363,7 +359,7 @@ function Chart(config) {
 			drawTimeScale.call(this);
 			context.drawImage(this.graph, MARGIN_LEFT, MARGIN_TOP);
 			
-			return value;
+			return result;
 		},
 		
 		clear: function () {

@@ -15,7 +15,8 @@ import java.util.Set;
 
 import com.itahm.EventListener;
 import com.itahm.ITAhMException;
-import com.itahm.json.Event;
+
+import event.Event;
 
 public class Listener implements Runnable, Closeable {
 

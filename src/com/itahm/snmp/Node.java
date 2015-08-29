@@ -27,11 +27,12 @@ import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 
 import com.itahm.EventListener;
-import com.itahm.json.Event;
 import com.itahm.json.RollingFile;
 import com.itahm.json.RollingFile.SCALE;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.json.RollingMap;
+
+import event.Event;
 
 public class Node extends CommunityTarget {
 
@@ -158,6 +159,9 @@ public class Node extends CommunityTarget {
 		
 		if (this.success != success) {
 			this.itahm.onEvent(new Event(this.nodeData.getString("sysName"), this.nodeData.getString("ip"), "snmp", success? 0: 1, success? 1: 0, ""));
+		}
+		else {
+			this.itahm.onEvent(new Event(this.nodeData.getString("sysName"), this.nodeData.getString("ip"), "echo", 0, 0, ""));
 		}
 	}
 	

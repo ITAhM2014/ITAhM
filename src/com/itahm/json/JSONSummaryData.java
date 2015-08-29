@@ -1,6 +1,7 @@
 package com.itahm.json;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Calendar;
 
 import org.json.JSONObject;
@@ -29,7 +30,9 @@ public class JSONSummaryData {
 		String key = Long.toString(date);
 		
 		if (date >= this.next) {
-			next();
+			if (!next()) {
+				return null;
+			}
 		}
 		
 		if (this.data != null && this.data.has(key)) {
@@ -53,10 +56,16 @@ public class JSONSummaryData {
 		next();
 	}
 	
-	private void next() {
+	private boolean next() {
 		this.current = this.next;
 		this.next += RollingFile.DAY;
 		
-		this.data = JSONFile.getJSONObject(new File(new File(this.root, Long.toString(this.current)), this.method));
+		try {
+			this.data = JSONFile.getJSONObject(new File(new File(this.root, Long.toString(this.current)), this.method));
+		} catch (IOException e) {
+			return false;
+		}
+		
+		return true;
 	}
 }

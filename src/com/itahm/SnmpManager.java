@@ -21,11 +21,12 @@ import org.snmp4j.event.ResponseListener;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import com.itahm.json.Event;
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.Node;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
+
+import event.Event;
 
 public class SnmpManager extends TimerTask implements ResponseListener, Closeable  {
 
