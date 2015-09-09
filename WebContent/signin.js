@@ -1,29 +1,52 @@
 ;"use strict";
 
+var elements = {};
+
 (function (window, undefined) {
-	var 
-		form;
-		//xhr = new JSONRequest("local.itahm.com:2014", onResponse);
+	var xhr;
 	
 	window.addEventListener("load", onLoad, false);
+	window.addEventListener("keydown", onKeyDown, false);
+	window.load = load;
 	
 	function onLoad() {
-		var search = parent.location.search;
+		var form = document.getElementById("form");
 		
-		form = document.getElementById("form");
-		
-		form.server.value = search? search.replace("?", ""): "";
+		elements.server = document.getElementById("server");
+		elements.user = form.elements["username"];
+		elements.password = form.elements["password"];
 		
 		form.addEventListener("submit", onSignIn, false);
+	}
+	
+	function load(data) {
+		elements.server.textContent = top.server;
+		xhr = new JSONRequest(top.server, onResponse);
+		
+		top.clearScreen();
 	}
 	
 	function onSignIn(e) {
 		e.preventDefault();
 		
-		var username = form.username.value,
-			password = form.password.value;
+		var request = {
+				command: "signin",
+				username: elements.user.value,
+				password: elements.password.value
+			};
 		
-		new JSONRequest(form.server.value, onResponse).set("Authorization", "Basic "+ btoa(username +":"+password)).request();
+		xhr.request(request);
+	}
+	
+	function onKeyDown(e) {
+		var keyCode = e.keyCode;
+		
+		if (keyCode == 27) {
+			//top.closeDialog()();
+		}
+		else if (keyCode == 13) {
+			//onSignIn();
+		}
 	}
 	
 	function onResponse(response) {
@@ -35,10 +58,11 @@
 			}
 		}
 		else if ("json" in response) {
-			alert("what are u doing?");
+			top.home();
+			top.closeDialog();
 		}
 		else {
-			
+			throw response;
 		}
 	}
 	

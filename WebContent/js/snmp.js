@@ -20,6 +20,19 @@ var ifOperStatus = {
 		7: "lowerLayerDown"
 	};
 
+var hrStorageType = {
+		1: "hrStorageOther",
+		2: "hrStorageRam",
+		3: "hrStorageVirtualMemory",
+		4: "hrStorageFixedDisk",
+		5: "hrStorageRemovableDisk",
+		6: "hrStorageFloppyDisk",
+		7: "hrStorageCompactDisc ",
+		8: "hrStorageRamDisk",
+		9: "hrStorageFlashMemory",
+		10: "hrStorageNetworkDisk"
+	};
+
 var ifType ={
 		1: "other",
 		2: "regular1822",

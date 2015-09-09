@@ -11,8 +11,10 @@ import java.util.Iterator;
 public final class Response extends Message {
 
 	public final static String COOKIE = "SESSION=%s; HttpOnly";
+	private final SocketChannel channel;
 	
-	public Response() {
+	public Response(SocketChannel sock) {
+		channel = sock;
 	}
 	
 	public Response status(int status, String reason) {
@@ -35,6 +37,10 @@ public final class Response extends Message {
 		System.arraycopy(body, 0, this.body, 0, length);
 	}
 	
+	public boolean own(SocketChannel channel) {
+		return channel == this.channel;
+	}
+	
 	public byte [] build() throws IOException {
 		Iterator<String> iterator = this.header.keySet().iterator();
 		String key;
@@ -54,36 +60,44 @@ public final class Response extends Message {
 	}
 	
 	/**
+	 * body 없는 전송
+	 * @throws IOException
+	 */
+	public void send() throws IOException {
+		sendHeader(0);
+	}
+	
+	/**
 	 * 문자열 전송시 사용
 	 * @param channel
 	 * @param body
 	 * @throws IOException
 	 */
-	public void send(SocketChannel channel, String body) throws IOException {
+	public void send(String body) throws IOException {
 		byte [] bytes = body.getBytes("UTF-8");
 		
-		sendHeader(channel, bytes.length);
-		send(channel, ByteBuffer.wrap(bytes));
+		sendHeader(bytes.length);
+		send(ByteBuffer.wrap(bytes));
 	}
 	
 	/**
 	 * file 전송시 사용
 	 */
-	public void send(SocketChannel channel, File body) throws IOException {
+	public void send(File body) throws IOException {
 		try (
 			FileInputStream fis = new FileInputStream(body);
 		) {
 			long size = body.length();
 			byte [] buffer;
 			
-			sendHeader(channel, size);
+			sendHeader(size);
 			
 			while (size > 0) {
 				buffer = new byte [(int)size];
 				size -= (int)size;
 				fis.read(buffer);
 				
-				send(channel, ByteBuffer.wrap(buffer));
+				send(ByteBuffer.wrap(buffer));
 			}
 		}
 	}
@@ -91,7 +105,7 @@ public final class Response extends Message {
 	/**
 	 * 이미 완성된 header와 전송할 data를 조합하여 전송
 	 */
-	private void sendHeader(SocketChannel channel, long length) throws IOException {
+	private void sendHeader(long length) throws IOException {
 		Iterator<String> iterator;
 		String header = this.startLine;
 		String key;
@@ -106,7 +120,7 @@ public final class Response extends Message {
 			header += String.format(FIELD, key, this.header.get(key));
 		}
 		
-		send(channel, ByteBuffer.wrap((header +CRLF).getBytes("US-ASCII")));
+		send(ByteBuffer.wrap((header +CRLF).getBytes("US-ASCII")));
 	}
 	
 	/**
@@ -116,11 +130,11 @@ public final class Response extends Message {
 	 * @return 전송한 data size (bytes)
 	 * @throws IOException
 	 */
-	private int send(SocketChannel channel, ByteBuffer buffer) throws IOException {
+	private int send(ByteBuffer buffer) throws IOException {
 		int bytes = 0;
 		
 		while (buffer.remaining() > 0) {
-			bytes += channel.write(buffer);
+			bytes += this.channel.write(buffer);
 		}
 		
 		return bytes;

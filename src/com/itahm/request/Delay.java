@@ -26,29 +26,29 @@ public class Delay extends Request {
 			return null;
 		}
 		
-		long base;
-		int size;
-		int scale = 1;
+		long start;
+		long end;
+		boolean summary = false;
 		
 		try {
-			base = value.getLong("base");
-			size = value.getInt("size");
+			start = value.getLong("start");
+			end = value.getLong("end");
 			
-			if (value.has("scale")) {
-				scale = value.getInt("scale");
+			if (value.has("summary")) {
+				summary = value.getBoolean("summary");
 			}
 		}
-		catch (JSONException jsone) {	
+		catch (JSONException jsone) {
 			return null;
 		}
 		
-		Node node = Node.node(key);
+		Node node = Node.getNode(key);
 		
 		if (node == null) {
 			return null;
 		}
 		
-		JSONObject jo = node.getJSON(Resource.DELAY, "0", base, size, scale);
+		JSONObject jo = node.getData(Resource.DELAY, "0", start, end, summary);
 		
 		return jo;
 	}

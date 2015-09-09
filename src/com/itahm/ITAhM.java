@@ -30,7 +30,8 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		commandMap.put("account", "com.itahm.request.Account");
 		commandMap.put("device", "com.itahm.request.Device");
 		commandMap.put("line", "com.itahm.request.Line");
-		commandMap.put("traffic", "com.itahm.request.Traffic");
+		commandMap.put("inoctet", "com.itahm.request.InOctet");
+		commandMap.put("outoctet", "com.itahm.request.OutOctet");
 		commandMap.put("profile", "com.itahm.request.Profile");
 		commandMap.put("address", "com.itahm.request.Address");
 		commandMap.put("snmp", "com.itahm.request.Snmp");
@@ -45,6 +46,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	private final SnmpManager snmp;
 	private final EventQueue eventQueue;
 	private final WaitingQueue waitingQueue;
+	
 	public ITAhM(int tcpPort, String path) throws IOException, ITAhMException {
 		System.out.println("ITAhM service is started");
 		
@@ -98,7 +100,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		}
 	}
 	
-	private boolean signin(String username, String password) {
+	private boolean signIn(String username, String password) {
 		JSONObject request = new JSONObject();
 		JSONObject data = new JSONObject();
 		
@@ -108,52 +110,28 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		
 		new Account(request, true);
 		
-		if (!data.isNull(username)) {
-			JSONObject result = data.getJSONObject(username);
-			
-			return password.equals(result.getString("password"));
+		try {
+			if (!data.isNull(username)) {
+				JSONObject result = data.getJSONObject(username);
+				
+				return password.equals(result.getString("password"));
+			}
 		}
-
+		catch (JSONException jsone) {}
+		
 		return false;
 	}
 	
-	/**
-	 * method에서 바로 queue에 넣지 않고 Waiter를 반환해서 caller가 처리하도록 하는 이유는
-	 * caller가 method에 channel 과 message를 전달하지 않았기 때문
-	 * @param json request json
-	 * @return Waiter 즉시 처리하지 않고 waiting queue에 보관하는 경우 
-	 */
-	private Waiter processRequest(JSONObject json, Session session) {
-		try {
-			if (json.has("database")) {
-				processRequest(json, json.getString("database"));
-			}
-			else {
-				if ("signout".equals(json.getString("command"))) {
-					session.close();
-				}
-				else if ("event".equals(json.getString("command"))) {
-					return new Waiter(json.getInt("index"));
-				}
-				else {
-					json.put("data", JSONObject.NULL);
-				}
-			}
-		}
-		catch(JSONException jsone) {
-			json.put("data", JSONObject.NULL);
-		}
-		
-		return null;
-	}
-	
-	private void processRequest(JSONObject jo, String database) {
-		String className =commandMap.get(database);
+	private void processRequest(JSONObject request) {
+		String className =commandMap.get(request.getString("database"));
 		
 		if (className != null) {
 			try {
-				Class.forName(className).getDeclaredConstructor(JSONObject.class).newInstance(jo);
-			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | NoSuchMethodException |SecurityException | IllegalArgumentException | InvocationTargetException e) {
+				Class.forName(className).getDeclaredConstructor(JSONObject.class).newInstance(request);
+			} catch (InstantiationException | IllegalAccessException
+					| IllegalArgumentException | InvocationTargetException
+					| NoSuchMethodException | SecurityException
+					| ClassNotFoundException e) {
 				e.printStackTrace();
 			}
 		}
@@ -173,76 +151,72 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	public void onClose(SocketChannel channel) {
 		this.waitingQueue.cancel(channel);
 	}
-
+	
 	@Override
-	public void onRequest(SocketChannel channel, Request request, Response response) {
-		String cookie = request.cookie();
-		String user = request.user();
-		Session session = null;
+	public void onRequest(Request request, Response response) {
+		JSONObject json = request.getJSONObject();
+		Session session = request.session();
+		String command = json.getString("command");
 		
-		if (cookie != null) {
-			session = Session.find(cookie);
-		}
-		else {
-		}
-		
-		if (session == null) {
-			if (user != null){
-				if (signin(user, request.password())) {
-					session = Session.getInstance();
-					
-					response.header("Set-Cookie", String.format(Response.COOKIE, session.getID()));
-				}
-				else {
-				}
-			}
-		}
-		else {
-		}
-		/**
-		 * session 확인하는 부분. 삭제하지 말것
-		if (session == null) {
-			try {
-				response.status("HTTP/1.1 401 Unauthorized").send(channel);
-			} catch (IOException ioe) {
-				onError(ioe);
-			}
-			
-			return;
-		}
-		
-		session.update();
-		*/
-		JSONObject jo = request.getJSONObject();
-		
+		// IOException
 		try {
-			if (jo == null) {
-				// signin 등과 body가 없고 header만으로 처리하는 경우
-				response.status(200, "OK").send(channel, "");
-			}
-			else {
-				Waiter waiter = processRequest(jo, session);
-				
-				if (waiter == null) {
-					response.status(200, "OK").send(channel, jo.toString());
-				}
-				else {
-					int index = waiter.index();
-					Event event = this.eventQueue.getNext(index);
-					
-					waiter.set(channel, response);
-					
-					if (index == -1 || event == null) {
-						this.waitingQueue.push(waiter);
+			// JSONException
+			try {
+				// session 없는 요청은 signin
+				if (session == null) { 
+					if ("signin".equals(command) && signIn(json.getString("username"), json.getString("password"))) {
+						// signin 성공, cookie 발행
+						session = Session.getInstance();
+						
+						response.header("Set-Cookie", String.format(Response.COOKIE, session.getID())).status(200, "OK").send(json.toString());
 					}
 					else {
-						waiter.checkout(event);
+						// signin 실패하거나 signin이 아닌 session 없는 요청은 거부
+						response.status(401, "Unauthorized").send();
+					}
+				}
+				// session 있는 정상 요청
+				else {
+					if ("signout".equals(command)) {
+						session.close();
+						
+						response.status(401, "Unauthorized").send();
+					}
+					else if ("echo".equals(command)) {
+						response.status(200, "OK").send(json.toString());
+					}
+					else if ("event".equals(command)) {
+						Waiter waiter = new Waiter(response, json.getInt("index"));
+						int index = waiter.index();
+						Event event = this.eventQueue.getNext(index);
+						
+						waiter.set(response);
+						
+						if (index == -1 || event == null) {
+							this.waitingQueue.push(waiter);
+							
+						}
+						else {
+							waiter.checkout(event);
+						}
+					}
+					else if (json.has("database")) {
+						processRequest(json);
+						
+						response.status(200, "OK").send(json.toString());
+					}
+					else {
+						response.status(400, "Bad Request").send();
 					}
 				}
 			}
-		}catch (IOException ioe) {
+			catch(JSONException jsone) {
+				response.status(400, "Bad Request").send();
+			}
+		}
+		catch (IOException ioe) {
 			onError(ioe);
-		}	
+		}
 	}
 
 	@Override

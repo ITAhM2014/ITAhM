@@ -7,84 +7,100 @@
 		<meta http-equiv="Content-Script-Type" content="text/javascript">
 		<meta http-equiv="Content-Style-Type" content="text/css">
 		<link rel="shortcut icon" href="img/favicon.ico">
-		<link rel="stylesheet" href="monitor.css">
+		<link rel="stylesheet" href="monitor2.css">
 		
 		<script src="js/JSONRequest.js"></script>
 		<script src="js/Draggable.js"></script>
 		<script src="js/Chart.2.js"></script>
 		<script src="js/snmp.js"></script>
+
 	</head>
 
 	<body class="loading">
 		
 		<aside>
-			<h3>device information</h3>
-			<div class="table">
-				<div>
-					<span>status</span><span id="txt_status"></span>
-				</div>
-				<div>
-					<span>ip address</span><span id="ip"></span>
-				</div>
-				<div>
-					<span>name</span><span id="txt_name"></span>
-				</div>
-				<div>
-					<span>uptime</span><span id="txt_uptime"></span>
-				</div>
-				<div>
-					<span>description</span><span id="txt_description"></span>
-				</div>
-				<div>
-					<span>enterprise</span><span id="txt_enterprise"></span>
-				</div>
+			<div class="header">
+				<img src="img/minimize_h.png" id="minimize" title="minimize">
+				<img src="img/maximize_h.png" id="maximize" title="maximize">
 			</div>
+			<div class="main">
+				<h3>device information</h3>
+				<div class="table">
+					<ul>
+						<li>status
+						<li><h4 id="txt_status"></h4>
+					</ul>
+					<ul>
+						<li>ip address
+						<li><h4 id="ip"></h4>
+					</ul>
+					<ul>
+						<li>name
+						<li><h4 id="txt_name"></h4>
+					</ul>
+					<ul>
+						<li>uptime
+						<li id="txt_uptime">
+					</ul>
+					<ul>
+						<li>description
+						<li id="txt_description">
+					</ul>
+					<ul>
+						<li>enterprise
+						<li id="txt_enterprise">
+					</ul>
+				</div>
+				
+				<h3>
+					snmp response time
+				</h3>
+				<ul>
+					<li><input type="checkbox" id="check_delay">response time (ms)
+				</ul>
+				
+				<h3>
+					processor load
+				</h3>
+				<ul id="cpu_list"></ul>
 			
-			<h3>
-				<input type="checkbox" id="check_delay">
-				response time
-			</h3>
-			
-			<h3>
-				processor load
-			</h3>
-			<ul id="cpu_list"></ul>
-		
-			<h3>
-				physical memory
-			</h3>
-			<ul id="mem_list"></ul>
-			
-			<h3>
-				storage usage
-			</h3>
-			<ul id="disk_list"></ul>
-			
-			<h3>
-				interface throughput
-			</h3>
-			<ul id="port_list"></ul>
-			
+				<h3>
+					physical memory
+				</h3>
+				<ul id="mem_list"></ul>
+				
+				<h3>
+					storage usage
+				</h3>
+				<ul id="disk_list"></ul>
+				
+				<h3>
+					interface throughput
+				</h3>
+				<ul id="port_list"></ul>
+			</div>
 		</aside>
 			
 		<section id="chart">
+			<img id="setup" class="tr" src="img/setup.png" width="50" height="50">
 			<div id="navigation">
-				<div class="left">
+				<div class="bl">
+					<a id="refresh"><img src="img/refresh.png" title="refresh chart"></a>
+					<input type="checkbox" id="fix_start" checked title="start date should be active if checked">
+					<input type="date" id="start_date">
+				</div>
+				<div class="br">
+					<input type="date" id="end_date">
+					<input type="checkbox" id="fix_end" checked title="end date should be active if checked">
+				</div>
+				
+				<div class="tr">
+					<a id="save_as"><img src="img/save.png" title="save as csv file"></a>
+					<a id="zoom_in"><img src="img/zoomin.png" title="more details"></a>
 					<select id="switch">
 						<option selected>log</option>
 						<option>real time</option>
 					</select>
-					<label>
-						<input type="checkbox">
-						detail
-					</label>
-					<input type="button" value="refresh">
-					<input type="checkbox" id="fix_start" checked title="start date should be active if checked">
-					<input type="date" id="start_date">
-				</div>
-				<div class="right">
-					<input type="date" id="end_date">
-					<input type="checkbox" id="fix_end" checked title="end date should be active if checked">
 				</div>
 			</div>
 		</section>

@@ -28,7 +28,6 @@ import org.snmp4j.smi.VariableBinding;
 
 import com.itahm.EventListener;
 import com.itahm.json.RollingFile;
-import com.itahm.json.RollingFile.SCALE;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.json.RollingMap;
 
@@ -159,9 +158,6 @@ public class Node extends CommunityTarget {
 		
 		if (this.success != success) {
 			this.itahm.onEvent(new Event(this.nodeData.getString("sysName"), this.nodeData.getString("ip"), "snmp", success? 0: 1, success? 1: 0, ""));
-		}
-		else {
-			this.itahm.onEvent(new Event(this.nodeData.getString("sysName"), this.nodeData.getString("ip"), "echo", 0, 0, ""));
 		}
 	}
 	
@@ -303,17 +299,16 @@ public class Node extends CommunityTarget {
 				else {
 					longValue = inCounter.count(longValue);
 					
-					if (ifData.has("ifSpeed")) {
+					this.rollingMap.put(Resource.IFINOCTETS, index, longValue);
+					
+					if (ifData.has("ifSpeed") && ifData.has("ifInOctets")) {
 						long speed = ifData.getLong("ifSpeed");
-						long current = speed > 0? longValue *100 / speed: 0;
-						long last;
 						
-						this.rollingMap.put(Resource.IFINOCTETS, index, current);
+						if (speed > 0) {
+							long current = longValue *100 / speed;
+							long last = ifData.getLong("ifInOctets") *100 / speed;
 						
-						if (ifData.has("ifInOctets")) {
-							last = speed > 0? ifData.getLong("ifInOctets") *100 / speed: 0;
-							
-							if (current /10 != last /10 && last > 69) {
+							if (current /10 != last /10 && (current > 69 || last > 69)) {
 								this.itahm.onEvent(new Event(
 										this.nodeData.getString("sysName"),
 										this.nodeData.getString("ip"),
@@ -342,17 +337,16 @@ public class Node extends CommunityTarget {
 				else {
 					longValue = outCounter.count(longValue);
 					
-					if (ifData.has("ifSpeed")) {
+					this.rollingMap.put(Resource.IFOUTOCTETS, index, longValue);
+					
+					if (ifData.has("ifSpeed") && ifData.has("ifOutOctets")) {
 						long speed = ifData.getLong("ifSpeed");
-						long current = speed > 0? longValue *100 / speed: 0;
-						long last;
 						
-						this.rollingMap.put(Resource.IFOUTOCTETS, index, current);
+						if (speed > 0) {
+							long current = longValue *100 / speed;
+							long last = ifData.getLong("ifOutOctets") *100 / speed;
 						
-						if (ifData.has("ifOutOctets")) {
-							last = speed > 0? ifData.getLong("ifOutOctets") *100 / speed: 0;
-							
-							if (current /10 != last /10 && last > 69) {
+							if (current /10 != last /10 && (current > 69 || last > 69)) {
 								this.itahm.onEvent(new Event(
 										this.nodeData.getString("sysName"),
 										this.nodeData.getString("ip"),
@@ -407,17 +401,16 @@ public class Node extends CommunityTarget {
 				else {
 					longValue = hcInCounter.count(longValue);
 					
-					if (ifData.has("ifSpeed")) {
+					this.rollingMap.put(Resource.IFINOCTETS, index, longValue);
+					
+					if (ifData.has("ifSpeed") && ifData.has("ifHCInOctets")) {
 						long speed = ifData.getLong("ifSpeed");
-						long current = speed > 0? longValue *100 / speed: 0;
-						long last;
 						
-						this.rollingMap.put(Resource.IFINOCTETS, index, current);
-						
-						if (ifData.has("ifHCInOctets")) {
-							last = speed > 0? ifData.getLong("ifHCInOctets") *100 / speed: 0;
+						if (speed > 0) {
+							long current = longValue *100 / speed;
+							long last = ifData.getLong("ifHCInOctets") *100 / speed;
 							
-							if (current /10 != last /10 && last > 69) {
+							if (current /10 != last /10 && (current > 69 || last > 69)) {
 								this.itahm.onEvent(new Event(
 										this.nodeData.getString("sysName"),
 										this.nodeData.getString("ip"),
@@ -446,17 +439,16 @@ public class Node extends CommunityTarget {
 				else {
 					longValue = hcOutCounter.count(longValue);
 					
-					if (ifData.has("ifSpeed")) {
+					this.rollingMap.put(Resource.IFOUTOCTETS, index, longValue);
+				
+					if (ifData.has("ifSpeed") && ifData.has("ifHCOutOctets")) {
 						long speed = ifData.getLong("ifSpeed");
-						long current = speed > 0? longValue *100 / speed: 0;
-						long last;
 						
-						this.rollingMap.put(Resource.IFOUTOCTETS, index, current);
-						
-						if (ifData.has("ifHCOutOctets")) {
-							last = speed > 0? ifData.getLong("ifHCOutOctets") *100 / speed: 0;
+						if (speed > 0) {
+							long current = longValue *100 / speed;
+							long last = ifData.getLong("ifHCOutOctets") *100 / speed;
 							
-							if (current /10 != last /10 && last > 69) {
+							if (current /10 != last /10 && (current > 69 || last > 69)) {
 								this.itahm.onEvent(new Event(
 										this.nodeData.getString("sysName"),
 										this.nodeData.getString("ip"),
@@ -511,10 +503,25 @@ public class Node extends CommunityTarget {
 				String index = Integer.toString(response.last());
 				int intValue = value.getValue();
 				
-				this.hrProcessorEntry.put(index, intValue);
-				
 				this.rollingMap.put(Resource.HRPROCESSORLOAD, index, intValue);
 				
+				if (this.hrProcessorEntry.has(index)) {
+					int last = this.hrProcessorEntry.getInt(index);
+					
+					if (intValue /10 != last /10 && (intValue > 69 || last > 69)) {
+							this.itahm.onEvent(new Event(
+									this.nodeData.getString("sysName"),
+									this.nodeData.getString("ip"),
+									"hrProcessorLoad",
+									index,
+									last,
+									intValue,
+									""));
+					}
+				}
+	
+				this.hrProcessorEntry.put(index, intValue);
+			
 				return true;
 			}
 			else if (request.startsWith(Constants.hrStorageEntry) && response.startsWith(Constants.hrStorageEntry)) {
@@ -576,13 +583,30 @@ public class Node extends CommunityTarget {
 					Integer32 value = (Integer32)variable;
 					int intValue = value.getValue();
 					
-					storageData.put("hrStorageUsed", intValue);
+					this.rollingMap.put(Resource.HRSTORAGEUSED, index, intValue);
 					
-					if (storageData.has("hrStorageSize")) {
+					if (storageData.has("hrStorageUsed") && storageData.has("hrStorageSize") && storageData.has("hrStorageType")) {
 						int size = storageData.getInt("hrStorageSize");
 						
-						this.rollingMap.put(Resource.HRSTORAGEUSED, index, size > 0? intValue *100L /storageData.getInt("hrStorageSize"): 0);
+						if (size != 0) {
+							int last = storageData.getInt("hrStorageUsed") / size;
+							int type = storageData.getInt("hrStorageType");
+							
+							intValue /= size;
+							if (intValue /10 != last /10 && (intValue > 69 || last > 69)) {
+								this.itahm.onEvent(new Event(
+										this.nodeData.getString("sysName"),
+										this.nodeData.getString("ip"),
+										"hrStorageUsed/"+ type,
+										index,
+										last,
+										intValue,
+										""));
+							}
+						}
 					}
+					
+					storageData.put("hrStorageUsed", intValue);
 					
 					return true;
 				}
@@ -619,39 +643,17 @@ public class Node extends CommunityTarget {
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
 	}
 	
-	public JSONObject getJSON(Resource resource, String index, long base, int size, int intScale) {
-		SCALE scale;
-		
-		if (intScale == 1) {
-			return getJSON(resource, index, base, size);
-		}
-		else if (intScale == 2) {
-			scale = SCALE.MINUTE5;
-		}
-		else {
-			scale = SCALE.HOUR6;
-		}
-		
-		RollingFile rollingFile = this.rollingMap.getFile(resource, index);
-		
-		if (rollingFile == null) {
-			return null;
-		}
-		
-		return rollingFile.getData(base, size, scale, "avg");
-	}
-	
-	public JSONObject getJSON(Resource resource, String index, long base, int size) {
+	public JSONObject getData(Resource resource, String index, long start, long end, boolean summary) {
 		RollingFile rollingFile = this.rollingMap.getFile(resource, index);
 		
 		if (rollingFile != null) {
-			return rollingFile.getData(base, size);
+			return rollingFile.getData(start, end, summary);
 		}
 		
 		return null;
 	}
 	
-	public static Node node(String ip) {
+	public static Node getNode(String ip) {
 		return nodeList.get(ip);
 	}
 	

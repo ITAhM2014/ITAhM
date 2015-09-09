@@ -7,23 +7,16 @@ import com.itahm.http.Response;
 
 public class Waiter {
 
-	private SocketChannel channel;
 	private Response response;
 	private final int index;
 	private Waiter next;
-
-	public Waiter(int index) {
-		this.index = index;
-	}
 	
-	public Waiter(SocketChannel channel, Response response, int index) {
-		this.channel = channel;
+	public Waiter(Response response, int index) {
 		this.response = response;
 		this.index = index;
 	}
 
-	public void set(SocketChannel channel, Response response) {
-		this.channel = channel;
+	public void set(Response response) {
 		this.response = response;
 	}
 	
@@ -31,13 +24,9 @@ public class Waiter {
 		return this.index;
 	}
 	
-	public SocketChannel getChannel() {
-		return this.channel;
-	}
-	
 	public void checkout(Event event) throws IOException {
-		if (this.response != null && this.channel != null) {
-			this.response.status(200, "OK").send(this.channel, event.toString());
+		if (this.response != null) {
+			this.response.status(200, "OK").send(event.toString());
 		}
 	}
 	
@@ -47,5 +36,9 @@ public class Waiter {
 	
 	public Waiter next() {
 		return this.next;
+	}
+	
+	public boolean own(SocketChannel channel) {
+		return this.response.own(channel);
 	}
 }

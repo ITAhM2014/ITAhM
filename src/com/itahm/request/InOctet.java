@@ -9,9 +9,9 @@ import org.json.JSONObject;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.snmp.Node;
 
-public class Traffic extends Request {
+public class InOctet extends Request {
 
-	public Traffic(JSONObject request) {
+	public InOctet(JSONObject request) {
 		request(request);
 	}
 
@@ -26,35 +26,31 @@ public class Traffic extends Request {
 			return null;
 		}
 		
-		long base;
-		int size;
+		long start;
+		long end;
 		int index;
-		int scale = 1;
+		boolean summary = false;
 		
 		try {
-			base = value.getLong("base");
-			size = value.getInt("size");
+			start = value.getLong("start");
+			end = value.getLong("end");
 			index = value.getInt("index");
 			
-			if (value.has("scale")) {
-				scale = value.getInt("scale");
+			if (value.has("summary")) {
+				summary = value.getBoolean("summary");
 			}
 		}
-		catch (JSONException jsone) {
+		catch (JSONException jsone) {	
 			return null;
 		}
 		
-		JSONObject result = new JSONObject();
-		Node node = Node.node(key);
+		Node node = Node.getNode(key);
 		
 		if (node == null) {
 			return null;
 		}
 		
-		result.put("ifInOctets", node.getJSON(Resource.IFINOCTETS, Integer.toString(index), base, size, scale));
-		result.put("ifOutOctets", node.getJSON(Resource.IFOUTOCTETS, Integer.toString(index), base, size, scale));
-		
-		return result;
+		return node.getData(Resource.IFINOCTETS, Integer.toString(index), start, end, summary);
 	}
 	
 }

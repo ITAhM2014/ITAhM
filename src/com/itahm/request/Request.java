@@ -18,9 +18,6 @@ import org.json.JSONObject;
 			String command = request.getString("command");
 			JSONObject data;
 			
-			if (!request.has("data")) {
-				
-			}
 			if (request.isNull("data")) {
 				value = execute(command);
 				
@@ -63,7 +60,7 @@ import org.json.JSONObject;
 			result = value;
 		}
 		else if ("delete".equals(command)) {
-			result =(JSONObject)data.remove(key);
+			result = (JSONObject)data.remove(key);
 		}
 		
 		return result;

@@ -283,7 +283,7 @@ public class SnmpManager extends TimerTask implements ResponseListener, Closeabl
 				}
 
 				@Override
-				public void onRequest(SocketChannel channel, Request request, Response response) {
+				public void onRequest(Request request, Response response) {
 					
 				}
 

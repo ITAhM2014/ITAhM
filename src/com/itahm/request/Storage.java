@@ -26,28 +26,31 @@ public class Storage extends Request {
 			return null;
 		}
 		
-		long base;
-		int size;
+		long start;
+		long end;
 		int index;
+		boolean summary = false;
 		
 		try {
-			base = value.getLong("base");
-			size = value.getInt("size");
+			start = value.getLong("start");
+			end = value.getLong("end");
 			index = value.getInt("index");
-		}
-		catch (JSONException jsone) {
-			jsone.printStackTrace();
 			
+			if (value.has("summary")) {
+				summary = value.getBoolean("summary");
+			}
+		}
+		catch (JSONException jsone) {	
 			return null;
 		}
 		
-		Node node = Node.node(key);
+		Node node = Node.getNode(key);
 		
 		if (node == null) {
 			return null;
 		}
 		
-		return node.getJSON(Resource.HRSTORAGEUSED, Integer.toString(index), base, size);
+		return node.getData(Resource.HRSTORAGEUSED, Integer.toString(index), start, end, summary);
 	}
 	
 }

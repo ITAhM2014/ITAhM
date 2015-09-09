@@ -9,19 +9,19 @@ import org.json.JSONObject;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.snmp.Node;
 
-public class Processor extends Request {
+public class OutOctet extends Request {
 
-	public Processor(JSONObject request) {
+	public OutOctet(JSONObject request) {
 		request(request);
 	}
-	
+
 	@Override
 	protected JSONObject execute(String command) {
 		return null;
 	}
 	
 	@Override
-	protected JSONObject execute(String command, String key, JSONObject value) {
+	protected JSONObject execute(String command, String key, JSONObject data) {
 		if (!"get".equals(command)) {
 			return null;
 		}
@@ -32,12 +32,12 @@ public class Processor extends Request {
 		boolean summary = false;
 		
 		try {
-			start = value.getLong("start");
-			end = value.getLong("end");
-			index = value.getInt("index");
+			start = data.getLong("start");
+			end = data.getLong("end");
+			index = data.getInt("index");
 			
-			if (value.has("summary")) {
-				summary = value.getBoolean("summary");
+			if (data.has("summary")) {
+				summary = data.getBoolean("summary");
 			}
 		}
 		catch (JSONException jsone) {	
@@ -50,9 +50,7 @@ public class Processor extends Request {
 			return null;
 		}
 		
-		JSONObject jo = node.getData(Resource.HRPROCESSORLOAD, Integer.toString(index), start, end, summary);
-		
-		return jo;
+		return node.getData(Resource.IFOUTOCTETS, Integer.toString(index), start, end, summary);
 	}
 	
 }

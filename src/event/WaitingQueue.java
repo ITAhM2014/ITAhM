@@ -44,7 +44,7 @@ public class WaitingQueue {
 		Waiter waiter = this.front;
 		
 		while (waiter != null) {
-			if (waiter.getChannel() == channel) {
+			if (waiter.own(channel)) {
 				if (prev == null) {
 					this.front = waiter.next();
 				}

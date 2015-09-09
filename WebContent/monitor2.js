@@ -1,18 +1,15 @@
 ;"use strict";
 
-var elements = {},
-	COLOR_GRAY = "#777777",
-	COLOR_RED = "#ff0000",
-	COLOR_BLUE = "#0000ff",
-	COLOR_ORANGE = "#ffaa00",
-	COLOR_GREEN = "#00ff00",
-	COLOR_PURPLE = "#800080",
-	COLOR_YELLOW = "#ffff00";
+var elements = {};
 
 function clearElement(element) {
 	for (var firstChild; firstChild = element.firstChild; ) {
 		element.removeChild(firstChild);
 	}
+}
+
+function removeElement(element) {
+	document.createDocumentFragment().appendChild(element);
 }
 
 function ResourceList() {
@@ -83,7 +80,7 @@ function ResourceList() {
 }) (window);
 
 (function (window, undefined) {
-	var xhr, device, chart,
+	var xhr, xhrDetail,  device, chart,
 		resourceList = new ResourceList(onChangeResource),
 		savedBase, savedScale,
 		checkboxList = [];
@@ -110,30 +107,35 @@ function ResourceList() {
 		elements["traffic"] = document.getElementById("traffic");
 		elements["switch"] = document.getElementById("switch");
 		elements.navigation = document.getElementById("navigation");
+		elements.fixStart = document.getElementById("fix_start");
+		elements.startDate = document.getElementById("start_date");
+		elements.fixEnd = document.getElementById("fix_end");
+		elements.endDate = document.getElementById("end_date");
+		elements.zoomIn = document.getElementById("zoom_in");
+		elements.saveAs = document.getElementById("save_as");
+		elements.refresh = document.getElementById("refresh");
+		elements.setup = document.getElementById("setup");
 		
+		document.getElementById("minimize").addEventListener("click", onMaximize.bind(window, true), false);
+		document.getElementById("maximize").addEventListener("click", onMaximize.bind(window, false), false);
 		elements["switch"].addEventListener("change", onChangeSwitch, false);
 	}
 	
 	function load(ipAddress) {
 		ip = ipAddress;
 		
-		xhr = new JSONRequest(top.server, onResponse);
-		
-		sendRequest("snmp");
+		new JSONRequest(top.server, onInitResponse).request({
+			database: "snmp",
+			command: "get"
+		});
 	}
 	
 	function init() {
-		document.createDocumentFragment().appendChild(elements.navigation);
-		
-		setUp();
-		
-		elements["body"].classList.remove("loading");
-	}
-	
-	function setUp() {
 		var cpuList, memList, diskList, portList, storage, port, data,
 			li, checkbox;
-	
+		
+		elements.chart.removeChild(elements.navigation);
+		elements.chart.removeChild(elements.setup);
 		elements["ip"].textContent = ip;
 		elements["status"].textContent = device.timeout > 0? "down ("+ new Date(device.timeout) +")": "up";
 		elements["uptime"].textContent = Uptime.toString(device["hrSystemUptime"]);
@@ -145,7 +147,6 @@ function ResourceList() {
 		checkbox = document.getElementById("check_delay");
 		resourceList.add(document.getElementById("check_delay"), {
 			database: "delay",
-			color: COLOR_PURPLE,
 			getDescription: function (resource) {
 				return "snmp response time";
 			},
@@ -170,7 +171,6 @@ function ResourceList() {
 		for (index in device["hrProcessorEntry"]) {
 			checkbox = resourceList.add(document.createElement("input"), {
 				database: "processor",
-				color: COLOR_BLUE,
 				index: index,
 				entry: "hrProcessorEntry",
 				getDescription: function () {
@@ -225,7 +225,6 @@ function ResourceList() {
 			 */
 			if (storage["hrStorageType"] === 2) {
 				data["database"] = "memory";
-				data["color"] = COLOR_RED;
 				data["getDescription"] = function (resource) {
 					return "physical memory usage index of "+ index;
 				};
@@ -240,7 +239,6 @@ function ResourceList() {
 			 */
 			else if (storage["hrStorageType"] === 4) {
 				data["database"] = "storage";
-				data["color"] = COLOR_YELLOW;
 				data["getDescription"] = function (resource) {
 					return "storage usage of "+ resource["hrStorageDescr"];;
 				};
@@ -255,13 +253,12 @@ function ResourceList() {
 		 * interface
 		 */
 		portList = elements["port_list"];
-
+		
 		for (index in device["ifIndex"]) {
 			port = device["ifEntry"][index];
 			
 			checkbox = resourceList.add(document.createElement("input"), data = {
-				database: "traffic",
-				color: COLOR_GREEN, // COLOR_ORANGE
+				database: "inoctet",
 				index: index,
 				entry: "ifEntry",
 				getDescription: function (resource) {
@@ -269,12 +266,6 @@ function ResourceList() {
 				},
 				getCapacity: function (resource) {
 					return Bandwidth.toString(resource["ifSpeed"]);
-				},
-				getCurrent: function (resource) {
-					return Bandwidth.toString(resource["ifInOctets"]);
-				},
-				getPercentage: function (resource) {
-					return (resource["ifInOctets"] / resource["ifSpeed"] *100).toFixed(2);
 				},
 				realTimeData: {
 					ifInOctets: {},
@@ -289,8 +280,10 @@ function ResourceList() {
 			
 			portList.appendChild(li);
 		}
+		
+		elements["body"].classList.remove("loading");
 	}
-	
+	/*
 	function update(checkbox) {
 		var key, data, database, entry, index, drawData;
 		
@@ -305,7 +298,7 @@ function ResourceList() {
 		drawData[key] = Number(data.getPercentage(resource));
 		data["realTimeData"] = chart.draw(drawData, data["color"], true);
 	}
-	
+	*/
 	function onChangeSwitch(e) {
 		if (this.value === "log") {
 			chart.setBase(savedBase);
@@ -320,39 +313,60 @@ function ResourceList() {
 		}
 	}
 	
-	function onReset(origin, base, size, scale) {
-		if (elements["switch"].value === "log") {
-			var checkbox;
-		
-			savedBase = base;
-			savedScale = scale;
-			
-			resourceList.each(sendLogRequest.bind(undefined, scale, base, size));
-		}
-		else {
-			if (resourceList.checked.length > 0) {
-				sendRequest("realtime");
-			}
-		}
-	}
-	
-	/*
+	/**
 	 * monitor 하고자 하는 resource 선택이 추가되거나 제거되는 경우 발생하는 event
-	 * realtime인 경우에는 반복해서 발생
 	 */
 	function onChangeResource() {
-		resourceList.each(sendLogRequest.bind(undefined, scale, base, size));
+		var date = new Date();
 		
 		clearElement(elements.chart);
+	
+		resourceList.each(createEachChart);
+		
+		resize();
 	}
 	
-	function resetResource() {
-		var detail = elements["detail"],
-			doc = document.createDocumentFragment();
+	function createEachChart(checkbox) {
+		var data = resourceList.getData(checkbox),
+			database = data.database,
+			index = data.index;
 	
-		clearElement(detail);
+		createChart(database, index);
 		
-		detail.appendChild(doc);
+		if (database === "inoctet") {
+			createChart("outoctet", index);
+		}
+	}
+	
+	function createChart (database, index) {
+		var chart = new Chart(),
+			xhr = new JSONRequest(top.server, onResponse.bind(window, chart)),
+			date = new Date(),
+			request = {
+				database: database,
+				command: "get",
+				data: {}
+			},
+			reqData = {
+				index: index,
+				end: date.setMinutes(0, 0, 0),
+				start: date.setFullYear(date.getFullYear() -1),
+				summary: true
+			};
+		
+		chart.user.database = database;
+		chart.user.index = index;
+		chart.user.summary = true;
+		chart.user.xhr = xhr;
+		chart.title = database;
+		chart.ondrag = onDrag.bind(window, chart);
+		chart.chart.onmouseenter = onSelectChart.bind(window, chart);
+		
+		elements.chart.appendChild(chart.chart);
+		
+		request.data[ip] = reqData;
+		
+		xhr.request(request);
 	}
 	
 	function requestTimer() {
@@ -365,58 +379,111 @@ function ResourceList() {
 		setTimeout(requestTimer, 1000);
 	}
 	
-	function sendRequest(database, scale, index, base, size) {
-		var o = null,
-			request = {
-				database: database,
+	function resize() {
+		var event = document.createEvent("Event");
+		
+		event.initEvent("resize", true, true);
+		
+		window.dispatchEvent(event);
+	}
+	
+	function onSendDetailRequest(chart) {
+		if ((chart.end - chart.start) > 7 *24 *60 *60 *1000) {
+			alert("can not draw more than 7days in detail");
+			
+			return;
+		}
+		
+		sendDetailRequest(chart);
+	}
+	
+	function sendDetailRequest(chart) {
+		var request = {
+				database: chart.user.database,
 				command: "get",
 				data: {}
+			},
+			reqData = {
+				start: chart.start,
+				end: chart.end,
+				index: chart.user.index,
+				summary: false
 			};
 		
-		o = {
-			base: base || null,
-			size: size || null,
-			scale: scale || null,
-			index: index || null
-		};
+		chart.user.summary = false;
 		
-		request.data[ip] = o;
+		request.data[ip] = reqData;
 		
-		xhr.request(request);
+		chart.user.xhr.request(request);
 	}
 	
-	function sendLogRequest(scale, base, size, checkbox) {
-		var data = resourceList.getData(checkbox);
-		
-		sendRequest(data["database"], scale, data["index"], base, size);
-		
-		elements.chart.appendChild(new Chart({}).chart);
+	function onRefresh(chart) {
+		chart.set(new Date(elements.startDate.value).setHours(0, 0, 0, 0), new Date(elements.endDate.value).setHours(0, 0, 0, 0));
 	}
 	
-	function drawGraph(database, data) {
-		if (!data) {
-			throw "null data.";
-		}
-		
-		if (database === "traffic") {
-			chart.draw(data["ifInOctets"], COLOR_GREEN);
-			chart.draw(data["ifOutOctets"], COLOR_ORANGE);
-		}
-		else if (database === "processor") {
-			chart.draw(data, COLOR_BLUE);
-		}
-		else if (database === "memory") {
-			chart.draw(data, COLOR_RED);
-		}
-		else if (database === "storage") {
-			chart.draw(data, COLOR_YELLOW);
-		}
-		else if (database === "delay") {
-			chart.draw(data, COLOR_PURPLE);
+	function onDrag(chart, action, x) {
+		if (action === "move") {
+			if (elements.fixEnd.checked && elements.fixStart.checked) {
+				chart.move(x);
+			}
+			else if (elements.fixEnd.checked) {
+				chart.zoom(x, "end");
+			}
+			else if (elements.fixStart.checked) {
+				chart.zoom(x, "start");
+			}
+			
+			setDate(chart);
 		}
 	}
+
+	function onMaximize(maximize) {
+		if (maximize) {
+			elements.body.classList.add("fullscreen");
+		}
+		else {
+			elements.body.classList.remove("fullscreen");
+		}
+		
+		resize();
+	}
 	
-	function onResponse(response) {
+	function setDate(chart) {
+		elements.startDate.value = Chart.toDateString(new Date(chart.start));
+		elements.endDate.value = Chart.toDateString(new Date(chart.end));
+	}
+	
+	function onSelectChart(chart) {
+		if (chart.chart == elements.navigation.parentNode) {
+			removeElement(elements.setup);
+			
+			return;
+		}
+		
+		chart.chart.appendChild(elements.setup);
+		elements.setup.onclick = onSetUpChart.bind(window, chart);
+		
+		setDate(chart);
+	}
+	
+	function onSetUpChart(chart) {
+		chart.chart.appendChild(elements.navigation);
+		chart.chart.removeChild(elements.setup);
+		
+		elements.zoomIn.onclick = onSendDetailRequest.bind(window, chart);
+		elements.saveAs.onmousedown = saveAs.bind(window, chart);
+		elements.refresh.onclick = onRefresh.bind(window, chart);
+	}
+	
+	function saveAs(chart) {
+		var a = elements.saveAs,
+			file = chart.getFile();
+		
+		a.download = "data.csv";
+		a.href = file;
+	}
+	
+	function parseResponse(response) {
 		if ("error" in response) {
 			var status = response.error.status;
 			
@@ -425,36 +492,43 @@ function ResourceList() {
 			}
 		}
 		else if ("json" in response) {
-			var json = response.json;
-			
-			if (json.command === "get") {
-				if (json.database == "snmp") {
-					if (!device) {
-						device = json.data[ip];
-						
-						init();
-					}
-					else {
-						console.log("debug");
-					}
-				}
-				else if (json.database === "realtime") {
-					if (elements["switch"].value !== "log") {
-						device = json.data[ip];
-						
-						resourceList.each(update);
-						
-						resetResource();
-					}
-				}
-				else {
-					drawGraph(json.database, json.data[ip]);
-				}
-			}
+			return response.json;
 		}
 		else {
 			throw "fatal error";
 		}
+	}
+	
+	function onInitResponse(response) {
+		var response = parseResponse(response),
+			data = response && response.data;
+		
+		if (!data) {
+			throw "null data";
+		}
+		
+		device = data[ip];
+			
+		init();
+	}
+	
+	function onResponse(chart, response) {
+		var response = parseResponse(response),
+		data = response && response.data;
+		
+		if (!data) {
+			throw "null data.";
+		}
+		
+		if (chart.user.summary) {
+			chart.data = data[ip];
+			
+			chart.invalidate();
+		}
+		else {
+			chart.draw(data[ip]);
+		}
+		
 	}
 	
 }) (window);

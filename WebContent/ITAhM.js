@@ -12,6 +12,7 @@ var elements = {};
 	window.signOut = signOut;
 	window.clearScreen = clearScreen;
 	window.openContent = openContent;
+	window.home = home;
 
 	function onLoad(e) {
 		window.server = location.search.replace("?", "");
@@ -43,22 +44,26 @@ var elements = {};
 		
 		xhr = new JSONRequest(server, onResponse);
 		
-		eventListener = new JSONRequest(server, onMonitor);
-		
-		eventListener.request({
-			command: "event",
-			index: -1
-		});
+		eventListener = new JSONRequest(server, onEvent);
 		
 		xhr.request({
 			command: "echo"
 		});
 	}
 	
-	function load() {		
-		openContent("monitor.html", "127.0.0.1");
-		
+	function load() {
+		home();
+		/*
+		eventListener.request({
+			command: "event",
+			index: -1
+		});
+		*/
 		clearScreen();
+	}
+	
+	function home() {
+		openContent("monitor2.html", "127.0.0.1");
 	}
 	
 	function writeEvent(data) {
@@ -95,11 +100,28 @@ var elements = {};
 	}
 	
 	function getEventResource(resource, index) {
-		if (index) {
-			
-		}
-		else {
+		if (!index) {
 			return resource;
+		}
+		
+		if (resource === "hrProcessorLoad") {
+			return "processor load ."+ index;
+		}
+		else if (resource === "ifAdminStatus") {
+			return "interface ."+ index;
+		}
+		else if (resource.indexOf("hrStorageUsed")) {
+			var type = Number(resource.replace("hrStorageUsed/", ""));
+			
+			if (type === 2) {
+				// memory
+				
+				return "physical memory ."+ index;
+			}
+			else if (type == 4) {
+				// disk
+				return "storage ."+ index;
+			}
 		}
 	}
 	
@@ -118,6 +140,7 @@ var elements = {};
 			var status = response.error.status;
 			
 			if (status == 401) {
+				
 				signOut();
 			}
 		}
@@ -132,13 +155,10 @@ var elements = {};
 			if (command === "echo") {
 				load();
 			}
-			else if (command === "signout") {
-				signOut();
-			}
 		}
 	}
 	
-	function onMonitor(response) {
+	function onEvent(response) {
 		if ("error" in response) {
 			var status = response.error.status;
 			
@@ -146,7 +166,7 @@ var elements = {};
 				signOut();
 			}
 			else {
-				console.log(response.error);
+				throw response.error;
 			}
 			
 			setTimeout(eventListener.request.bind(undefined, {
@@ -217,10 +237,19 @@ var elements = {};
 		elements["body"].classList.remove("dialog");
 	}
 
-	function onPopUp(data, e) {		
-		elements["dialog"].contentWindow.load(data);
+	function onPopUp(data, e) {
+		var load = elements["dialog"].contentWindow.load;
 		
-		elements["body"].classList.add("dialog");
+		if (load) {
+			load(data);
+			
+			elements["body"].classList.add("dialog");
+		}
+		else {
+			closeDialog();
+			
+			throw "dialog must have 'load' method";
+		}
 	}
 	
 })(window);

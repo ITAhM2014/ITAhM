@@ -7,19 +7,18 @@ import java.util.Calendar;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class JSONData implements Data{
-
+public class JSONSummary implements Data {
+	
 	/** rollingRoot, itahm/snmp/ip address/resource/index */
 	private final File root;
 	
 	private Calendar date;
 	private final long end;
-	private long nextHourMills;
-	private long day;
+	private long nextDay;
 	private JSONObject data = null;
 	private final JSONObject result;
 	
-	public JSONData(JSONObject json, File rollingRoot, long startDate, long endDate) {
+	public JSONSummary(JSONObject json, File rollingRoot, long startDate, long endDate) {
 		Calendar calendar = Calendar.getInstance();
 		
 		date = Calendar.getInstance();
@@ -30,15 +29,16 @@ public class JSONData implements Data{
 		end = endDate;
 		
 		date.set(Calendar.MILLISECOND, 0);
-		date.set(Calendar.SECOND, 0);	
+		date.set(Calendar.SECOND, 0);
+		date.set(Calendar.MINUTE, 0);
 		
 		calendar.setTimeInMillis(startDate);
 		calendar.set(Calendar.MILLISECOND, 0);
 		calendar.set(Calendar.SECOND, 0);
 		calendar.set(Calendar.MINUTE, 0);
-		nextHourMills = calendar.getTimeInMillis();
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		
-		day = calendar.get(Calendar.DATE);
+		nextDay = calendar.getTimeInMillis();
 		
 		nextDate();
 	}
@@ -51,53 +51,41 @@ public class JSONData implements Data{
 		long date = this.date.getTimeInMillis();
 		String key = Long.toString(date);
 		
-		if (date >= this.nextHourMills) {
+		if (date >= this.nextDay) {
 			nextDate();
 		}
 		
 		try {
 			if (this.data != null && this.data.has(key)) {
-				this.result.put(key, this.data.getLong(key));
+				this.result.put(key, this.data.getJSONObject(key));
 			}
 		}
 		catch (JSONException jsone) {
 		}
 		
-		this.date.add(Calendar.MINUTE, 1);
+		this.date.add(Calendar.HOUR_OF_DAY, 1);
 		
 		return true;
 	}
 	
-	/** next hour or next day*/
 	private void nextDate() {
 		Calendar calendar = Calendar.getInstance();
-		long hourMills = this.nextHourMills;
-		int day;
+		long day = this.nextDay;
 		
-		calendar.setTimeInMillis(this.nextHourMills);
-		calendar.add(Calendar.HOUR_OF_DAY, 1);
+		calendar.setTimeInMillis(this.nextDay);
+		calendar.add(Calendar.DATE, 1);
 		
-		this.nextHourMills = calendar.getTimeInMillis();
-		
-		day = calendar.get(Calendar.DATE);
-		if (day != this.day) {
-			// 날짜가 바뀌었으면 calendar.set(Calendar.HOUR_OF_DAY, 0) 는 불필요. 단지 최종 날짜만 바꾸어준다.
-			this.day = day;
-		}
-		else {
-			// 바뀌지 않았으면
-			calendar.set(Calendar.HOUR_OF_DAY, 0);
-		}
+		this.nextDay = calendar.getTimeInMillis();
 		
 		try {
-			File dir = new File(this.root, Long.toString(calendar.getTimeInMillis()));
-			File file = new File(dir, Long.toString(hourMills));
+			File dir = new File(this.root, Long.toString(day));
+			File file = new File(dir, "summary");
 			
 			this.data = JSONFile.getJSONObject(file);
 		} catch (IOException e) {
 			this.data = null;
 			
-			this.date.setTimeInMillis(this.nextHourMills);
+			this.date.setTimeInMillis(this.nextDay);
 		}
 	}
 	

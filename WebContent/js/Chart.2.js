@@ -1,12 +1,14 @@
-var 
+var
+	MINUTES1 = 60000,
 	HOURS1 = 3600000,
 	HOURS24 = 86400000,
 	GRID_MIN_WIDTH = 100,
 	MARGIN_TOP = 20,
 	MARGIN_RIGHT = 20,
-	MARGIN_LEFT = 120,
+	MARGIN_LEFT = 20,
 	MARGIN_BOTTOM = 50,
 	MARGIN_SCALE = 10,
+	BG_COLOR = "#ffffff",
 	MONTH_NAME = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function Chart(config) {
@@ -63,58 +65,74 @@ function stroke(context, x1, y1, x2, y2) {
 		this.width = width - MARGIN_LEFT - MARGIN_RIGHT;
 		this.height = height - MARGIN_BOTTOM - MARGIN_TOP;
 		
-		this.avgCtx.lineWidth = 2;
-		//avgCtx.strokeStyle = "#fa8072";
-		//maxCtx.fillStyle = "#fafad2";
-		this.avgCtx.strokeStyle = "#fafad2";
-		this.maxCtx.fillStyle = "#fa8072";
+		this.tpp = HOURS24 / this.width;
 		
+		this.context.fillStyle = BG_COLOR;
+		this.context.font = "14px tahoma, arial, '맑은 고딕'"
+			
+		this.avgCtx.lineWidth = 2;
+		this.avgCtx.strokeStyle = this.strokeStyle;
+		
+		this.maxCtx.fillStyle = this.fillStyle;
+		
+		this.minCtx.fillStyle = BG_COLOR;
 		this.gridCtx.font = "14px tahoma, arial, '맑은 고딕'"
-		this.gridCtx.globalAlpha = .1;
-		//this.gridCtx.textAlign = "left";
 		this.gridCtx.textBaseline="top";
 	}
 	
-	function closePath(x, point) {
-		this.maxCtx.lineTo(x, this.height);
-		this.maxCtx.lineTo(point, this.height);
-		this.maxCtx.closePath();
-		this.maxCtx.fill();
+	function closePath2(avg, max, min, x, cpX, cpY) {
+		max.lineTo(x, cpY);
+		max.lineTo(cpX, cpY);
+		max.closePath();
+		max.fill();
 		
-		this.minCtx.lineTo(x, 0);
-		this.minCtx.lineTo(point, 0);
-		this.minCtx.closePath();
-		this.minCtx.fill();
+		min.lineTo(x, 0);
+		min.lineTo(cpX, 0);
+		min.closePath();
+		min.fill();
 		
-		this.avgCtx.stroke();
+		avg.stroke();
 		
-		this.avgCtx.beginPath();
-		this.minCtx.beginPath();
-		this.maxCtx.beginPath();
+		avg.beginPath();
+		min.beginPath();
+		max.beginPath();
+	}
+	
+	function closePath(avg, max, min, x, cpX) {
+		max.lineTo(x, 0);
+		max.lineTo(cpX, 0);
+		max.closePath();
+		max.fill();
+		
+		min.lineTo(x, 0);
+		min.lineTo(cpX, 0);
+		min.closePath();
+		min.fill();
+		
+		avg.stroke();
+		
+		avg.beginPath();
+		min.beginPath();
+		max.beginPath();
 	}
 	
 	function resize() {
 		this.resize();
 		
-		this.draw();
+		this.invalidate();
 	}
 	
-	function onDrag(event) {
-		this.ondragmove(event.moveX);
+	function onDrag(action, event) {
+		var x = event.moveX;
+		if (x != 0) {
+			this.ondrag(action, event.moveX);
+		}
 	}
 	
 	Chart.prototype = {
 		init: function (config) {
 			config = config || {};
 			
-			if (config.id) {
-				this.chart = document.getElementById(config.id);
-			}
-			else {
-				this.chart = document.createElement("div");
-			}
-			
-			this.ondragmove = config.ondragmove || function () {};
 			this.canvas = document.createElement("canvas");
 			this.max = document.createElement("canvas");
 			this.avg = document.createElement("canvas");
@@ -127,7 +145,21 @@ function stroke(context, x1, y1, x2, y2) {
 			this.maxCtx = this.max.getContext("2d");
 			this.gridCtx = this.grid.getContext("2d");
 			
-			this.resize();
+			this.user = {};
+			
+			this.strokeStyle = config.strokeStyle || "#75bdde";
+			this.fillStyle = config.fillStyle || "#e0ffff";
+			
+			this.ondrag = config.ondrag || function () {};
+			
+			if (config.id) {
+				this.chart = document.getElementById(config.id);
+				
+				this.resize();
+			}
+			else {
+				this.chart = document.createElement("div");
+			}
 			
 			this.canvas.className = "chart";
 			
@@ -135,24 +167,33 @@ function stroke(context, x1, y1, x2, y2) {
 			
 			this.start = new Date().setHours(0, 0, 0, 0);
 			this.end = this.start + HOURS24;
-			this.tpp = HOURS24 / this.width;
 			
-			new Draggable(this.chart).on("dragmove", onDrag.bind(this));
+			var draggable = new Draggable(this.chart);
+			draggable.on("dragstart", onDrag.bind(this, "start"));
+			draggable.on("dragmove", onDrag.bind(this, "move"));
+			draggable.on("dragend", onDrag.bind(this, "end"));
 			
 			window.addEventListener("resize", resize.bind(this), false);
 		},
 		
-		draw: function () {
+		invalidate: function () {
 			var
-				block = this.width * HOURS1 / (this.end - this.start),
+				data = this.data;
+			
+			if (!data) {
+				return;
+			}
+			
+			var
+				block = HOURS1 / this.tpp,
 				date = this.start,
 				end = this.end,
 				offset = 0,
 				gridBlock =0,
-				max = 100,
 				skip = 0,
-				data = new Data(),
-				diff, value, gridX, point;
+				labelLength = 0,
+				tmpData = new Data(),
+				high, height, diff, value, gridX, cpX;
 			
 			diff = this.start - new Date(this.start).setMinutes(0, 0, 0);
 			if (diff > 0) {
@@ -168,53 +209,56 @@ function stroke(context, x1, y1, x2, y2) {
 			this.clear();
 			
 			this.avgCtx.save();
-			this.avgCtx.setTransform(1, 0, 0, 1, MARGIN_LEFT - offset, MARGIN_TOP);
-			//this.avgCtx.setTransform(1, 0, 0, 1, offset + MARGIN_LEFT , MARGIN_TOP);
+			this.avgCtx.setTransform(1, 0, 0, -1, MARGIN_LEFT - offset, MARGIN_TOP + this.height);
 			
 			this.minCtx.save();
-			this.minCtx.setTransform(1, 0, 0, 1, MARGIN_LEFT - offset, MARGIN_TOP);
-			//this.minCtx.setTransform(1, 0, 0, 1, offset + MARGIN_LEFT, MARGIN_TOP);
+			this.minCtx.setTransform(1, 0, 0, -1, MARGIN_LEFT - offset, MARGIN_TOP + this.height);
 			
 			this.maxCtx.save();
-			this.maxCtx.setTransform(1, 0, 0, 1, MARGIN_LEFT - offset, MARGIN_TOP);
-			//this.maxCtx.setTransform(1, 0, 0, 1, offset + MARGIN_LEFT, MARGIN_TOP);
+			this.maxCtx.setTransform(1, 0, 0, -1, MARGIN_LEFT - offset, MARGIN_TOP + this.height);
 			
 			this.gridCtx.save();
 			this.gridCtx.setTransform(1, 0, 0, 1, MARGIN_LEFT - offset, MARGIN_TOP);
-			//this.gridCtx.setTransform(1, 0, 0, 1, offset + MARGIN_LEFT, MARGIN_TOP);
 			
 			this.avgCtx.beginPath();
 			this.minCtx.beginPath();
 			this.maxCtx.beginPath();
 			
 			for (var x=0; date <= end; x += block, date += HOURS1, gridBlock += block) {
-				value = this.data[date];
+				value = data[date];
 				
 				if (gridBlock > GRID_MIN_WIDTH) {
 					gridX = Math.round(x - block /2) +.5;
 					
-					stroke(this.gridCtx, gridX, 0, gridX, this.height +5);
 					this.gridCtx.save();
-					
-					this.gridCtx.globalAlpha = 1;
-					this.gridCtx.fillText(format(date), gridX, this.height + MARGIN_SCALE);
+					this.gridCtx.globalAlpha = .1;
+					stroke(this.gridCtx, gridX, 0, gridX, this.height +5);
 					this.gridCtx.restore();
+					
+					this.gridCtx.fillText(format(date), gridX, this.height + MARGIN_SCALE);
 					
 					gridBlock = 0;
 				}
 				
 				if (value) {
-					data.push(x, value);
+					tmpData.push(x, value);
+					
+					labelLength = Math.max(labelLength, this.gridCtx.measureText(value.avg).width);
+					labelLength = Math.max(labelLength, this.gridCtx.measureText(value.max).width);
+					labelLength = Math.max(labelLength, this.gridCtx.measureText(value.min).width);
 				}
 				else {
-					data.wrap();
+					tmpData.wrap();
 				}
 			}
 			
-			data.wrap();
+			tmpData.wrap();
 			
-			for (var i=0, _i=data.length(), j, block, blockX, blockV, x, v; i<_i; i++) {
-				block = data.get(i);
+			high = tmpData.high;
+			this.high = high;
+			
+			for (var i=0, _i=tmpData.length(), j, block, blockX, blockV, x, v; i<_i; i++) {
+				block = tmpData.get(i);
 				blockX = block.x;
 				blockV = block.v;
 				
@@ -222,12 +266,13 @@ function stroke(context, x1, y1, x2, y2) {
 					x = blockX[j];
 					value = blockV[j];
 					
-					this.avgCtx.lineTo(x, (max - value.avg) / max * this.height);
-					this.minCtx.lineTo(x, (max - value.min) / max * this.height);
-					this.maxCtx.lineTo(x, (max - value.max) / max * this.height);
+					this.avgCtx.lineTo(x, value.avg / high * this.height);
+					this.minCtx.lineTo(x, value.min / high * this.height);
+					this.maxCtx.lineTo(x, value.max / high * this.height);
 				}
 				
-				closePath.call(this, x, block.z);
+				//closePath(this.avgCtx, this.maxCtx, this.minCtx, x, block.z, this.height);
+				closePath(this.avgCtx, this.maxCtx, this.minCtx, x, block.z);
 			}
 			
 			this.avgCtx.restore();
@@ -235,23 +280,82 @@ function stroke(context, x1, y1, x2, y2) {
 			this.maxCtx.restore();
 			this.gridCtx.restore();
 			
-			this.context.fillRect(MARGIN_LEFT, MARGIN_TOP, this.width, this.height + MARGIN_BOTTOM);
-			
-			this.maxCtx.save();
-			this.maxCtx.globalCompositeOperation = "destination-in";
-			this.maxCtx.drawImage(this.min, 0, 0);
-			this.maxCtx.restore();
-			
-			this.maxCtx.drawImage(this.avg, 0, 0);
-			this.maxCtx.drawImage(this.grid, 0, 0);
+			this.context.fillRect(MARGIN_LEFT + labelLength + 5, MARGIN_TOP, this.width - labelLength -5, this.height);
 			
 			this.context.save();
-			this.context.globalCompositeOperation = "source-in";
+			this.context.globalCompositeOperation = "source-atop";
 			this.context.drawImage(this.max, 0, 0);
+			this.context.drawImage(this.min, 0, 0);
+			this.context.drawImage(this.avg, 0, 0);
 			this.context.restore();
 			
-			this.context.strokeRect(MARGIN_LEFT -.5, MARGIN_TOP -.5, this.width, this.height);
-			//this.context.drawImage(this.grid, 0, 0);
+			this.gridCtx.strokeRect(MARGIN_LEFT + labelLength +5 -.5, MARGIN_TOP -.5, this.width - labelLength -5, this.height);
+			
+			this.gridCtx.save();
+			this.gridCtx.textBaseline = "bottom";
+			this.gridCtx.fillText(this.title || "", MARGIN_LEFT + labelLength + this.width /2, MARGIN_TOP + this.height + MARGIN_BOTTOM);
+			this.gridCtx.restore();
+			this.gridCtx.save();
+			this.gridCtx.textAlign = "right";
+			this.gridCtx.textBaseline="middle";
+			this.gridCtx.fillText(tmpData.high || "", MARGIN_LEFT + labelLength, MARGIN_TOP);
+			this.gridCtx.fillText("0", MARGIN_LEFT + labelLength, MARGIN_TOP + this.height);
+			this.gridCtx.restore();
+			
+			
+			this.context.drawImage(this.grid, 0, 0);
+			
+			this.detail = undefined;
+		},
+		
+		draw: function (detail) {
+			if (this.detail) {
+				return;
+			}
+			
+			var
+				block = this.width * MINUTES1 / (this.end - this.start),
+				date = new Date(this.start),
+				end = this.end,
+				offset = 0,
+				high = this.high,
+				height = this.height,
+				key = date.setSeconds(0, 0),
+				diff, value;
+			
+			diff = this.start - key;
+			if (diff > 0) {
+				offset = Math.round(diff /this.tpp);
+			}
+			
+			diff = this.end - new Date(this.end).setSeconds(0, 0);
+			if (diff > 0) {
+				end = this.end - diff + MINUTES1;
+			}
+			
+			this.avgCtx.save();
+			this.avgCtx.setTransform(1, 0, 0, 1, MARGIN_LEFT - offset, MARGIN_TOP);
+			
+			for (var x=0; key <= end; x += block, key = date.setMinutes(date.getMinutes() +1)) {
+				value = detail[key];
+				
+				if (value) {
+					this.avgCtx.lineTo(x, (high - value) / high * height);
+				}
+				else {
+					this.avgCtx.stroke();
+					this.avgCtx.beginPath();
+				}
+			}
+			this.avgCtx.stroke();
+			this.avgCtx.restore();
+			
+			this.context.save();
+			this.context.globalCompositeOperation = "source-atop";
+			this.context.drawImage(this.avg, 0, 0);
+			this.context.restore();
+			
+			this.detail = detail;
 		},
 		
 		/**
@@ -274,22 +378,24 @@ function stroke(context, x1, y1, x2, y2) {
 				this.tpp = (this.end - this.start) / this.width;
 			}
 			
-			this.draw();
+			this.invalidate();
 		},
 		
 		move: function (amount) {
 			var move = this.tpp * amount;
-				
+			
 			this.start -= move;
 			this.end -= move;
 			
-			return this.draw();
+			this.invalidate();
 		},
 		
-		set: function (milliseconds, origin) {
-			this[origin] = milliseconds;
+		set: function (start, end) {
+			this.tpp = (end - start) / this.width;
+			this.start = start;
+			this.end = end;
 			
-			this.draw();
+			this.invalidate();
 		},
 		
 		clear: function () {
@@ -323,9 +429,62 @@ function stroke(context, x1, y1, x2, y2) {
 		},
 		
 		resize: function () {
-			var rect = this.chart.getBoundingClientRect();
+			var rect;
+			
+			document.createDocumentFragment().appendChild(this.canvas);
+			
+			rect = this.chart.getBoundingClientRect();
 			
 			initCanvas.call(this, rect.width, rect.height);
+			
+			this.chart.appendChild(this.canvas);
+		},
+		
+		getFile: function () {
+			var file=[];
+			
+			if (this.detail) {
+				var data = this.detail,
+					date = new Date(this.start),
+					end = this.end,
+					key = date.setSeconds(0, 0),
+					index=0, value;
+				
+				file[0] = "index,date,value";
+				
+				while (key < end) {
+					value = data[key];
+					
+					if (value) {
+						file[file.length] = index++ +","+ date.toISOString().slice(0, 10) + " "+ date.toTimeString().slice(0, 8) +","+ value;
+					}
+					
+					key = date.setMinutes(date.getMinutes() +1);
+				}
+			}
+			else {
+				var data = this.data,
+					date = new Date(this.start),
+					end = this.end,
+					key = date.setMinutes(0, 0, 0),
+					index=0, value;
+				
+				file[0] = "index,date,max,avg,min";
+				
+				while (key < end) {
+					value = data[key];
+					
+					if (value) {
+						file[file.length] = index++ +","+ date.toISOString().slice(0, 10) + " "+ date.toTimeString().slice(0, 8) +","+ value.max +","+ value.avg +","+ value.min;
+					}
+					
+					key = date.setHours(date.getHours() +1);
+				}
+			}
+			
+			if (file.length > 0) {
+				return "data:text/csv;charset=utf-8,"+ encodeURI(file.join("\n"));
+			}
 		}
 		
 	};
@@ -409,6 +568,9 @@ function stroke(context, x1, y1, x2, y2) {
 			
 			blockX[index] = x;
 			blockV[index] = v;
+			
+			this.high = Math.max(this.high || v.max, v.max);
+			this.low = Math.min(this.low || v.min, v.min);
 			
 			this.block.length = index +1;
 		},

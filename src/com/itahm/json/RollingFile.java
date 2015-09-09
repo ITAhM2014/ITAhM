@@ -1,67 +1,36 @@
 package com.itahm.json;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Calendar;
 
 import org.json.JSONObject;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class RollingFile.
  */
-public class RollingFile {
-
-	/**
-	 * 60s *1000mills
-	 */
-	private static final long MINUTE = 60000;
+public class RollingFile implements Closeable {
 	
-	/**
-	 * 5m *60s *1000mills
-	 */
-	private static final long MINUTE5 = 300000;
+	/** The lastHour. */
+	private int lastHour;
+	private String lastHourString;
 	
-	/**
-	 * 1h * 60m *60s *1000mills
-	 */
-	public static final long HOUR = 3600000;
-	
-	/**
-	 * 6h * 60m *60s *1000mills
-	 */
-	private static final long HOUR6 = 21600000;
-	
-	/**
-	 * 24h * 60m *60s *1000mills
-	 */
-	public static final long DAY = 86400000;
-	
-	public static enum SCALE {
-		MINUTE, MINUTE5, HOUR6
-	}
-
-	/** The last. */
-	private int last = -1;
-	
+	/** rollingRoot, itahm/snmp/ip address/resource/index */
 	private File root;
 	
-	private final JSONFile maxSummary;
-	private final JSONFile minSummary;
-	private final JSONFile avgSummary;
-	private final  JSONObject maxData;
-	private final  JSONObject minData;
-	private final  JSONObject avgData;
-	private JSONFile maxDailySummary;
-	private JSONFile minDailySummary;
-	private JSONFile avgDailySummary;
-	private JSONObject maxDailyData;
-	private JSONObject minDailyData;
-	private JSONObject avgDailyData;
+	private JSONFile summary;
+	private JSONObject summaryData;
+	
 	private File dir;
 	private JSONFile file;
 	private JSONObject data;
 	
+	private long max;
+	private long min;
+	private BigInteger sum;
+	private int count;
 	/**
 	 * Instantiates a new rolling file.
 	 *
@@ -71,51 +40,26 @@ public class RollingFile {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public RollingFile(File rscRoot, String index) throws IOException {
+		Calendar calendar = Calendar.getInstance();
+		int hour;
+		String hourString;
+		
 		root = new File(rscRoot, index);
 		root.mkdir();
 		
-		maxSummary = new JSONFile(new File(root, "max"));
-		maxData = maxSummary.getJSONObject();
-		
-		minSummary = new JSONFile(new File(root, "min"));
-		minData = maxSummary.getJSONObject();
-		
-		avgSummary = new JSONFile(new File(root, "avg"));
-		avgData = maxSummary.getJSONObject();
-		
-		Calendar calendar = Calendar.getInstance();
-		
+		hour = calendar.get(Calendar.HOUR_OF_DAY);
 		calendar.set(Calendar.MILLISECOND, 0);
 		calendar.set(Calendar.SECOND, 0);
 		calendar.set(Calendar.MINUTE, 0);
-		
-		String fileName = Long.toString(calendar.getTimeInMillis());
+		hourString = Long.toString(calendar.getTimeInMillis());
 		
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		
-		createDailyRolling(calendar.getTimeInMillis());
+		initDay(Long.toString(calendar.getTimeInMillis()));
+		initHour(hourString, hour);
 		
-		createFile(fileName);
-	}
-	
-	private void createFile(String fileName) throws IOException {
-		this.data = (this.file = new JSONFile(new File(this.dir, fileName))).getJSONObject();
-	}
-	
-	private void createDailyRolling(long date) throws IOException {
-		File dir = new File(this.root, Long.toString(date));
-		dir.mkdir();
-		
-		this.maxDailySummary = new JSONFile(new File(dir, "max"));
-		this.maxDailyData = this.maxDailySummary.getJSONObject();
-		
-		this.minDailySummary = new JSONFile(new File(dir, "min"));
-		this.minDailyData = this.minDailySummary.getJSONObject();
-		
-		this.avgDailySummary = new JSONFile(new File(dir, "avg"));
-		this.avgDailyData = this.avgDailySummary.getJSONObject();
-		
-		this.dir = dir;
+		sum = BigInteger.valueOf(0);
+		count = 0;
 	}
 	
 	/**
@@ -138,272 +82,112 @@ public class RollingFile {
 		now = calendar.getTimeInMillis();
 		hour = calendar.get(Calendar.HOUR_OF_DAY);
 		key = Long.toString(now);
-		
-		if (calendar.get(Calendar.MINUTE) %5 == 0) {
-			dailySummarize(now);
-			
-			if (hour %6 == 0 && calendar.get(Calendar.MINUTE) == 0) {
-				summarize(now);
-			}
-		}
-		
-		if (this.last < 0 || hour != this.last) {
-			// 실제로 rolling이 발생했거나 프로세스의 시작
-			this.last = hour;
-			
-			
+
+		if (hour != this.lastHour) {
+			summarize();
 			
 			if (hour == 0) {
-				// daily rolling 초기화
-				createDailyRolling(now);
-				
-				createFile(Long.toString(now));
+				initDay(key);
 			}
-			else {
-				// rolling
-				calendar.set(Calendar.MINUTE, 0);
-				
-				createFile(Long.toString(calendar.getTimeInMillis()));
-			}
+									
+			initHour(key, hour);
 		}
 		
-		if (!this.data.has(key) || this.data.getLong(key) < value) {
-			this.data.put(key, value);
-			
-			// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
-			this.file.save();
+		// 동일한 분 단위 data가 이미 존재 한다면 더 큰 수로 변경
+		roll(key, value);
+	}
+	
+	private void roll(String key, long value) throws IOException {
+		if (this.data.has(key) && this.data.getLong(key) >= value) {
+			return;
 		}
+		 
+		this.data.put(key, value);
+		
+		if (this.count == 0) {
+			this.sum = BigInteger.valueOf(value);
+			this.max = value;
+			this.min = value;
+		}
+		else {
+			this.sum = this.sum.add(BigInteger.valueOf(value));
+			this.max = Math.max(this.max, value);
+			this.min = Math.min(this.min, value);
+		}
+		
+		this.count++;
+		
+		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
+		this.file.save();
+	}
+	
+	private void initDay(String dateString) throws IOException {
+		// day directory 생성
+		this.dir = new File(this.root, dateString);
+		this.dir.mkdir();
+		
+		if (this.summary != null) {
+			this.summary.close();
+		}
+		
+		// summary file 생성
+		this.summary = new JSONFile(new File(this.dir, "summary"));
+		this.summaryData = this.summary.getJSONObject();
 	}
 	
 	/**
 	 * 
-	 * @param now 초단위 이하 절사한 분 값
-	 * @param last counter 타입인 경우 값 차이를 구하기 위함
-	 * @throws IOException 
+	 * @param hourString 
+	 * @param hour of day (0 ~ 23)
+	 * @throws IOException
 	 */
-	private void dailySummarize(long now) throws IOException {
-		String key;
-		long var, i, cnt, value;
-		long max = 0;
-		long min = 0;
-		double sum = 0;
-		boolean b;
-	
-		for (i = 0, cnt = 0, b = false, var = now -MINUTE; i < 5; i++, var -= MINUTE) {
-			key = Long.toString(var);
-			
-			if (this.data.has(key)) {
-				value = this.data.getLong(key);
-				
-				if (b) {
-					max = Math.max(max, value);
-					min = Math.min(min, value);
-					sum += value;
-				}
-				else {
-					max = value;
-					min = value;
-					sum = value;
-					
-					b = true;
-				}
-				
-				cnt++;
-			}
+	private void initHour(String hourString, int hour) throws IOException {
+		if (this.file != null) {
+			this.file.close();
 		}
 		
-		if (b) {
-			key = Long.toString(now);
+		// hourly file 생성
+		this.file = new JSONFile(new File(this.dir, hourString));
+		this.data = this.file.getJSONObject();
+		
+		// 마지막 시간 변경
+		this.lastHourString = hourString;
+		this.lastHour = hour;
+	}
+	
+	private void summarize() throws IOException {
+		if (this.count > 0) {
+			this.summaryData.put(this.lastHourString,
+				new JSONObject()
+				.put("avg", this.sum.divide(BigInteger.valueOf(this.count)).longValue())
+				.put("max", this.max)
+				.put("min", this.min)
+			);
 			
-			this.maxDailyData.put(key, max);
-			this.maxDailySummary.save();
+			this.count = 0;
 			
-			this.minDailyData.put(key, min);
-			this.minDailySummary.save();
-			
-			this.avgDailyData.put(key, (long)(sum / cnt));
-			this.avgDailySummary.save();
+			this.summary.save();
 		}
 	}
 	
-	private void summarize(long now) throws IOException {
-		String key;
-		long var, i, cnt, value;
-		long max = 0;
-		long min = 0;
-		double sum = 0;
-		boolean bMax, bMin, bAvg;
-	
-		for (i = 0, cnt = 0, bMax = bMin = bAvg = false, var = now -MINUTE5; i < 72; i++, var -= MINUTE5) {
-			key = Long.toString(var);
-			
-			if (this.maxDailyData.has(key)) {
-				value = this.maxDailyData.getLong(key);
-				
-				if (bMax) {
-					max = Math.max(max, value);
-				}
-				else {
-					max = value;
-					
-					bMax = true;
-				}
-			}
-			
-			if (this.minDailyData.has(key)) {
-				value = this.minDailyData.getLong(key);
-				
-				if (bMin) {
-					min = Math.min(min, value);
-				}
-				else {
-					min = value;
-
-					bMin = true;
-				}
-			}
-			
-			if (this.avgDailyData.has(key)) {
-				value = this.avgDailyData.getLong(key);
-				
-				if (bAvg) {
-					sum += value;
-				}
-				else {
-					sum = value;
-					
-					bAvg = true;
-				}
-				
-				cnt++;
-			}
-		}
-		
-		key = Long.toString(now);
-		
-		if (bMax) {
-			this.maxData.put(key, max);
-			
-			this.maxSummary.save();
-		}
-		
-		if (bMin) {
-			this.minData.put(key, min);
-			
-			this.minSummary.save();
-		}
-		
-		if (bAvg) {
-			this.avgData.put(key, (long)(sum / cnt));
-			
-			this.avgSummary.save();
-		}
-	}
-	
-	public JSONObject getData(long base, int size) {
-		return getData(base, size, SCALE.MINUTE, "");
-	}
-	
-	public JSONObject getData(long base, int size, SCALE scale, String method) {
-		long begin;
-		long end;
-		
-		Calendar calendar = Calendar.getInstance();
-		
-		calendar.setTimeInMillis(base);
-		calendar.set(Calendar.MILLISECOND, 0);
-		calendar.set(Calendar.SECOND, 0);
-		
-		switch (scale) {
-		case MINUTE:
-			end = calendar.getTimeInMillis();
-			begin = end - (size -1) * MINUTE;
-			
-			return getMinuteData(begin, end);
-			
-		case MINUTE5:
-			calendar.set(Calendar.MINUTE, calendar.get(Calendar.MINUTE) /5 *5);
-			
-			end = calendar.getTimeInMillis();
-			begin = end - (size -1) *MINUTE5;
-			
-			return getMinute5Data(begin, end, method);
-			
-		case HOUR6:
-			calendar.set(Calendar.MINUTE, 0);
-			calendar.set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY) /6 *6);
-			
-			end = calendar.getTimeInMillis();
-			begin = end - (size -1) * HOUR6;
-			
-			return getHour6Data(begin, end, method);
-		}
-		
-		return null;
-	}
-	
-	private JSONObject getMinuteData(long begin, long end) {
+	public JSONObject getData(long start, long end, boolean summary) {
 		JSONObject result = new JSONObject();
-		JSONData data = new JSONData(this.root);
-		Long value;
+		Data data = summary? new JSONSummary(result, this.root, start, end): new JSONData(result, this.root, start, end);
 		
-		for (long date = begin; date < end; date += MINUTE) {
-			value = data.get(date);
-			
-			if (value != null) {
-				result.put(Long.toString(date), value);
-			}
-			else {
-			}
-		}
+		while (data.next());
 		
 		return result;
 	}
 	
-	private JSONObject getMinute5Data(long begin, long end, String method) {
-		JSONObject result = new JSONObject();
-		JSONSummaryData data = new JSONSummaryData(this.root, method);
-		Long value;
-		
-		for (long date = begin; date < end; date += MINUTE5) {
-			value = data.get(date);
-			
-			if (value != null) {
-				result.put(Long.toString(date), value);
-			}
+	@Override
+	public void close() throws IOException {
+		if (this.file != null) {
+			this.file.close();
 		}
 		
-		return result;
+		if (this.summary != null) {
+			this.summary.close();
+		}
 	}
-	
-	private JSONObject getHour6Data(long begin, long end, String method) {
-		JSONObject result = new JSONObject();
-		String key;
-		JSONObject data;
-		
-		if ("max".equals(method)) {
-			data = this.maxData;
-		}
-		else if ("min".equals(method)) {
-			data = this.minData;
-		}
-		else if ("avg".equals(method)) {
-			data = this.avgData;
-		}
-		else {
-			return result;
-		}
-		
-		for (long date = begin; date < end; date += HOUR6) {
-			key = Long.toString(date);
-			
-			if (data.has(key)) {
-				result.put(key, data.getLong(key));
-			}
-		}
-		
-		return result;
-	}
-	
 }
 

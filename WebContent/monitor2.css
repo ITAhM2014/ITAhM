@@ -11,35 +11,92 @@ input[name=status] {
 	color: #0f0;
 }
 
-div.table span {
-	display: inline-block;
+aside {
 	box-sizing: border-box;
-	margin: .5em 0;
+	position: fixed; width: 400px; top: 0; bottom: 0; left: 0;
+	transition: width .2s;
 }
 
-div.table span:first-child {
-	width: 20%;
+body.fullscreen aside {
+	width: 16px;	
+}
+	
+aside .header {
+	position: absolute; height: 16px; top: 0; left: 0; right: 0;
+	text-align: right;
 }
 
-div.table span:last-child {
-	width: 80%;
+aside .header img {
+	float: right;
+	cursor: pointer;
 }
 
-table {
-	border-collapse: collapse;
-	width: 100%;
-	box-sizing: border-box;
+aside .main {
+	position: absolute; top: 16px; right: 0; bottom: 0; left: 0;
+	overflow-y: auto;
+}
+
+#maximize {
+	display: none;
+}
+
+body.fullscreen #maximize {
+	display: block;
+}
+
+body.fullscreen #minimize {
+	display: none;
+}
+
+body.fullscreen .main {
+	display: none;
+}
+
+aside ul {
+	list-style: none;
+	padding: 10px;
+	margin: 0;
+}
+
+aside h3 {
+	background-color: #87ceeb;
+	margin: 0;
+	padding: 10px;
+	border-radius: 10px 10px 0 0;
+	margin-top: 10px;
+	text-shadow: 1px 1px #ddd;
+}
+
+aside h3:first-child {
+	margin-top: 0;
+}
+
+aside h4 {
+	margin: 0;
+}
+
+.table ul {
+	padding: 0;
+	display: flex;
+	margin: 1px 0;
+}
+
+.table li {
+	padding: 5px;
+}
+
+.table li:first-child {
+	flex: 1 0;
+	background-color: #ddd;
+	text-align: right;
+}
+
+.table li:last-child {
+	flex: 4 0;
 }
 
 canvas {
-	/*background-color: #000;*/
-	vertical-align: bottom;
-}
-
-table input,
-table textarea {
-	width: 100%;
-	box-sizing: border-box;
+	display: block;
 }
 
 #ifentry tr:not(.up) {
@@ -56,55 +113,66 @@ table textarea {
 	font-size: 11px;
 }
 
-aside {
-	padding: 10px;
-	box-sizing: border-box;
-	position: fixed; width: 400px; top: 0; bottom: 0; left: 0;
-	overflow: auto;
-}
-
-header {
-	position: fixed; top: 0; right: 0; left: 400px; height: 100px;
-}
-
-section {
-	position: fixed; top: 100px; right: 0; bottom: 0; left: 400px;
-	display: flex;
-	flex-direction: column;
-}
-
-section .chart {
-	position: relative;
-	flex: 1;
-}
-
-input[type=checkbox] {
-	vertical-align: middle;
-}
-
-aside ul {
-	list-style: none;
-	padding: 0;
-}
-
-header h3,
-header h4 {
-	margin: 0;
-	padding: 0;
-	line-height: 50px;
-	text-align: center;
-}
-
 #navigation {
 	position: absolute;
 	width: 100%;
 	top: 5px;
 }
 
-#navigation:first-child {
-	float: left;
+.br {
+	position: absolute; bottom: 5px;right: 5px;
 }
 
-#navigation:last-child {
-	float: right;
+.bl {
+	position: absolute; bottom: 5px; left: 5px;
+}
+
+.tr {
+	position: absolute; top: 5px; right: 5px;
+}
+
+.tl {
+	position: absolute; top: 5px; left: 5px;
+}
+
+img {
+	vertical-align: middle;
+}
+
+section {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 400px;
+	display: flex;
+	flex-direction: column;
+}
+
+body.fullscreen section {
+	left: 16px;
+}
+
+section>* {
+	position: relative;
+	flex: 1;
+	height: 0;
+	margin: 5px;
+	box-shadow: 0 0 10px 3px #777;
+}
+
+input[type=checkbox] {
+	vertical-align: middle;
+}
+
+#navigation {
+	position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+}
+
+#navigation img {
+	cursor: pointer;
+}
+
+#setup {
+	cursor: pointer;
+}
+
+*:not(:hover)> #setup {
+	display: none;
 }

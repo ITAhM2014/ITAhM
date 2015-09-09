@@ -15,6 +15,7 @@ import java.util.Set;
 
 import com.itahm.EventListener;
 import com.itahm.ITAhMException;
+import com.itahm.session.Session;
 
 import event.Event;
 
@@ -84,8 +85,8 @@ public class Listener implements Runnable, Closeable {
 		this.itahm.onConnect(channel);
 	}
 	
-	private Response getPreProcessMessage() throws IOException{
-		Response response = new Response()
+	private Response createResponse(SocketChannel channel) throws IOException{
+		Response response = new Response(channel)
 			.header("Access-Control-Allow-Headers", "Authorization, Content-Type")
 			.header("Access-Control-Allow-Origin", "http://app.itahm.com")
 			.header("Access-Control-Allow-Credentials", "true");
@@ -93,29 +94,36 @@ public class Listener implements Runnable, Closeable {
 		return response;
 	}
 	
-	private void preProcessRequest(SocketChannel channel) throws IOException{
-		Response response = getPreProcessMessage();
-		
-		response.status(400, "Bad Request").header("Connection", "Close").send(channel, "");
-	}
-	
 	private void preProcessRequest(SocketChannel channel, Request request) throws IOException{
-		Response response = getPreProcessMessage();
+		Response response = createResponse(channel);
 		
 		String method = request.method();
+		String cookie = request.cookie();
 		
 		if (!"HTTP/1.1".equals(request.version())) {
-			response.status(505, "HTTP Version Not Supported").send(channel, "");
+			response.status(505, "HTTP Version Not Supported").send();
 		}
 		else {
 			if ("OPTIONS".equals(method)) {
-				response.status(200, "OK").header("Allow", "OPTIONS, POST, GET").send(channel, "");
+				response.status(200, "OK").header("Allow", "OPTIONS, POST, GET").send();
 			}
 			else if ("POST".equals(method) || "GET".equals(method)) {
-				this.itahm.onRequest(channel, request, response);
+				if (request.getJSONObject() == null) {
+					response.status(400, "Bad Request").send();
+				}
+				else {
+					if (cookie != null) {
+						Session session = Session.find(cookie);
+						if (session != null) {
+							session.update();
+						}
+					}
+					
+					this.itahm.onRequest(request, response);
+				}
 			}
 			else {
-				response.status(405, "Method Not Allowed").header("Allow", "OPTIONS, POST").send(channel, "");
+				response.status(405, "Method Not Allowed").header("Allow", "OPTIONS, POST").send("");
 			}
 		}
 	}
@@ -149,7 +157,9 @@ public class Listener implements Runnable, Closeable {
 				// else continue
 			}
 			catch (ITAhMException itahme) {
-				preProcessRequest(channel);
+				Response response = createResponse(channel);
+				
+				response.status(400, "Bad Request").header("Connection", "Close").send();
 			}
 			
 			this.buffer.clear();
@@ -216,7 +226,7 @@ public class Listener implements Runnable, Closeable {
 			}
 
 			@Override
-			public void onRequest(SocketChannel channel, Request request, Response response) {
+			public void onRequest(Request request, Response response) {
 				
 			}
 
