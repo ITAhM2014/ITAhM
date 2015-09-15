@@ -12,11 +12,9 @@ var elements = {};
 	window.signOut = signOut;
 	window.clearScreen = clearScreen;
 	window.openContent = openContent;
-	window.home = home;
+	window.signIn = signIn;
 
 	function onLoad(e) {
-		window.server = location.search.replace("?", "");
-		
 		elements["dialog"] = document.getElementById("dialog");
 		elements["content"] = document.getElementById("content");
 		elements["event"] = document.getElementById("event_list");
@@ -36,22 +34,11 @@ var elements = {};
 		document.getElementById("event").onclick = onShowEvent;
 		document.getElementById("close").onclick = onCloseEvent;
 		
-		if (server == "") {
-			location.href = "ITAhM.html?"+ prompt("server address[:tcp port]");
-			
-			return;
-		}
-		
-		xhr = new JSONRequest(server, onResponse);
-		
-		eventListener = new JSONRequest(server, onEvent);
-		
-		xhr.request({
-			command: "echo"
-		});
+		signOut();
 	}
 	
 	function load() {
+		
 		home();
 		/*
 		eventListener.request({
@@ -60,10 +47,6 @@ var elements = {};
 		});
 		*/
 		clearScreen();
-	}
-	
-	function home() {
-		openContent("monitor2.html", "127.0.0.1");
 	}
 	
 	function writeEvent(data) {
@@ -129,6 +112,14 @@ var elements = {};
 		xhr.request({command: "signout"});
 	}
 	
+	function signIn() {
+		xhr = new JSONRequest(server, onResponse);
+		
+		eventListener = new JSONRequest(server, onEvent);
+		
+		openContent("monitor2.html", "127.0.0.1");
+	}
+	
 	function signOut() {
 		elements["content"].src = "about:blank";
 		
@@ -144,18 +135,14 @@ var elements = {};
 				signOut();
 			}
 		}
-		else if ("json" in response) {
+		/*else if ("json" in response) {
 			var json = response.json,
 				command = json.command;
 			
 			if (json === null) {
 				return;
 			}
-			
-			if (command === "echo") {
-				load();
-			}
-		}
+		}*/
 	}
 	
 	function onEvent(response) {

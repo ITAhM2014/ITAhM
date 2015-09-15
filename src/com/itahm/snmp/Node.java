@@ -42,6 +42,7 @@ public class Node extends CommunityTarget {
 	private final String ipAddress;
 	private final JSONObject nodeData;
 	private final JSONObject hrProcessorEntry;
+	private JSONObject hrProcessorIndex;
 	private final JSONObject ifEntry;
 	private JSONObject ifIndex;
 	private final JSONObject hrStorageEntry;
@@ -118,6 +119,8 @@ public class Node extends CommunityTarget {
 		else {
 			hrStorageIndex = nodeData.getJSONObject("hrStorageIndex");
 		}
+		
+		hrProcessorIndex = new JSONObject();
 		
 		inCounter = new HashMap<String, Counter>();
 		outCounter = new HashMap<String, Counter>();
@@ -498,31 +501,40 @@ public class Node extends CommunityTarget {
 				
 				this.nodeData.put("hrSystemUptime", value.toMilliseconds());
 			}
-			else if (request.startsWith(Constants.hrProcessorLoad) && response.startsWith(Constants.hrProcessorLoad)) {
-				Integer32 value = (Integer32)variable;
-				String index = Integer.toString(response.last());
-				int intValue = value.getValue();
-				
-				this.rollingMap.put(Resource.HRPROCESSORLOAD, index, intValue);
-				
-				if (this.hrProcessorEntry.has(index)) {
-					int last = this.hrProcessorEntry.getInt(index);
+			else if (request.startsWith(Constants.hrProcessorLoad)) {
+				if (response.startsWith(Constants.hrProcessorLoad)) {
+					Integer32 value = (Integer32)variable;
+					String index = Integer.toString(response.last());
+					int intValue = value.getValue();
 					
-					if (intValue /10 != last /10 && (intValue > 69 || last > 69)) {
-							this.itahm.onEvent(new Event(
-									this.nodeData.getString("sysName"),
-									this.nodeData.getString("ip"),
-									"hrProcessorLoad",
-									index,
-									last,
-									intValue,
-									""));
+					this.rollingMap.put(Resource.HRPROCESSORLOAD, index, intValue);
+					
+					if (this.hrProcessorEntry.has(index)) {
+						int last = this.hrProcessorEntry.getInt(index);
+						
+						if (intValue /10 != last /10 && (intValue > 69 || last > 69)) {
+								this.itahm.onEvent(new Event(
+										this.nodeData.getString("sysName"),
+										this.nodeData.getString("ip"),
+										"hrProcessorLoad",
+										index,
+										last,
+										intValue,
+										""));
+						}
 					}
+		
+					this.hrProcessorEntry.put(index, intValue);
+					
+					this.hrProcessorIndex.put(index, Integer.parseInt(index, 10));
+					
+					return true;
 				}
-	
-				this.hrProcessorEntry.put(index, intValue);
-			
-				return true;
+				else {
+					this.nodeData.put("hrProcessorIndex", this.hrProcessorIndex);
+					
+					this.hrProcessorIndex = new JSONObject();
+				}
 			}
 			else if (request.startsWith(Constants.hrStorageEntry) && response.startsWith(Constants.hrStorageEntry)) {
 				JSONObject storageData;
@@ -583,7 +595,10 @@ public class Node extends CommunityTarget {
 					Integer32 value = (Integer32)variable;
 					int intValue = value.getValue();
 					
-					this.rollingMap.put(Resource.HRSTORAGEUSED, index, intValue);
+					if (storageData.has("hrStorageAllocationUnits")) {
+						this.rollingMap.put(Resource.HRSTORAGEUSED, index, 1L* intValue * storageData.getInt("hrStorageAllocationUnits"));
+					}
+					
 					
 					if (storageData.has("hrStorageUsed") && storageData.has("hrStorageSize") && storageData.has("hrStorageType")) {
 						int size = storageData.getInt("hrStorageSize");

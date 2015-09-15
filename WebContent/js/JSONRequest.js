@@ -115,4 +115,8 @@ function JSONRequest() {
 		}
 	}
 	
+	JSONRequest.request = function (request) {
+		
+	}
+	
 })( window );

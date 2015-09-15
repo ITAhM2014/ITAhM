@@ -151,6 +151,12 @@ function stroke(context, x1, y1, x2, y2) {
 			this.fillStyle = config.fillStyle || "#e0ffff";
 			
 			this.ondrag = config.ondrag || function () {};
+			this.onvalue = config.onvalue || function (value) {
+				return {
+					value: value,
+					text: value
+				};
+			};
 			
 			if (config.id) {
 				this.chart = document.getElementById(config.id);
@@ -309,8 +315,8 @@ function stroke(context, x1, y1, x2, y2) {
 		},
 		
 		draw: function (detail) {
-			if (this.detail) {
-				return;
+			if (this.detail || !detail) {
+				throw "";
 			}
 			
 			var
@@ -335,6 +341,8 @@ function stroke(context, x1, y1, x2, y2) {
 			
 			this.avgCtx.save();
 			this.avgCtx.setTransform(1, 0, 0, 1, MARGIN_LEFT - offset, MARGIN_TOP);
+			this.avgCtx.lineWidth = .5;
+			this.avgCtx.strokeStyle = "#696969";//"#ffd700";
 			
 			for (var x=0; key <= end; x += block, key = date.setMinutes(date.getMinutes() +1)) {
 				value = detail[key];

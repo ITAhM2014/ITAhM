@@ -3,6 +3,7 @@ package com.itahm.request;
 import org.json.JSONObject;
 
 import com.itahm.Data;
+import com.itahm.SnmpManager;
 
 public class Snmp extends Request {
 
@@ -25,7 +26,20 @@ public class Snmp extends Request {
 	
 	@Override
 	protected JSONObject execute(String command, String key, JSONObject value) {
-		return execute(this.data, command, key, value);
+		if (!this.data.has(key)) {
+			return null;
+		}
+			
+		if ("realtime".equals(command)) {
+			SnmpManager.addRealTimeNode(key);
+		}
+		else if ("get".equals(command)) {
+		}
+		else {
+			return null;
+		}
+			
+		return data.getJSONObject(key);
 	}
 	
 }

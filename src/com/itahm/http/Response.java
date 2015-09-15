@@ -1,6 +1,5 @@
 package com.itahm.http;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -40,25 +39,32 @@ public final class Response extends Message {
 	public boolean own(SocketChannel channel) {
 		return channel == this.channel;
 	}
-	
+	/*
 	public byte [] build() throws IOException {
 		Iterator<String> iterator = this.header.keySet().iterator();
 		String key;
-		String header = "";
+		StringBuilder header = new StringBuilder();
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();		
+		
+		header.append(startLine +CRLF);
+		header.append(String.format(FIELD, "Access-Control-Allow-Headers", "Authorization, Content-Type"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://app.itahm.com"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://free.itahm.com"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Credentials", "true"));
 		
 		while(iterator.hasNext()) {
 			key = iterator.next();
 			
-			header += String.format(FIELD, key, this.header.get(key));
+			header.append(String.format(FIELD, key, this.header.get(key)));
 		}
 		
-		baos.write((startLine +CRLF+ header +CRLF).getBytes("US-ASCII"));
+		header.append(CRLF);
+		baos.write(header.toString().getBytes("US-ASCII"));
 		baos.write(this.body);
 		
 		return baos.toByteArray();
 	}
-	
+	*/
 	/**
 	 * body 없는 전송
 	 * @throws IOException
@@ -107,20 +113,27 @@ public final class Response extends Message {
 	 */
 	private void sendHeader(long length) throws IOException {
 		Iterator<String> iterator;
-		String header = this.startLine;
+		StringBuilder header = new StringBuilder();
 		String key;
 		
-		this.header.put("Content-Length", Long.toString(length));
+		header.append(this.startLine);
+		header.append(String.format(FIELD, "Access-Control-Allow-Headers", "Authorization, Content-Type"));
+		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://app.itahm.com"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://itahm.com"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Credentials", "true"));
+		header.append(String.format(FIELD, "Content-Length", Long.toString(length)));
 		
 		iterator = this.header.keySet().iterator();
 		
 		while(iterator.hasNext()) {
 			key = iterator.next();
 			
-			header += String.format(FIELD, key, this.header.get(key));
+			header.append(String.format(FIELD, key, this.header.get(key)));
 		}
 		
-		send(ByteBuffer.wrap((header +CRLF).getBytes("US-ASCII")));
+		header.append(CRLF);
+		
+		send(ByteBuffer.wrap(header.toString().getBytes("US-ASCII")));
 	}
 	
 	/**

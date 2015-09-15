@@ -12,26 +12,22 @@
 		<script src="js/JSONRequest.js"></script>
 	</head>
 
-	<body>
+	<body class="server">
 		<div class="dialog">
-			<h2>Sign In</h2>
-			
-			<label>
-				<span>server</span>
-				<span id="server"></span>
-			</label>
-			
-			<form id="form">
-				<label>
-					<span>username</span>
-					<input type="text" name="username" placeholder="root" required autofocus>
-				</label>
-				
-				<label>
-					<span>password</span>
-					<input type="password" name="password" placeholder="root" required>
-				</label>
-				
+			<form id="server">
+				<h2>Server</h2>
+				<div class="flex">
+					<input type="text" id="ip" placeholder="server ip address" required autofocus value="127.0.0.1">
+					<input type="text" id="tcp" placeholder="tcp port number" required value="2014">
+				</div>
+				<input type="submit" value="Connect">
+			</form>
+			<form id="sign_in">
+				<h2>Sign In</h2>
+				<div class="full">
+					<input type="text" id="username" placeholder="user name" required autofocus>
+					<input type="password" id="password" placeholder="password" required>
+				</div>
 				<input type="submit" value="SignIn">
 			</form>
 		</div>

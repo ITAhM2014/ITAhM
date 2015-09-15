@@ -5,30 +5,58 @@ input, span {
 	font-size: 11pt;
 }
 
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+body.sign_in #server,
+body.server #sign_in {
+	display: none;
+}
+
+h2 {
+	margin-top: 0;
+}
+
 .dialog {
 	width: 300px;
-	margin: 100px auto;
 	padding: 20px;
 	border: 1px solid #ddd;
 	background-color: #fff;
 	box-shadow: 0px 0px 20px 10px #ddd;
 }
 
-label {
+form {
+	translation: width 1s;
+}
+
+form.hide {
+	width: 0;
+}
+
+input {
+	padding: 10px;
+}
+
+.flex {
 	display: flex;
+	display: -webkit-flex;
 }
 
-label>* {
-	padding: .5em;
+.flex input:first-child {
+	flex: 4;
+	-webkit-flex: 4;
 }
 
-label>*:first-child {
+.flex input:last-child {
 	flex: 1;
-	text-align: right;
+	-webkit-flex: 1;
 }
 
-label>*:last-child {
-	flex: 3;
+.full input {
 	width: 100%;
 	box-sizing: border-box;
 }

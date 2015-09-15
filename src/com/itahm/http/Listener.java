@@ -85,17 +85,8 @@ public class Listener implements Runnable, Closeable {
 		this.itahm.onConnect(channel);
 	}
 	
-	private Response createResponse(SocketChannel channel) throws IOException{
-		Response response = new Response(channel)
-			.header("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			.header("Access-Control-Allow-Origin", "http://app.itahm.com")
-			.header("Access-Control-Allow-Credentials", "true");
-		
-		return response;
-	}
-	
 	private void preProcessRequest(SocketChannel channel, Request request) throws IOException{
-		Response response = createResponse(channel);
+		Response response = new Response(channel);
 		
 		String method = request.method();
 		String cookie = request.cookie();
@@ -157,7 +148,7 @@ public class Listener implements Runnable, Closeable {
 				// else continue
 			}
 			catch (ITAhMException itahme) {
-				Response response = createResponse(channel);
+				Response response = new Response(channel);
 				
 				response.status(400, "Bad Request").header("Connection", "Close").send();
 			}
