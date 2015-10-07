@@ -1,0 +1,215 @@
+{
+    "11": {
+        "address": "8.8.8.88",
+        "profile": "",
+        "x": -590,
+        "name": "web server",
+        "y": 325,
+        "snmp": false,
+        "id": "11",
+        "label": " ",
+        "type": "server",
+        "community": ""
+    },
+    "46": {
+        "address": "172.16.0.10",
+        "profile": "",
+        "x": -120,
+        "name": "internet router 1",
+        "y": -285,
+        "id": "46",
+        "label": " idc, public",
+        "type": "router"
+    },
+    "57": {
+        "address": "",
+        "profile": "",
+        "x": -430,
+        "name": "server farm (A)",
+        "y": 75,
+        "id": "57",
+        "type": "l3switch"
+    },
+    "68": {
+        "address": "",
+        "profile": "",
+        "x": 225,
+        "name": "dmz (A)",
+        "y": -85,
+        "id": "68",
+        "label": " idc, dmz",
+        "type": "l3switch"
+    },
+    "14": {
+        "address": "10.8.241.8",
+        "profile": "",
+        "x": 390,
+        "name": "firewall",
+        "y": 185,
+        "snmp": true,
+        "id": "14",
+        "type": "firewall"
+    },
+    "47": {
+        "address": "172.16.0.20",
+        "profile": "",
+        "x": 80,
+        "name": "internet router 2",
+        "y": -275,
+        "id": "47",
+        "label": " public, idc",
+        "type": "router"
+    },
+    "58": {
+        "address": "",
+        "profile": "",
+        "x": -185,
+        "name": "server farm (S)",
+        "y": 75,
+        "id": "58",
+        "type": "l3switch"
+    },
+    "69": {
+        "address": "",
+        "profile": "",
+        "x": 410,
+        "name": "dmz (S)",
+        "y": -85,
+        "id": "69",
+        "type": "l3switch"
+    },
+    "15": {
+        "address": "192.168.100.100",
+        "profile": "",
+        "name": "vpn main(A)",
+        "x": 255,
+        "y": -225,
+        "id": "15",
+        "type": "concentrator"
+    },
+    "4": {
+        "address": "10.5.100.99",
+        "profile": "",
+        "name": "2nd floor",
+        "x": 110,
+        "y": 250,
+        "snmp": false,
+        "id": "4",
+        "label": " ",
+        "community": "",
+        "type": "l3switch"
+    },
+    "5": {
+        "address": "1.2.3.47",
+        "profile": "",
+        "name": "router",
+        "x": 390,
+        "y": 360,
+        "id": "5",
+        "snmp": false,
+        "community": "",
+        "type": "router"
+    },
+    "80": {
+        "address": "",
+        "profile": "",
+        "x": -120,
+        "name": "isp KT",
+        "y": -405,
+        "id": "80",
+        "type": "cloud"
+    },
+    "40": {
+        "address": "1.0.0.100",
+        "profile": "",
+        "x": -120,
+        "name": "firewall(active)",
+        "y": -165,
+        "id": "40",
+        "type": "firewall"
+    },
+    "62": {
+        "address": "",
+        "profile": "",
+        "x": -430,
+        "name": "workgroup 1",
+        "y": 215,
+        "id": "62",
+        "type": "workgroup"
+    },
+    "73": {
+        "address": "",
+        "profile": "",
+        "x": 30,
+        "name": "user (A)",
+        "y": 115,
+        "id": "73",
+        "type": "l3switch"
+    },
+    "41": {
+        "address": "10.0.0.200",
+        "profile": "",
+        "x": 80,
+        "name": "firewall(standby)",
+        "y": -165,
+        "id": "41",
+        "type": "firewall"
+    },
+    "52": {
+        "address": "",
+        "profile": "",
+        "x": 80,
+        "name": "backbone switch",
+        "y": -40,
+        "id": "52",
+        "type": "l3switch"
+    },
+    "74": {
+        "address": "",
+        "profile": "",
+        "x": 245,
+        "name": "user (S)",
+        "y": 115,
+        "id": "74",
+        "type": "l3switch"
+    },
+    "53": {
+        "address": "",
+        "profile": "",
+        "x": -120,
+        "name": "backbone switch",
+        "y": -40,
+        "id": "53",
+        "type": "l3switch"
+    },
+    "86": {
+        "address": "",
+        "profile": "",
+        "name": "테스트",
+        "x": 330,
+        "y": 20,
+        "label": " ",
+        "id": "86",
+        "type": "server"
+    },
+    "10": {
+        "address": "192.168.0.250",
+        "profile": "",
+        "x": -505,
+        "name": "server",
+        "y": 320,
+        "snmp": false,
+        "id": "10",
+        "type": "storage",
+        "community": ""
+    },
+    "43": {
+        "address": "127.0.0.1",
+        "profile": "public",
+        "x": -400,
+        "name": "itahm",
+        "y": 325,
+        "id": "43",
+        "type": "server"
+    }
+}
